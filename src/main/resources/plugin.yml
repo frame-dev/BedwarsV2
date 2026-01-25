@@ -1,0 +1,32 @@
+name: BedWars
+version: 1.0
+main: ch.framedev.BedWarsPlugin
+api-version: 1.20
+author: FrameDev
+description: A comprehensive BedWars plugin for Minecraft
+
+commands:
+  bedwars:
+    description: Main BedWars command
+    usage: /bedwars <join|leave|stats|list|setup>
+    aliases: [bw]
+
+permissions:
+  bedwars.join:
+    description: Allow players to join games
+    default: true
+  bedwars.leave:
+    description: Allow players to leave games
+    default: true
+  bedwars.stats:
+    description: Allow players to view their stats
+    default: true
+  bedwars.setup:
+    description: Allow arena setup
+    default: op
+  bedwars.admin:
+    description: Administrative commands
+    default: op
+  bedwars.bungee:
+    description: BungeeCord server switching
+    default: true

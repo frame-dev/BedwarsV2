@@ -1,0 +1,152 @@
+# BedWars Shop Configuration
+# Configure all shop categories and items here
+# Format:
+#   category-name:
+#     icon: MATERIAL_TYPE
+#     items:
+#       - item: MATERIAL_TYPE
+#         amount: number
+#         cost-item: MATERIAL_TYPE
+#         cost-amount: number
+#         display-name: "Optional Custom Name"
+
+categories:
+  Blocks:
+    icon: SANDSTONE
+    items:
+      - item: WHITE_WOOL
+        amount: 16
+        cost-item: IRON_INGOT
+        cost-amount: 4
+      - item: TERRACOTTA
+        amount: 16
+        cost-item: IRON_INGOT
+        cost-amount: 12
+      - item: END_STONE
+        amount: 12
+        cost-item: IRON_INGOT
+        cost-amount: 24
+      - item: OBSIDIAN
+        amount: 4
+        cost-item: EMERALD
+        cost-amount: 4
+        
+  Weapons:
+    icon: GOLDEN_SWORD
+    items:
+      - item: STONE_SWORD
+        amount: 1
+        cost-item: IRON_INGOT
+        cost-amount: 10
+      - item: IRON_SWORD
+        amount: 1
+        cost-item: GOLD_INGOT
+        cost-amount: 7
+      - item: DIAMOND_SWORD
+        amount: 1
+        cost-item: EMERALD
+        cost-amount: 4
+      - item: STICK
+        amount: 1
+        cost-item: GOLD_INGOT
+        cost-amount: 5
+        display-name: "Knockback Stick"
+        
+  Armor:
+    icon: CHAINMAIL_CHESTPLATE
+    items:
+      - item: CHAINMAIL_CHESTPLATE
+        amount: 1
+        cost-item: IRON_INGOT
+        cost-amount: 40
+      - item: IRON_CHESTPLATE
+        amount: 1
+        cost-item: GOLD_INGOT
+        cost-amount: 12
+      - item: DIAMOND_CHESTPLATE
+        amount: 1
+        cost-item: EMERALD
+        cost-amount: 6
+        
+  Tools:
+    icon: STONE_PICKAXE
+    items:
+      - item: WOODEN_PICKAXE
+        amount: 1
+        cost-item: IRON_INGOT
+        cost-amount: 10
+      - item: IRON_PICKAXE
+        amount: 1
+        cost-item: GOLD_INGOT
+        cost-amount: 3
+      - item: DIAMOND_PICKAXE
+        amount: 1
+        cost-item: GOLD_INGOT
+        cost-amount: 6
+      - item: WOODEN_AXE
+        amount: 1
+        cost-item: IRON_INGOT
+        cost-amount: 10
+      - item: STONE_AXE
+        amount: 1
+        cost-item: IRON_INGOT
+        cost-amount: 10
+      - item: SHEARS
+        amount: 1
+        cost-item: IRON_INGOT
+        cost-amount: 20
+        
+  Food:
+    icon: COOKED_BEEF
+    items:
+      - item: APPLE
+        amount: 1
+        cost-item: IRON_INGOT
+        cost-amount: 4
+      - item: COOKED_BEEF
+        amount: 3
+        cost-item: IRON_INGOT
+        cost-amount: 4
+      - item: GOLDEN_APPLE
+        amount: 1
+        cost-item: GOLD_INGOT
+        cost-amount: 3
+        
+  Potions:
+    icon: POTION
+    items:
+      - item: POTION
+        amount: 1
+        cost-item: EMERALD
+        cost-amount: 2
+        display-name: "Speed Potion"
+      - item: POTION
+        amount: 1
+        cost-item: EMERALD
+        cost-amount: 2
+        display-name: "Jump Potion"
+      - item: POTION
+        amount: 1
+        cost-item: EMERALD
+        cost-amount: 1
+        display-name: "Invisibility Potion"
+        
+  Special:
+    icon: TNT
+    items:
+      - item: TNT
+        amount: 1
+        cost-item: GOLD_INGOT
+        cost-amount: 4
+      - item: ENDER_PEARL
+        amount: 1
+        cost-item: EMERALD
+        cost-amount: 4
+      - item: FIRE_CHARGE
+        amount: 1
+        cost-item: IRON_INGOT
+        cost-amount: 40
+      - item: LADDER
+        amount: 8
+        cost-item: IRON_INGOT
+        cost-amount: 4

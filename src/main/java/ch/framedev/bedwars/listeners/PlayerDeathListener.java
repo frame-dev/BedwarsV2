@@ -1,0 +1,61 @@
+package ch.framedev.bedwars.listeners;
+
+import ch.framedev.BedWarsPlugin;
+import ch.framedev.bedwars.game.Game;
+import ch.framedev.bedwars.game.GameState;
+import ch.framedev.bedwars.player.GamePlayer;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
+
+/**
+ * Handles player death events
+ */
+public class PlayerDeathListener implements Listener {
+
+    private final BedWarsPlugin plugin;
+
+    public PlayerDeathListener(BedWarsPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        Game game = plugin.getGameManager().getPlayerGame(player);
+
+        if (game != null && game.getState() == GameState.RUNNING) {
+            event.setDeathMessage(null);
+
+            GamePlayer gamePlayer = game.getGamePlayer(player);
+            if (gamePlayer != null) {
+                Player killer = player.getKiller();
+
+                if (killer != null) {
+                    GamePlayer killerPlayer = game.getGamePlayer(killer);
+                    if (killerPlayer != null) {
+                        killerPlayer.addKill();
+
+                        if (!gamePlayer.getTeam().isBedAlive()) {
+                            killerPlayer.addFinalKill();
+                            game.broadcast("death.final-kill",
+                                    gamePlayer.getTeam().getColor().getChatColor() + player.getName(),
+                                    killerPlayer.getTeam().getColor().getChatColor() + killer.getName());
+                        } else {
+                            game.broadcast("death.killed-by",
+                                    gamePlayer.getTeam().getColor().getChatColor() + player.getName(),
+                                    killerPlayer.getTeam().getColor().getChatColor() + killer.getName());
+                        }
+                    }
+                } else {
+                    game.broadcast("death.died",
+                            gamePlayer.getTeam().getColor().getChatColor() + player.getName());
+                }
+            }
+
+            event.getDrops().clear();
+            game.handlePlayerDeath(player);
+        }
+    }
+}

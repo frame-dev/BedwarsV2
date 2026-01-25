@@ -1,0 +1,108 @@
+# BedWars Team Upgrades Configuration
+# Configure all team upgrades here
+# 
+# Effect Types:
+#   ENCHANTMENT - Adds enchantments to items (weapons/armor)
+#   POTION_EFFECT - Gives potion effects to players
+#   SPECIAL - Custom effects (heal pool, dragon buff, etc.)
+#
+# For ENCHANTMENT effects:
+#   - target: WEAPON (swords/axes) or ARMOR (all armor pieces)
+#   - enchantment: Enchantment name (DAMAGE_ALL, PROTECTION_ENVIRONMENTAL, etc.)
+#
+# For POTION_EFFECT effects:
+#   - potion-type: PotionEffectType name (FAST_DIGGING, SPEED, REGENERATION, etc.)
+#   - duration: Duration in ticks (Integer.MAX_VALUE for permanent)
+#   - amplifier-per-level: true = amplifier increases with level, false = fixed amplifier
+#
+# For SPECIAL effects: No additional properties needed, handled by custom logic
+
+upgrades:
+  sharpness:
+    enabled: true
+    display-name: "Sharpened Swords"
+    description:
+      - "&7Your team gets Sharpness I"
+      - "&7on all swords and axes!"
+    icon: IRON_SWORD
+    max-level: 1
+    effect-type: ENCHANTMENT
+    target: WEAPON
+    enchantment: DAMAGE_ALL
+    cost:
+      level-1:
+        material: DIAMOND
+        amount: 8
+
+  protection:
+    enabled: true
+    display-name: "Reinforced Armor"
+    description:
+      - "&7Your team gets Protection"
+      - "&7on all armor pieces!"
+    icon: IRON_CHESTPLATE
+    max-level: 4
+    effect-type: ENCHANTMENT
+    target: ARMOR
+    enchantment: PROTECTION_ENVIRONMENTAL
+    cost:
+      level-1:
+        material: DIAMOND
+        amount: 2
+      level-2:
+        material: DIAMOND
+        amount: 4
+      level-3:
+        material: DIAMOND
+        amount: 8
+      level-4:
+        material: DIAMOND
+        amount: 16
+
+  haste:
+    enabled: true
+    display-name: "Maniac Miner"
+    description:
+      - "&7All players on your team"
+      - "&7permanently gain Haste!"
+    icon: GOLDEN_PICKAXE
+    max-level: 2
+    effect-type: POTION_EFFECT
+    potion-type: FAST_DIGGING
+    duration: 2147483647  # Integer.MAX_VALUE
+    amplifier-per-level: true
+    cost:
+      level-1:
+        material: DIAMOND
+        amount: 2
+      level-2:
+        material: DIAMOND
+        amount: 4
+
+  heal-pool:
+    enabled: true
+    display-name: "Heal Pool"
+    description:
+      - "&7Creates a Regeneration field"
+      - "&7around your base!"
+    icon: BEACON
+    max-level: 1
+    effect-type: SPECIAL
+    cost:
+      level-1:
+        material: DIAMOND
+        amount: 3
+
+  dragon-buff:
+    enabled: true
+    display-name: "Dragon Buff"
+    description:
+      - "&7Spawns 2 dragons to"
+      - "&7protect your base!"
+    icon: DRAGON_EGG
+    max-level: 1
+    effect-type: SPECIAL
+    cost:
+      level-1:
+        material: EMERALD
+        amount: 5

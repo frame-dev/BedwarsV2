@@ -1,0 +1,175 @@
+# BedWars Configuration File
+
+# BungeeCord Settings
+bungeecord:
+  # Enable BungeeCord support (set to true if running on BungeeCord network)
+  enabled: false
+  
+  # Lobby server name (where players are sent after games)
+  lobby-server: "lobby"
+  
+  # Auto-send to lobby when game ends
+  send-to-lobby-on-end: true
+  
+  # Auto-send to lobby when player leaves game
+  send-to-lobby-on-leave: false
+  
+  # Delay before sending to lobby (in seconds)
+  lobby-send-delay: 3
+
+# Game Settings
+game:
+  # Countdown settings
+  countdown-time: 30  # seconds
+  countdown-broadcast-intervals: [30, 20, 10, 5, 4, 3, 2, 1]  # Announce countdown at these seconds
+  
+  # Player settings
+  min-players: 2  # Minimum players to start
+  max-players: 16  # Maximum players per arena
+  respawn-time: 5  # seconds
+  auto-balance-teams: true  # Automatically balance teams when players join
+  
+  # Combat settings
+  void-death-level: 0  # Y level where players instantly die
+  allow-fall-damage: true
+  allow-projectile-damage: true
+  allow-pvp: true
+  
+  # Bed settings
+  bed-protection: true  # Prevent players from breaking their own bed
+  
+  # Generator upgrade times
+  diamond-upgrade-time: 720  # 12 minutes in seconds
+  emerald-upgrade-time: 1440  # 24 minutes in seconds
+  
+  # Team colors (order matters for auto-assignment)
+  available-team-colors: 
+    - RED
+    - BLUE
+    - GREEN
+    - YELLOW
+    - AQUA
+    - WHITE
+    - PINK
+    - GRAY
+
+# Resource Generator Settings
+generators:
+  # Iron generators (spawn at each team base)
+  iron:
+    enabled: true
+    base-delay: 1  # seconds between spawns
+    upgraded-delay: 0.5  # seconds after team upgrade
+    spawn-amount: 1
+    material: IRON_INGOT
+    max-stack: 64  # Maximum items that can stack at generator
+  
+  # Gold generators (spawn at each team base)
+  gold:
+    enabled: true
+    base-delay: 8  # seconds between spawns
+    upgraded-delay: 4  # seconds after team upgrade
+    spawn-amount: 1
+    material: GOLD_INGOT
+    max-stack: 32
+  
+  # Diamond generators (spawn at map locations)
+  diamond:
+    enabled: true
+    tier1-delay: 30  # seconds at tier 1
+    tier2-delay: 15  # seconds at tier 2 (after upgrade time)
+    spawn-amount: 1
+    material: DIAMOND
+    max-stack: 16
+  
+  # Emerald generators (spawn at map locations)
+  emerald:
+    enabled: true
+    tier1-delay: 60  # seconds at tier 1
+    tier2-delay: 30  # seconds at tier 2 (after upgrade time)
+    spawn-amount: 1
+    material: EMERALD
+    max-stack: 8
+
+# Spectator Settings
+spectator:
+  allow-spectating: true
+  allow-during-game: true
+  teleport-to-arena: true
+  fly-speed: 2  # 1 = normal, 2 = double
+  show-other-spectators: true
+
+# World Settings
+world:
+  reset-on-end: true  # Reset arena blocks after game
+  track-block-changes: true  # Track which blocks were placed/broken
+  allow-block-breaking: true
+  allow-block-placing: true
+  restore-delay: 2  # seconds to wait before restoring blocks
+
+# Database Settings
+database:
+  type: "sqlite"  # sqlite or mysql
+  save-stats: true
+  
+  # MySQL settings (only if type is mysql)
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "bedwars"
+    username: "root"
+    password: "password"
+    use-ssl: false
+
+# Messages (most messages are in messages.yml, these are legacy)
+messages:
+  game-starting: "&aThe game is starting!"
+  game-started: "&aGame started! Protect your bed and destroy enemy beds!"
+  bed-destroyed: "&c&lBED DESTROYED!"
+  final-kill: "&c&lFINAL KILL!"
+  team-eliminated: "&chas been eliminated!"
+  victory: "&6&l{TEAM} TEAM WINS!"
+
+# Debug Settings
+debug:
+  enabled: false
+  verbose-logging: false
+  show-generator-spawns: false
+  
+# Example arena configuration (arenas are managed via setup commands)
+# arenas:
+#   example:
+#     lobby-spawn:
+#       world: world
+#       x: 0
+#       y: 100
+#       z: 0
+#       yaw: 0
+#       pitch: 0
+#     min-players: 2
+#     max-players: 8
+#     teams:
+#       red:
+#         spawn:
+#           world: world
+#           x: 10
+#           y: 100
+#           z: 10
+#         bed:
+#           world: world
+#           x: 15
+#           y: 100
+#           z: 15
+#       blue:
+#         spawn:
+#           world: world
+#           x: -10
+#           y: 100
+#           z: -10
+#         bed:
+#           world: world
+#           x: -15
+#           y: 100
+#           z: -15
+  
+arenas: {}

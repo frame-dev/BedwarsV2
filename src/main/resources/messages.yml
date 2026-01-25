@@ -1,0 +1,214 @@
+# BedWars Messages Configuration
+# Use {0}, {1}, {2}, etc. for placeholders
+# Color codes: &a (green), &c (red), &e (yellow), &6 (gold), &7 (gray), &b (aqua), &d (light purple)
+
+# Game Messages
+game:
+  player-joined: "&e{0} has joined the game! ({1}/{2})"
+  player-left: "&e{0} has left the game!"
+  countdown: "&aGame starting in {0} seconds!"
+  countdown-cancelled: "&cCountdown cancelled! Need more players."
+  game-started: "&aGame started! Protect your bed and destroy enemy beds!"
+  diamond-upgrade: "&bDiamond generators upgraded to level 2!"
+  emerald-upgrade: "&aEmerald generators upgraded to level 2!"
+  respawned: "&aYou have respawned!"
+  respawning: "&eRespawning in {0}..."
+  player-eliminated: "&c{0} has been eliminated!"
+  now-spectating: "&7You are now spectating the game!"
+  winner-border: "&6═══════════════════════════════"
+  winner-announcement: "&e&l{0} TEAM WINS!"
+  no-winner: "&cGame ended with no winner!"
+  sending-to-lobby: "&aSending you to lobby..."
+  world-reset: "&7World reset complete! ({0} blocks restored)"
+
+# Death Messages
+death:
+  final-kill: "&c&lFINAL KILL! &e{0} &7was killed by &e{1}"
+  killed-by: "{0} &7was killed by {1}"
+  died: "{0} &7died"
+  bed-destroyed: "&c&lBED DESTROYED! &e{0} &7bed was destroyed by {1}"
+
+# Block Messages
+block:
+  cannot-break-placed: "&cYou can only break blocks placed by players!"
+  cannot-break-yet: "&cYou can't break blocks yet!"
+  cannot-break-own-bed: "&cYou can't break your own bed!"
+  cannot-place-yet: "&cYou can't place blocks yet!"
+
+# Shop Messages
+shop:
+  purchase-successful: "&aPurchase successful!"
+  not-enough-resources: "&cYou don't have enough {0}!"
+  upgrade-purchased: "&aUpgrade purchased!"
+  upgrade-max-level: "&cYou already have the maximum level of this upgrade!"
+  team-upgrade-purchased: "&e{0} &apurchased &e{1}&a for your team!"
+
+# Spectator Messages
+spectator:
+  only-during-game: "&cYou can only spectate during an active game!"
+  now-spectating: "&7You are now spectating the game!"
+  stopped-spectating: "&aYou are no longer spectating!"
+
+# Command Messages
+command:
+  only-players: "&cOnly players can use this command!"
+  no-permission: "&cYou don't have permission!"
+  
+  # Join command
+  join-usage: "&cUsage: /bedwars join <arena>"
+  already-in-game: "&cYou are already in a game! Use /bedwars leave first."
+  arena-not-found: "&cArena '{0}' not found!"
+  
+  # Leave command
+  not-in-game: "&cYou are not in a game!"
+  left-game: "&aYou left the game!"
+  
+  # Spectate command
+  spectate-usage: "&cUsage: /bedwars spectate <arena>"
+  leave-game-first: "&cLeave your current game first!"
+  
+  # Stats command
+  stats-other: "&eUse /bedwars stats to view your own stats"
+  player-not-found: "&cPlayer '{0}' not found or has never played before!"
+  loading-leaderboard: "&6Loading leaderboard..."
+  leaderboard-usage: "&cUsage: /bedwars leaderboard <wins|kills|beds>"
+  
+  # Setup commands
+  setup-usage: "&cUsage: /bedwars setup <command>"
+  setup-create-usage: "&cUsage: /bedwars setup create <name>"
+  setup-delete-usage: "&cUsage: /bedwars setup delete <arena>"
+  setup-setspawn-usage: "&cUsage: /bedwars setup setspawn <team>"
+  setup-setbed-usage: "&cUsage: /bedwars setup setbed <team>"
+  setup-addgenerator-usage: "&cUsage: /bedwars setup addgenerator <name>"
+  setup-setminplayers-usage: "&cUsage: /bedwars setup setminplayers <count>"
+  setup-setmaxplayers-usage: "&cUsage: /bedwars setup setmaxplayers <count>"
+  
+  # Setup commands messages
+  arena-already-exists: "&cArena already exists!"
+  setup-started: "&a✓ Arena '{0}' setup started!"
+  setup-use-commands: "&eUse /bedwars setup commands to configure the arena."
+  arena-deleted: "&a✓ Arena '{0}' deleted!"
+  arena-delete-failed: "&cFailed to delete arena!"
+  no-setup-session: "&cNo setup session! Use /bedwars setup create <name> first."
+  lobby-spawn-set: "&a✓ Lobby spawn set!"
+  spectator-spawn-set: "&a✓ Spectator spawn set!"
+  team-spawn-set: "&a✓ {0}&a team spawn set!"
+  available-teams: "&eTeams: {0}"
+  invalid-team-color: "&cInvalid team color!"
+  team-bed-set: "&a✓ {0}&a team bed set!"
+  generator-added: "&a✓ Generator '{0}' added!"
+  min-players-set: "&a✓ Min players set to {0}"
+  max-players-set: "&a✓ Max players set to {0}"
+  invalid-number: "&cInvalid number!"
+  setup-incomplete: "&cArena setup incomplete!"
+  setup-incomplete-hint: "&eUse /bedwars setup info to see what's missing."
+  arena-saved: "&a✓ Arena '{0}' saved successfully!"
+  arena-loaded: "&a✓ Arena loaded and ready for games!"
+  arena-save-failed: "&cFailed to save arena: {0}"
+  setup-cancelled: "&eSetup cancelled."
+  
+  # Setup info display
+  setup-info-header: "&6╔══════════════════════════════╗"
+  setup-info-title: "&6║  &e&lSetup Progress&6            ║"
+  setup-info-separator: "&6╠══════════════════════════════╣"
+  setup-info-footer: "&6╚══════════════════════════════╝"
+  
+  # Admin commands
+  must-be-in-game: "&cYou must be in a game!"
+  game-already-running: "&cThe game is already running!"
+  force-starting: "&eForce starting game..."
+  game-stopped: "&aGame stopped!"
+  world-reset: "&a✓ World reset! Restored {0} blocks."
+  config-reloaded: "&a✓ Configuration reloaded!"
+  
+  # Lobby (BungeeCord)
+  bungee-not-enabled: "&cBungeeCord is not enabled!"
+  sending-to-lobby: "&aSending you to lobby..."
+
+# Help menus
+help:
+  header: "&6╔══════════════════════════════╗"
+  title: "&6║  &e&lBedWars Commands&6          ║"
+  separator: "&6╠══════════════════════════════╣"
+  footer: "&6╚══════════════════════════════╝"
+  
+  join: "&e /bedwars join <arena>&7 - Join a game"
+  leave: "&e /bedwars leave&7 - Leave your game"
+  spectate: "&e /bedwars spectate <arena>&7 - Spectate a game"
+  stats: "&e /bedwars stats [player]&7 - View statistics"
+  leaderboard: "&e /bedwars top <wins|kills|beds>&7 - Leaderboard"
+  list: "&e /bedwars list&7 - List all arenas"
+  setup: "&e /bedwars setup&7 - Arena setup"
+  lobby: "&e /bedwars lobby&7 - Return to lobby"
+  start: "&e /bedwars start&7 - Force start game"
+  stop: "&e /bedwars stop&7 - Force stop game"
+  resetworld: "&e /bedwars resetworld&7 - Reset world"
+  reload: "&e /bedwars reload&7 - Reload config"
+
+# Setup help menu
+setup-help:
+  header: "&6╔══════════════════════════════╗"
+  title: "&6║  &e&lArena Setup Commands&6     ║"
+  separator: "&6╠══════════════════════════════╣"
+  footer: "&6╚══════════════════════════════╝"
+  
+  create: "&e /bw setup create <name>"
+  delete: "&e /bw setup delete <arena>"
+  setlobby: "&e /bw setup setlobby"
+  setspectator: "&e /bw setup setspectator"
+  setspawn: "&e /bw setup setspawn <team>"
+  setbed: "&e /bw setup setbed <team>"
+  addgenerator: "&e /bw setup addgenerator <name>"
+  setminplayers: "&e /bw setup setminplayers <count>"
+  setmaxplayers: "&e /bw setup setmaxplayers <count>"
+  info: "&e /bw setup info"
+  save: "&e /bw setup save"
+  cancel: "&e /bw setup cancel"
+  list: "&e /bw setup list"
+
+# Stats display
+stats:
+  header: "&6╔══════════════════════════════╗"
+  title: "&6║  &e&l{0}'s Statistics&6"
+  separator: "&6╠══════════════════════════════╣"
+  footer: "&6╚══════════════════════════════╝"
+  
+  games-played: "&e Games Played: &f{0}"
+  wins: "&e Wins: &a{0}&7 | &e Losses: &c{1}"
+  win-rate: "&e Win Rate: &f{0}%"
+  kills: "&e Kills: &a{0}&7 | &e Deaths: &c{1}"
+  kd-ratio: "&e K/D Ratio: &f{0}"
+  final-kills: "&e Final Kills: &b{0}"
+  beds-broken: "&e Beds Broken: &d{0}"
+
+# Arena list
+arena-list:
+  header: "&6╔══════════════════════════════╗"
+  title: "&6║  &e&lAvailable Arenas&6          ║"
+  separator: "&6╠══════════════════════════════╣"
+  footer: "&6╚══════════════════════════════╝"
+  
+  arena-line: "&e • &f{0}"
+  arena-info: "&7   Players: {0}/{1} | Spectators: {2} | {3}"
+
+# Leaderboard
+leaderboard:
+  header: "&6╔══════════════════════════════╗"
+  title: "&6║  &e&l{0}&6"
+  separator: "&6╠══════════════════════════════╣"
+  footer: "&6╚══════════════════════════════╝"
+  
+  entry: "&e {0} #{1} &f{2}&7 - {3}{4} {5}"
+  
+  top-wins: "Top 10 Wins"
+  top-kills: "Top 10 Kills"
+  top-beds: "Top 10 Beds Broken"
+
+# Configured arenas list
+configured-arenas:
+  header: "&6╔══════════════════════════════╗"
+  title: "&6║  &e&lConfigured Arenas&6       ║"
+  separator: "&6╠══════════════════════════════╣"
+  footer: "&6╚══════════════════════════════╝"
+  
+  arena-line: "&e • &f{0}"

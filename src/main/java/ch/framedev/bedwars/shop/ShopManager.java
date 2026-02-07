@@ -34,6 +34,7 @@ public class ShopManager {
         this.categories = new ArrayList<>();
         loadShopConfig();
         loadShopFromConfig();
+        plugin.getLogger().info("ShopManager initialized with " + categories.size() + " categories");
     }
 
     private void loadShopConfig() {

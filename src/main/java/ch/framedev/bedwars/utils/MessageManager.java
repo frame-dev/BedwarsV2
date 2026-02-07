@@ -27,6 +27,8 @@ public class MessageManager {
         this.plugin = plugin;
         this.messageCache = new HashMap<>();
         loadMessages();
+        plugin.getLogger()
+                .info("MessageManager initialized with " + messagesConfig.getKeys(true).size() + " message keys");
     }
 
     /**

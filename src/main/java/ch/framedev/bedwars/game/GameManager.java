@@ -23,6 +23,7 @@ public class GameManager {
         this.playerGames = new HashMap<>();
 
         loadArenas();
+        plugin.getLogger().info("GameManager initialized with " + games.size() + " games loaded");
     }
 
     private void loadArenas() {

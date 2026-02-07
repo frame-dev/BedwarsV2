@@ -28,6 +28,7 @@ public class ArenaManager {
         this.setupSessions = new HashMap<>();
         this.arenasFile = new File(plugin.getDataFolder(), "arenas.yml");
         loadArenasFile();
+        plugin.getLogger().info("ArenaManager initialized with " + getArenaNames().size() + " arenas loaded");
     }
 
     private void loadArenasFile() {

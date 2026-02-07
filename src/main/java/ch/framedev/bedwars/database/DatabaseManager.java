@@ -17,6 +17,7 @@ public class DatabaseManager {
     public DatabaseManager(BedWarsPlugin plugin) {
         this.plugin = plugin;
         this.dbPath = plugin.getDataFolder().getAbsolutePath() + File.separator + "bedwars.db";
+        plugin.getLogger().info("DatabaseManager initialized with db path: " + dbPath);
     }
 
     /**

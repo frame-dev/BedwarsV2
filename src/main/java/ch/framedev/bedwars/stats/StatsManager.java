@@ -23,6 +23,7 @@ public class StatsManager {
         this.plugin = plugin;
         this.database = database;
         this.statsCache = new HashMap<>();
+        plugin.getLogger().info("StatsManager initialized with database connection");
     }
 
     /**

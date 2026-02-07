@@ -32,6 +32,7 @@ public class UpgradeManager {
     public UpgradeManager(Plugin plugin) {
         this.plugin = plugin;
         loadUpgradesConfig();
+        plugin.getLogger().info("UpgradeManager initialized with " + upgrades.size() + " upgrades");
     }
 
     /**
@@ -297,7 +298,8 @@ public class UpgradeManager {
     private boolean isMeleeWeapon(Material material) {
         return switch (material) {
             case WOODEN_SWORD, STONE_SWORD, IRON_SWORD, GOLDEN_SWORD, DIAMOND_SWORD,
-                    WOODEN_AXE, STONE_AXE, IRON_AXE, GOLDEN_AXE, DIAMOND_AXE -> true;
+                    WOODEN_AXE, STONE_AXE, IRON_AXE, GOLDEN_AXE, DIAMOND_AXE ->
+                true;
             default -> false;
         };
     }

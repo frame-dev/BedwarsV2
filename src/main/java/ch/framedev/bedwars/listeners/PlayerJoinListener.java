@@ -22,5 +22,11 @@ public class PlayerJoinListener implements Listener {
                 + " (" + event.getPlayer().getUniqueId() + ")");
         // Load player stats asynchronously when they join
         plugin.getStatsManager().loadPlayerStats(event.getPlayer().getUniqueId());
+            if (plugin.getCosmeticsManager() != null) {
+                plugin.getCosmeticsManager().loadPlayerCosmetics(event.getPlayer().getUniqueId());
+            }
+            if (plugin.getAchievementsManager() != null) {
+                plugin.getAchievementsManager().loadPlayer(event.getPlayer().getUniqueId());
+            }
     }
 }

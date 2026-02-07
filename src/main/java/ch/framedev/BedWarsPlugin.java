@@ -7,10 +7,14 @@ import ch.framedev.bedwars.commands.BedWarsTabCompleter;
 import ch.framedev.bedwars.database.DatabaseManager;
 import ch.framedev.bedwars.game.GameManager;
 import ch.framedev.bedwars.manager.UpgradeManager;
+import ch.framedev.bedwars.party.PartyManager;
 import ch.framedev.bedwars.player.GamePlayer;
 import ch.framedev.bedwars.stats.StatsManager;
 import ch.framedev.bedwars.utils.DebugLogger;
 import ch.framedev.bedwars.utils.MessageManager;
+import ch.framedev.bedwars.voting.MapVoteManager;
+import ch.framedev.bedwars.cosmetics.CosmeticsManager;
+import ch.framedev.bedwars.achievements.AchievementsManager;
 import ch.framedev.bedwars.listeners.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -28,6 +32,10 @@ public class BedWarsPlugin extends JavaPlugin {
     private MessageManager messageManager;
     private UpgradeManager upgradeManager;
     private DebugLogger debugLogger;
+    private PartyManager partyManager;
+    private MapVoteManager mapVoteManager;
+    private CosmeticsManager cosmeticsManager;
+    private AchievementsManager achievementsManager;
 
     @Override
     public void onEnable() {
@@ -53,6 +61,10 @@ public class BedWarsPlugin extends JavaPlugin {
         databaseManager = new DatabaseManager(this);
         databaseManager.connect();
 
+        // Initialize party manager
+        partyManager = new PartyManager(this, databaseManager);
+        partyManager.loadParties();
+
         // Initialize BungeeCord support
         bungeeManager = new BungeeManager(this);
 
@@ -60,6 +72,15 @@ public class BedWarsPlugin extends JavaPlugin {
         arenaManager = new ArenaManager(this);
         gameManager = new GameManager(this, arenaManager);
         statsManager = new StatsManager(this, databaseManager);
+
+        // Initialize map voting manager
+        mapVoteManager = new MapVoteManager(this);
+
+        // Initialize cosmetics manager
+        cosmeticsManager = new CosmeticsManager(this, databaseManager);
+
+        // Initialize achievements manager
+        achievementsManager = new AchievementsManager(this, databaseManager);
 
         // Register commands with tab completion
         ImprovedBedWarsCommand commandExecutor = new ImprovedBedWarsCommand(this, arenaManager);
@@ -94,6 +115,18 @@ public class BedWarsPlugin extends JavaPlugin {
 
         if (databaseManager != null) {
             databaseManager.disconnect();
+        }
+
+        if (partyManager != null) {
+            partyManager.shutdown();
+        }
+
+        if (cosmeticsManager != null) {
+            cosmeticsManager.shutdown();
+        }
+
+        if (achievementsManager != null) {
+            achievementsManager.shutdown();
         }
 
         getLogger().info("BedWars plugin has been disabled!");
@@ -146,5 +179,21 @@ public class BedWarsPlugin extends JavaPlugin {
 
     public DebugLogger getDebugLogger() {
         return debugLogger;
+    }
+
+    public PartyManager getPartyManager() {
+        return partyManager;
+    }
+
+    public MapVoteManager getMapVoteManager() {
+        return mapVoteManager;
+    }
+
+    public CosmeticsManager getCosmeticsManager() {
+        return cosmeticsManager;
+    }
+
+    public AchievementsManager getAchievementsManager() {
+        return achievementsManager;
     }
 }

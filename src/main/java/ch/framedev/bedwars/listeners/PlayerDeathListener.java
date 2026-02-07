@@ -38,8 +38,19 @@ public class PlayerDeathListener implements Listener {
                     if (killerPlayer != null) {
                         killerPlayer.addKill();
 
+                        if (plugin.getCosmeticsManager() != null) {
+                            plugin.getCosmeticsManager().applyKillEffect(killer, player.getLocation());
+                        }
+
+                        if (plugin.getAchievementsManager() != null) {
+                            plugin.getAchievementsManager().recordKill(killer.getUniqueId());
+                        }
+
                         if (!gamePlayer.getTeam().isBedAlive()) {
                             killerPlayer.addFinalKill();
+                            if (plugin.getAchievementsManager() != null) {
+                                plugin.getAchievementsManager().recordFinalKill(killer.getUniqueId());
+                            }
                             game.broadcast("death.final-kill",
                                     gamePlayer.getTeam().getColor().getChatColor() + player.getName(),
                                     killerPlayer.getTeam().getColor().getChatColor() + killer.getName());

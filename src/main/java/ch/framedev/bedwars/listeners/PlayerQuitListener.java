@@ -39,5 +39,9 @@ public class PlayerQuitListener implements Listener {
 
         // Clear cache to free memory
         plugin.getStatsManager().clearCache(player.getUniqueId());
+
+        if (plugin.getMapVoteManager() != null) {
+            plugin.getMapVoteManager().removePlayer(player);
+        }
     }
 }

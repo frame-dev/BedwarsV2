@@ -1,0 +1,77 @@
+enabled: true
+
+gui:
+  title: "&dCosmetics"
+  size: 54
+  kill-slot-start: 10
+  bed-slot-start: 28
+  slot-step: 1
+  selected-lore: "&aSelected"
+  locked-lore: "&cLocked"
+
+kill-effects:
+  none:
+    enabled: true
+    display-name: "&7No Kill Effect"
+    icon: BARRIER
+    lore:
+      - "&7Disable kill effects."
+    effect: NONE
+  firework:
+    enabled: true
+    display-name: "&aFirework"
+    icon: FIREWORK_ROCKET
+    lore:
+      - "&7Launch a firework on kill."
+    effect: FIREWORK
+  heart:
+    enabled: true
+    display-name: "&dHeart Burst"
+    icon: POPPY
+    lore:
+      - "&7Hearts appear on kill."
+    effect: HEART
+  smoke:
+    enabled: true
+    display-name: "&8Smoke"
+    icon: CAMPFIRE
+    lore:
+      - "&7Smoke particles on kill."
+    effect: SMOKE
+  explosion:
+    enabled: true
+    display-name: "&cExplosion"
+    icon: TNT
+    lore:
+      - "&7Explosion particles on kill."
+    effect: EXPLOSION
+
+bed-effects:
+  none:
+    enabled: true
+    display-name: "&7No Bed Effect"
+    icon: BARRIER
+    lore:
+      - "&7Disable bed destroy effects."
+    effect: NONE
+  lightning:
+    enabled: true
+    display-name: "&bLightning"
+    icon: LIGHTNING_ROD
+    lore:
+      - "&7Strike lightning on bed destroy."
+    effect: LIGHTNING
+  firework:
+    enabled: true
+    display-name: "&aFirework"
+    icon: FIREWORK_ROCKET
+    lore:
+      - "&7Launch a firework on bed destroy."
+    effect: FIREWORK
+  explosion:
+    enabled: true
+    display-name: "&cExplosion"
+    icon: TNT
+    lore:
+      - "&7Explosion particles on bed destroy."
+    effect: EXPLOSION

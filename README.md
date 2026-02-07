@@ -36,6 +36,10 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
   - Final kills
   - Beds broken
   - Team wins/losses
+- **Party System**: Invite friends, manage party leadership, and auto-join arenas together
+- **Map Voting Queue**: Queue up, vote via GUI, and join the winning map automatically
+- **Cosmetics System**: Kill effects and bed destroy effects with a selection GUI
+- **Achievements System**: Progress-based achievements with a GUI
 - **Colored Armor**: Leather armor automatically colored to team color
 - **Starting Items**: Configurable starting item (default wooden sword)
 
@@ -55,6 +59,12 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 | `/bedwars stats` | View your statistics | bedwars.stats |
 | `/bedwars list` | List all available arenas | bedwars.list |
 | `/bedwars setup` | Arena setup commands | bedwars.setup |
+| `/bedwars party` | Party commands | bedwars.party |
+| `/bedwars queue` | Join map voting queue | bedwars.queue |
+| `/bedwars vote` | Open map voting GUI | bedwars.vote |
+| `/bedwars vote start|end|force <arena>` | Admin map voting controls | bedwars.vote.admin |
+| `/bedwars cosmetics` | Cosmetics menu | bedwars.cosmetics |
+| `/bedwars achievements` | Achievements menu | bedwars.achievements |
 
 ## Setup Commands
 
@@ -91,6 +101,9 @@ The plugin uses multiple YAML configuration files for easy customization:
 - Starting item and block/combat toggles
 - BungeeCord integration settings
 - Player limits and team colors
+- Debug logging toggles (enable/verbose and generator spawn tracing)
+- Party settings (max size, invite expiry)
+- Map voting settings (queue size, vote duration, GUI title)
 
 ### arenas.yml
 - Arena definitions (lobby spawn, team spawns, beds, generators)
@@ -117,6 +130,30 @@ The plugin uses multiple YAML configuration files for easy customization:
 
 Optional runtime settings in config.yml:
 ```yaml
+debug:
+  enabled: false
+  verbose-logging: false
+  show-generator-spawns: false
+
+party:
+  max-size: 4
+  invite-expire-seconds: 60
+
+map-voting:
+  enabled: true
+  queue-min-players: 2
+  vote-duration-seconds: 20
+  allow-revote: true
+  gui-title: "&aMap Voting"
+  gui-size: 27
+  gui-item: "MAP"
+  gui-slot-start: 10
+  gui-slot-step: 1
+  gui-lore:
+    - "&7Votes: &e{votes}"
+    - "&7Queued: &e{queued}"
+    - "&7Click to vote"
+
 upgrades:
   heal-pool:
     radius: 6.0
@@ -127,6 +164,12 @@ upgrades:
 ```
 
 Example arena configuration in `arenas.yml`:
+### cosmetics.yml
+- Cosmetic effect definitions for kill and bed destroy effects
+- GUI layout and cosmetics access permissions
+
+### achievements.yml
+- Achievement definitions and GUI layout
 ```yaml
 arenas:
   example:
@@ -145,7 +188,7 @@ arenas:
 ## Requirements
 
 - Spigot or Paper 1.20.4+
-- Java 17+
+- Java 21+
 - Maven 3.6+ (for building)
 
 ## Project Structure

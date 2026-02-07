@@ -18,6 +18,8 @@ import org.bukkit.entity.Player;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -57,6 +59,10 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
                     return true;
                 }
                 if (args.length < 2) {
+                    if (plugin.getMapVoteManager() != null) {
+                        plugin.getMapVoteManager().joinQueue(player);
+                        return true;
+                    }
                     plugin.getMessageManager().sendMessage(player, "command.join-usage");
                     return true;
                 }
@@ -156,6 +162,105 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
                 handleLobby(player);
                 break;
 
+            case "queue":
+                if (!player.hasPermission("bedwars.queue")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
+                if (plugin.getMapVoteManager() != null) {
+                    plugin.getMapVoteManager().joinQueue(player);
+                }
+                break;
+
+            case "vote":
+                if (!player.hasPermission("bedwars.vote")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
+                if (plugin.getMapVoteManager() == null) {
+                    return true;
+                }
+                if (args.length > 1) {
+                    String sub = args[1].toLowerCase();
+                    switch (sub) {
+                        case "open":
+                            if (!plugin.getMapVoteManager().isQueued(player.getUniqueId())) {
+                                plugin.getMessageManager().sendMessage(player, "map-vote.not-queued");
+                                return true;
+                            }
+                            plugin.getMapVoteManager().openVoteGui(player);
+                            break;
+
+                        case "start":
+                            if (!player.hasPermission("bedwars.vote.admin")) {
+                                plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                                return true;
+                            }
+                            plugin.getMapVoteManager().forceStartVoting(player);
+                            break;
+
+                        case "end":
+                            if (!player.hasPermission("bedwars.vote.admin")) {
+                                plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                                return true;
+                            }
+                            plugin.getMapVoteManager().forceEndVoting(player);
+                            break;
+
+                        case "force":
+                            if (!player.hasPermission("bedwars.vote.admin")) {
+                                plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                                return true;
+                            }
+                            if (args.length < 3) {
+                                plugin.getMessageManager().sendMessage(player, "map-vote.force-usage");
+                                return true;
+                            }
+                            plugin.getMapVoteManager().forceSelectArena(player, args[2]);
+                            break;
+
+                        default:
+                            plugin.getMessageManager().sendMessage(player, "map-vote.vote-usage");
+                            break;
+                    }
+                    return true;
+                }
+
+                if (!plugin.getMapVoteManager().isQueued(player.getUniqueId())) {
+                    plugin.getMessageManager().sendMessage(player, "map-vote.not-queued");
+                    return true;
+                }
+                plugin.getMapVoteManager().openVoteGui(player);
+                break;
+
+            case "party":
+                if (!player.hasPermission("bedwars.party")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
+                handleParty(player, args);
+                break;
+
+            case "cosmetics":
+                if (!player.hasPermission("bedwars.cosmetics")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
+                if (plugin.getCosmeticsManager() != null) {
+                    plugin.getCosmeticsManager().openCosmeticsMenu(player);
+                }
+                break;
+
+            case "achievements":
+                if (!player.hasPermission("bedwars.achievements")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
+                if (plugin.getAchievementsManager() != null) {
+                    plugin.getAchievementsManager().openMenu(player);
+                }
+                break;
+
             default:
                 sendHelp(player);
                 break;
@@ -174,6 +279,11 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         player.sendMessage(plugin.getMessageManager().getMessage("help.stats"));
         player.sendMessage(plugin.getMessageManager().getMessage("help.leaderboard"));
         player.sendMessage(plugin.getMessageManager().getMessage("help.list"));
+        player.sendMessage(plugin.getMessageManager().getMessage("help.queue"));
+        player.sendMessage(plugin.getMessageManager().getMessage("help.vote"));
+        player.sendMessage(plugin.getMessageManager().getMessage("help.party"));
+        player.sendMessage(plugin.getMessageManager().getMessage("help.cosmetics"));
+        player.sendMessage(plugin.getMessageManager().getMessage("help.achievements"));
 
         if (player.hasPermission("bedwars.setup")) {
             player.sendMessage(plugin.getMessageManager().getMessage("help.separator"));
@@ -191,6 +301,11 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
             player.sendMessage(plugin.getMessageManager().getMessage("help.stop"));
             player.sendMessage(plugin.getMessageManager().getMessage("help.resetworld"));
             player.sendMessage(plugin.getMessageManager().getMessage("help.reload"));
+        }
+
+        if (player.hasPermission("bedwars.vote.admin")) {
+            player.sendMessage(plugin.getMessageManager().getMessage("help.separator"));
+            player.sendMessage(plugin.getMessageManager().getMessage("help.vote-admin"));
         }
 
         player.sendMessage(plugin.getMessageManager().getMessage("help.footer"));
@@ -215,12 +330,57 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
             return;
         }
 
+        var partyManager = plugin.getPartyManager();
+        var party = partyManager.getParty(player.getUniqueId());
+        if (party != null && !partyManager.isLeader(player.getUniqueId())) {
+            plugin.getMessageManager().sendMessage(player, "party.only-leader");
+            return;
+        }
+
+        if (party != null && partyManager.isLeader(player.getUniqueId())) {
+            List<Player> joiners = new ArrayList<>();
+            for (var memberId : party.getMemberUuids()) {
+                Player member = plugin.getServer().getPlayer(memberId);
+                if (member == null) {
+                    String name = plugin.getServer().getOfflinePlayer(memberId).getName();
+                    plugin.getMessageManager().sendMessage(player, "party.member-offline",
+                            name == null ? "Unknown" : name);
+                    return;
+                }
+
+                Game memberGame = plugin.getGameManager().getPlayerGame(member);
+                if (memberGame != null && !memberGame.equals(game)) {
+                    plugin.getMessageManager().sendMessage(player, "party.member-in-game", member.getName());
+                    return;
+                }
+
+                if (memberGame == null) {
+                    joiners.add(member);
+                }
+            }
+
+            int totalAfterJoin = game.getPlayers().size() + joiners.size();
+            if (totalAfterJoin > game.getArena().getMaxPlayers()) {
+                plugin.getMessageManager().sendMessage(player, "party.party-game-full");
+                return;
+            }
+
+            for (Player member : joiners) {
+                game.addPlayer(member);
+            }
+            return;
+        }
+
         game.addPlayer(player);
     }
 
     private void handleLeave(Player player) {
         Game game = plugin.getGameManager().getPlayerGame(player);
         if (game == null) {
+            if (plugin.getMapVoteManager() != null && plugin.getMapVoteManager().isQueued(player.getUniqueId())) {
+                plugin.getMapVoteManager().leaveQueue(player);
+                return;
+            }
             plugin.getMessageManager().sendMessage(player, "command.not-in-game");
             return;
         }
@@ -815,5 +975,129 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         mm.sendMessage(player, "command.sending-to-lobby");
         plugin.getDebugLogger().debug("Lobby command: player=" + player.getName());
         plugin.getBungeeManager().sendPlayerToLobby(player);
+    }
+
+    private void handleParty(Player player, String[] args) {
+        if (args.length < 2) {
+            sendPartyHelp(player);
+            return;
+        }
+
+        String sub = args[1].toLowerCase();
+        switch (sub) {
+            case "create":
+                plugin.getPartyManager().createParty(player);
+                break;
+
+            case "invite":
+                if (!player.hasPermission("bedwars.party.invite")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return;
+                }
+                if (args.length < 3) {
+                    plugin.getMessageManager().sendMessage(player, "party.invite-usage");
+                    return;
+                }
+                Player target = plugin.getServer().getPlayer(args[2]);
+                if (target == null) {
+                    plugin.getMessageManager().sendMessage(player, "party.player-not-online");
+                    return;
+                }
+                plugin.getPartyManager().invitePlayer(player, target);
+                break;
+
+            case "accept":
+                if (args.length < 3) {
+                    plugin.getMessageManager().sendMessage(player, "party.accept-usage");
+                    return;
+                }
+                plugin.getPartyManager().acceptInvite(player, args[2]);
+                break;
+
+            case "deny":
+                if (args.length < 3) {
+                    plugin.getMessageManager().sendMessage(player, "party.deny-usage");
+                    return;
+                }
+                plugin.getPartyManager().denyInvite(player, args[2]);
+                break;
+
+            case "leave":
+                plugin.getPartyManager().leaveParty(player);
+                break;
+
+            case "kick":
+                if (!player.hasPermission("bedwars.party.kick")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return;
+                }
+                if (args.length < 3) {
+                    plugin.getMessageManager().sendMessage(player, "party.kick-usage");
+                    return;
+                }
+                Player kickTarget = plugin.getServer().getPlayer(args[2]);
+                if (kickTarget == null) {
+                    plugin.getMessageManager().sendMessage(player, "party.player-not-online");
+                    return;
+                }
+                plugin.getPartyManager().kickMember(player, kickTarget);
+                break;
+
+            case "promote":
+                if (!player.hasPermission("bedwars.party.promote")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return;
+                }
+                if (args.length < 3) {
+                    plugin.getMessageManager().sendMessage(player, "party.promote-usage");
+                    return;
+                }
+                Player promoteTarget = plugin.getServer().getPlayer(args[2]);
+                if (promoteTarget == null) {
+                    plugin.getMessageManager().sendMessage(player, "party.player-not-online");
+                    return;
+                }
+                plugin.getPartyManager().promoteMember(player, promoteTarget);
+                break;
+
+            case "disband":
+                plugin.getPartyManager().disbandParty(player);
+                break;
+
+            case "list":
+                plugin.getPartyManager().listParty(player);
+                break;
+
+            case "chat":
+                if (args.length < 3) {
+                    plugin.getMessageManager().sendMessage(player, "party.chat-usage");
+                    return;
+                }
+                String message = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+                plugin.getPartyManager().sendPartyChat(player, message);
+                break;
+
+            default:
+                sendPartyHelp(player);
+                break;
+        }
+    }
+
+    private void sendPartyHelp(Player player) {
+        MessageManager mm = plugin.getMessageManager();
+        mm.sendMessage(player, "party-help.header");
+        mm.sendMessage(player, "party-help.title");
+        mm.sendMessage(player, "party-help.separator");
+        mm.sendMessage(player, "party-help.create");
+        mm.sendMessage(player, "party-help.invite");
+        mm.sendMessage(player, "party-help.accept");
+        mm.sendMessage(player, "party-help.deny");
+        mm.sendMessage(player, "party-help.leave");
+        mm.sendMessage(player, "party-help.kick");
+        mm.sendMessage(player, "party-help.promote");
+        mm.sendMessage(player, "party-help.disband");
+        mm.sendMessage(player, "party-help.list");
+        mm.sendMessage(player, "party-help.chat");
+        mm.sendMessage(player, "party-help.footer");
     }
 }

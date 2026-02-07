@@ -1,0 +1,68 @@
+enabled: true
+
+gui:
+  title: "&6Achievements"
+  size: 54
+  slot-start: 10
+  slot-step: 1
+  progress-lore: "&eProgress: {progress}/{target}"
+  locked-lore: "&cLocked"
+  unlocked-lore: "&aUnlocked"
+
+achievements:
+  first_kill:
+    enabled: true
+    display-name: "&aFirst Blood"
+    icon: IRON_SWORD
+    lore:
+      - "&7Get your first kill."
+    type: KILLS
+    target: 1
+  killer_10:
+    enabled: true
+    display-name: "&cKiller I"
+    icon: DIAMOND_SWORD
+    lore:
+      - "&7Get 10 kills."
+    type: KILLS
+    target: 10
+  final_kill:
+    enabled: true
+    display-name: "&bFinal Blow"
+    icon: NETHERITE_SWORD
+    lore:
+      - "&7Get a final kill."
+    type: FINAL_KILLS
+    target: 1
+  bed_breaker:
+    enabled: true
+    display-name: "&dBed Breaker"
+    icon: RED_BED
+    lore:
+      - "&7Break an enemy bed."
+    type: BEDS_BROKEN
+    target: 1
+  bed_breaker_10:
+    enabled: true
+    display-name: "&5Bed Breaker II"
+    icon: PURPLE_BED
+    lore:
+      - "&7Break 10 enemy beds."
+    type: BEDS_BROKEN
+    target: 10
+  first_win:
+    enabled: true
+    display-name: "&6First Victory"
+    icon: GOLDEN_APPLE
+    lore:
+      - "&7Win a game."
+    type: WINS
+    target: 1
+  veteran:
+    enabled: true
+    display-name: "&eVeteran"
+    icon: TOTEM_OF_UNDYING
+    lore:
+      - "&7Play 25 games."
+    type: GAMES_PLAYED
+    target: 25

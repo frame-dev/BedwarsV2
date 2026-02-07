@@ -77,6 +77,14 @@ public class BlockBreakListener implements Listener {
                 plugin.getDebugLogger().debug("Bed destroyed: team=" + team.getColor().name()
                     + ", by=" + player.getName());
 
+                if (plugin.getCosmeticsManager() != null) {
+                    plugin.getCosmeticsManager().applyBedDestroyEffect(player, block.getLocation());
+                }
+
+                if (plugin.getAchievementsManager() != null) {
+                    plugin.getAchievementsManager().recordBedBroken(player.getUniqueId());
+                }
+
                 // Record bed for reset
                 game.getWorldResetManager().recordBedLocation(
                         block.getLocation(),

@@ -42,6 +42,10 @@ A comprehensive, fully-featured BedWars minigame plugin for Minecraft (Spigot/Pa
 - Respawn system (5 seconds when bed alive)
 - Final kill mechanics
 - Elimination system
+- Party system (invite friends, leader management, auto-join)
+- Map voting queue (GUI voting before match)
+- Cosmetics system (kill effects, bed destroy effects)
+- Achievements system (progress-based unlocks)
 - Persistent data storage
 
 ---
@@ -164,6 +168,11 @@ A comprehensive, fully-featured BedWars minigame plugin for Minecraft (Spigot/Pa
 - `/bedwars spectate <arena>` - Spectate a game
 - `/bedwars stats` - View statistics
 - `/bedwars list` - List all arenas
+- `/bedwars party` - Party commands
+- `/bedwars queue` - Join map voting queue
+- `/bedwars vote` - Open map voting GUI
+- `/bedwars cosmetics` - Cosmetics menu
+- `/bedwars achievements` - Achievements menu
 - `/bw` - Command alias
 
 **Admin Commands:**
@@ -173,6 +182,9 @@ A comprehensive, fully-featured BedWars minigame plugin for Minecraft (Spigot/Pa
 - `/bedwars setup setspawn <arena> <team>` - Set team spawn
 - `/bedwars setup setbed <arena> <team>` - Set bed location
 - `/bedwars setup addgenerator <name>` - Add a generator
+- `/bedwars vote start` - Force start map voting
+- `/bedwars vote end` - End map voting immediately
+- `/bedwars vote force <arena>` - Force a map selection
 
 ---
 
@@ -229,7 +241,7 @@ arenas:
 |--------------|---------|
 | **Minecraft Version** | 1.20.4+ |
 | **Server Software** | Spigot/Paper |
-| **Java Version** | 17+ |
+| **Java Version** | 21+ |
 | **Build Tool** | Maven 3.6+ |
 | **API** | Spigot API |
 | **Code Lines** | 3,500+ |
@@ -284,11 +296,7 @@ arenas:
 ## 🔮 Future Enhancement Ideas
 
 While complete, here are ideas for expansion:
-- Cosmetics system (kill effects, bed destroy effects)
-- Party system (play with friends)
 - Multiple game modes (solo, doubles, squads)
-- Achievements system
-- Map voting
 - Anti-cheat integration
 
 ---

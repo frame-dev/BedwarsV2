@@ -63,9 +63,56 @@ public class DatabaseManager {
                 CREATE INDEX IF NOT EXISTS idx_beds_broken ON player_stats(beds_broken DESC);
                 """;
 
+        String createPartiesTable = """
+            CREATE TABLE IF NOT EXISTS parties (
+                id TEXT PRIMARY KEY,
+                leader_uuid TEXT NOT NULL,
+                created_at INTEGER
+            )
+            """;
+
+        String createPartyMembersTable = """
+            CREATE TABLE IF NOT EXISTS party_members (
+                party_id TEXT NOT NULL,
+                member_uuid TEXT NOT NULL,
+                role TEXT NOT NULL,
+                joined_at INTEGER,
+                PRIMARY KEY (party_id, member_uuid)
+            )
+            """;
+
+        String createPartyIndexes = """
+            CREATE INDEX IF NOT EXISTS idx_party_member_uuid ON party_members(member_uuid);
+            """;
+
+        String createCosmeticsTable = """
+            CREATE TABLE IF NOT EXISTS player_cosmetics (
+                uuid TEXT PRIMARY KEY,
+                kill_effect TEXT,
+                bed_effect TEXT,
+                updated_at INTEGER
+            )
+            """;
+
+        String createAchievementsTable = """
+                CREATE TABLE IF NOT EXISTS player_achievements (
+                    uuid TEXT NOT NULL,
+                    achievement_id TEXT NOT NULL,
+                    progress INTEGER DEFAULT 0,
+                    unlocked_at INTEGER DEFAULT 0,
+                    updated_at INTEGER,
+                    PRIMARY KEY (uuid, achievement_id)
+                )
+                """;
+
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createStatsTable);
             stmt.execute(createIndexes);
+            stmt.execute(createPartiesTable);
+            stmt.execute(createPartyMembersTable);
+            stmt.execute(createPartyIndexes);
+            stmt.execute(createCosmeticsTable);
+            stmt.execute(createAchievementsTable);
             plugin.getLogger().info("Database tables created successfully!");
             plugin.getDebugLogger().debug("Database schema ensured");
         } catch (SQLException e) {

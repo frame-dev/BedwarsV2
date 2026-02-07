@@ -455,8 +455,15 @@ public class Game {
 
                 if (winningTeam != null && gamePlayer.getTeam() == winningTeam) {
                     stats.addWin();
+                    if (plugin.getAchievementsManager() != null) {
+                        plugin.getAchievementsManager().recordWin(player.getUniqueId());
+                    }
                 } else {
                     stats.addLoss();
+                }
+
+                if (plugin.getAchievementsManager() != null) {
+                    plugin.getAchievementsManager().recordGamePlayed(player.getUniqueId());
                 }
 
                 stats.setKills(stats.getKills() + gamePlayer.getKills());

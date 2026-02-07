@@ -51,6 +51,10 @@ public class GameManager {
         playerGames.put(player.getUniqueId(), game);
         plugin.getDebugLogger().debug("Player mapped to game: " + player.getName()
                 + " -> " + game.getArena().getName());
+
+        if (plugin.getMapVoteManager() != null) {
+            plugin.getMapVoteManager().removePlayer(player);
+        }
     }
 
     public void removePlayerFromGame(Player player) {

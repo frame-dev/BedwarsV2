@@ -10,7 +10,7 @@ libraries:
 commands:
   bedwars:
     description: Main BedWars command
-    usage: /bedwars <join|leave|stats|list|setup>
+    usage: /bedwars <join|leave|stats|list|setup|party|queue|vote|cosmetics|achievements>
     aliases: [bw]
 
 permissions:
@@ -37,4 +37,31 @@ permissions:
     default: op
   bedwars.bungee:
     description: BungeeCord server switching
+    default: true
+  bedwars.party:
+    description: Party commands
+    default: true
+  bedwars.party.invite:
+    description: Invite players to a party
+    default: true
+  bedwars.party.kick:
+    description: Kick players from a party
+    default: true
+  bedwars.party.promote:
+    description: Promote a party member to leader
+    default: true
+  bedwars.queue:
+    description: Join the map voting queue
+    default: true
+  bedwars.vote:
+    description: Vote for a map
+    default: true
+  bedwars.vote.admin:
+    description: Admin control for map voting
+    default: op
+  bedwars.cosmetics:
+    description: Open cosmetics menu
+    default: true
+  bedwars.achievements:
+    description: Open achievements menu
     default: true

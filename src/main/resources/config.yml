@@ -137,6 +137,27 @@ debug:
   # Include high-frequency event details (can be very noisy)
   verbose-logging: false
   show-generator-spawns: false
+
+# Party Settings
+party:
+  max-size: 4
+  invite-expire-seconds: 60
+
+# Map Voting Settings
+map-voting:
+  enabled: true
+  queue-min-players: 2
+  vote-duration-seconds: 20
+  allow-revote: true
+  gui-title: "&aMap Voting"
+  gui-size: 27
+  gui-item: "MAP"
+  gui-slot-start: 10
+  gui-slot-step: 1
+  gui-lore:
+    - "&7Votes: &e{votes}"
+    - "&7Queued: &e{queued}"
+    - "&7Click to vote"
   
 # Example arena configuration (arenas are managed via setup commands)
 # arenas:

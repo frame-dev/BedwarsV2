@@ -16,9 +16,11 @@ import java.util.stream.Collectors;
  */
 public class BedWarsTabCompleter implements TabCompleter {
 
+    private final BedWarsPlugin plugin;
     private final ArenaManager arenaManager;
 
     public BedWarsTabCompleter(BedWarsPlugin plugin, ArenaManager arenaManager) {
+        this.plugin = plugin;
         this.arenaManager = arenaManager;
     }
 
@@ -29,7 +31,8 @@ public class BedWarsTabCompleter implements TabCompleter {
         if (args.length == 1) {
             // Main commands
             List<String> commands = new ArrayList<>(
-                    Arrays.asList("join", "leave", "stats", "leaderboard", "top", "list", "spectate"));
+                Arrays.asList("join", "leave", "stats", "leaderboard", "top", "list", "spectate", "party",
+                        "queue", "vote", "cosmetics", "achievements"));
             if (sender.hasPermission("bedwars.setup")) {
                 commands.add("setup");
             }
@@ -68,6 +71,19 @@ public class BedWarsTabCompleter implements TabCompleter {
                     return setupCommands.stream()
                             .filter(c -> c.toLowerCase().startsWith(args[1].toLowerCase()))
                             .collect(Collectors.toList());
+
+                case "party":
+                    List<String> partyCommands = Arrays.asList(
+                            "create", "invite", "accept", "deny", "leave", "kick",
+                            "promote", "disband", "list", "chat");
+                    return partyCommands.stream()
+                            .filter(c -> c.toLowerCase().startsWith(args[1].toLowerCase()))
+                            .collect(Collectors.toList());
+
+                case "vote":
+                    return Arrays.asList("open", "start", "end", "force").stream()
+                        .filter(c -> c.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList());
             }
         }
 
@@ -88,6 +104,26 @@ public class BedWarsTabCompleter implements TabCompleter {
                             return new ArrayList<>(arenaManager.getArenaNames()).stream()
                                     .filter(a -> a.toLowerCase().startsWith(args[2].toLowerCase()))
                                     .collect(Collectors.toList());
+                    }
+                    break;
+                case "party":
+                    switch (args[1].toLowerCase()) {
+                        case "invite":
+                        case "kick":
+                        case "promote":
+                        case "accept":
+                        case "deny":
+                            return plugin.getServer().getOnlinePlayers().stream()
+                                    .map(p -> p.getName())
+                                    .filter(n -> n.toLowerCase().startsWith(args[2].toLowerCase()))
+                                    .collect(Collectors.toList());
+                    }
+                    break;
+                case "vote":
+                    if ("force".equalsIgnoreCase(args[1])) {
+                        return new ArrayList<>(arenaManager.getArenaNames()).stream()
+                                .filter(a -> a.toLowerCase().startsWith(args[2].toLowerCase()))
+                                .collect(Collectors.toList());
                     }
                     break;
             }

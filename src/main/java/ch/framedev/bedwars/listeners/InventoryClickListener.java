@@ -42,6 +42,37 @@ public class InventoryClickListener implements Listener {
         Player player = (Player) event.getWhoClicked();
         String title = event.getView().getTitle();
 
+        if (plugin.getCosmeticsManager() != null && plugin.getCosmeticsManager().isCosmeticsTitle(title)) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
+                return;
+            }
+            plugin.getCosmeticsManager().handleMenuClick(player, event.getSlot());
+            return;
+        }
+
+        if (plugin.getAchievementsManager() != null && plugin.getAchievementsManager().isAchievementsTitle(title)) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
+                return;
+            }
+            plugin.getAchievementsManager().handleMenuClick(player, event.getSlot());
+            return;
+        }
+
+        String voteTitle = ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("map-voting.gui-title", "Map Voting"));
+        if (ChatColor.stripColor(title).equalsIgnoreCase(ChatColor.stripColor(voteTitle))) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
+                return;
+            }
+            if (plugin.getMapVoteManager() != null) {
+                plugin.getMapVoteManager().handleVoteClick(player, event.getCurrentItem(), event.getSlot());
+            }
+            return;
+        }
+
         // Check if it's a shop inventory
         if (title.contains("Item Shop") || title.contains("Team Upgrades") || isShopCategory(title)) {
             event.setCancelled(true);

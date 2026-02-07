@@ -57,6 +57,8 @@ public class Game {
 
         initializeTeams();
         initializeGenerators();
+        plugin.getDebugLogger().debug("Game initialized for arena: " + arena.getName()
+            + ", teams=" + teams.size() + ", generators=" + generators.size());
     }
 
     private void initializeTeams() {
@@ -65,6 +67,8 @@ public class Game {
                 teams.put(color, new Team(color, arena.getTeamSpawn(color), arena.getBedLocation(color)));
             }
         }
+        plugin.getDebugLogger().debug("Teams initialized for arena: " + arena.getName()
+                + ", count=" + teams.size());
     }
 
     private void initializeGenerators() {
@@ -166,9 +170,14 @@ public class Game {
             generators.add(new ResourceGenerator(entry.getValue(), type, 1, tier1Delay, tier2Delay, spawnAmount,
                     maxStack));
         }
+
+            plugin.getDebugLogger().debug("Generators initialized for arena: " + arena.getName()
+                + ", count=" + generators.size());
     }
 
     public void addPlayer(Player player) {
+        plugin.getDebugLogger().debug("Add player requested: " + player.getName()
+                + ", arena=" + arena.getName() + ", state=" + state);
         if (state == GameState.RUNNING || state == GameState.ENDING) {
             plugin.getMessageManager().sendMessage(player, "command.game-already-running");
             return;
@@ -188,6 +197,7 @@ public class Game {
         if (team != null) {
             team.addPlayer(gamePlayer);
             gamePlayer.setTeam(team);
+            plugin.getDebugLogger().debug("Assigned team: " + player.getName() + " -> " + team.getColor().name());
         }
 
         plugin.getGameManager().addPlayerToGame(player, this);
@@ -204,6 +214,8 @@ public class Game {
 
     public void removePlayer(Player player) {
         GamePlayer gamePlayer = players.remove(player.getUniqueId());
+        plugin.getDebugLogger().debug("Remove player: " + player.getName()
+                + ", arena=" + arena.getName() + ", state=" + state);
         if (gamePlayer != null && gamePlayer.getTeam() != null) {
             gamePlayer.getTeam().removePlayer(gamePlayer);
         }
@@ -232,6 +244,9 @@ public class Game {
         countdown = plugin.getConfig().getInt("game.countdown-time", 30);
         List<Integer> broadcastIntervals = plugin.getConfig().getIntegerList("game.countdown-broadcast-intervals");
 
+        plugin.getDebugLogger().debug("Countdown started: arena=" + arena.getName()
+            + ", seconds=" + countdown);
+
         countdownTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -254,6 +269,7 @@ public class Game {
         }
         state = GameState.WAITING;
         broadcast("game.countdown-cancelled");
+        plugin.getDebugLogger().debug("Countdown cancelled: arena=" + arena.getName());
     }
 
     /**
@@ -271,6 +287,8 @@ public class Game {
     private void startGame() {
         state = GameState.RUNNING;
         broadcast("game.game-started");
+        plugin.getDebugLogger().debug("Game started: arena=" + arena.getName()
+            + ", players=" + players.size());
 
         // Teleport players to their team spawns
         for (GamePlayer gamePlayer : players.values()) {
@@ -288,6 +306,7 @@ public class Game {
         for (ResourceGenerator generator : generators) {
             generator.start(plugin);
         }
+        plugin.getDebugLogger().debug("Resource generators started: count=" + generators.size());
 
         // Start game timer
         startGameTimer();
@@ -301,6 +320,9 @@ public class Game {
         int emeraldUpgradeTime = plugin.getConfig().getInt("game.emerald-upgrade-time", 1440);
         boolean[] upgraded = new boolean[] { false, false };
 
+        plugin.getDebugLogger().debug("Game timer started: diamondUpgrade=" + diamondUpgradeTime
+            + "s, emeraldUpgrade=" + emeraldUpgradeTime + "s");
+
         gameTask = new BukkitRunnable() {
             int elapsed = 0;
 
@@ -313,6 +335,7 @@ public class Game {
                     upgraded[0] = true;
                     upgradeGenerators(ResourceGenerator.ResourceType.DIAMOND);
                     broadcast("game.diamond-upgrade");
+                    plugin.getDebugLogger().debug("Diamond generators upgraded: arena=" + arena.getName());
                 }
 
                 // Emerald generators upgrade at 24 minutes
@@ -320,6 +343,7 @@ public class Game {
                     upgraded[1] = true;
                     upgradeGenerators(ResourceGenerator.ResourceType.EMERALD);
                     broadcast("game.emerald-upgrade");
+                    plugin.getDebugLogger().debug("Emerald generators upgraded: arena=" + arena.getName());
                 }
             }
         };
@@ -330,6 +354,9 @@ public class Game {
         GamePlayer gamePlayer = players.get(player.getUniqueId());
         if (gamePlayer == null)
             return;
+
+        plugin.getDebugLogger().debug("Handle player death: " + player.getName()
+                + ", bedAlive=" + (gamePlayer.getTeam() != null && gamePlayer.getTeam().isBedAlive()));
 
         gamePlayer.addDeath();
 
@@ -348,6 +375,7 @@ public class Game {
                         giveStartingItem(player);
                         player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
                         plugin.getMessageManager().sendMessage(player, "game.respawned");
+                        plugin.getDebugLogger().debug("Player respawned: " + player.getName());
                         cancel();
                     } else {
                         plugin.getMessageManager().sendMessage(player, "game.respawning", respawnTime);
@@ -381,6 +409,8 @@ public class Game {
             broadcast("game.player-eliminated", player.getName());
             plugin.getMessageManager().sendMessage(player, "game.now-spectating");
 
+            plugin.getDebugLogger().debug("Player eliminated: " + player.getName());
+
             checkWinCondition();
         }
     }
@@ -402,6 +432,8 @@ public class Game {
 
     public void endGame(Team winningTeam) {
         state = GameState.ENDING;
+        plugin.getDebugLogger().debug("Game ending: arena=" + arena.getName()
+            + ", winner=" + (winningTeam != null ? winningTeam.getColor().name() : "none"));
 
         if (gameTask != null) {
             gameTask.cancel();
@@ -476,6 +508,9 @@ public class Game {
     private void sendToLobbyDelayed(Player player) {
         int delay = plugin.getConfig().getInt("bungeecord.lobby-send-delay", 3);
 
+        plugin.getDebugLogger().debug("Sending player to lobby (delayed): " + player.getName()
+            + ", delay=" + delay + "s");
+
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -494,6 +529,7 @@ public class Game {
             if (blocksReset > 0) {
                 worldResetManager.resetWorld();
                 broadcast("game.world-reset", blocksReset);
+                plugin.getDebugLogger().debug("World reset completed: blocks=" + blocksReset);
             }
         }
 
@@ -506,6 +542,8 @@ public class Game {
         for (Team team : teams.values()) {
             team.reset();
         }
+
+        plugin.getDebugLogger().debug("Game reset to WAITING: arena=" + arena.getName());
     }
 
     private Team getSmallestTeam() {
@@ -569,6 +607,9 @@ public class Game {
         spectators.add(player.getUniqueId());
         plugin.getGameManager().addPlayerToGame(player, this);
 
+        plugin.getDebugLogger().debug("Spectator added: " + player.getName()
+            + ", arena=" + arena.getName());
+
         // Set spectator mode
         player.setGameMode(GameMode.SPECTATOR);
         player.teleport(arena.getSpectatorSpawn());
@@ -589,6 +630,9 @@ public class Game {
             player.setGameMode(GameMode.SURVIVAL);
             player.teleport(arena.getLobbySpawn());
             plugin.getMessageManager().sendMessage(player, "spectator.stopped-spectating");
+
+            plugin.getDebugLogger().debug("Spectator removed: " + player.getName()
+                    + ", arena=" + arena.getName());
 
             // Make them visible again
             for (GamePlayer gp : players.values()) {
@@ -612,6 +656,9 @@ public class Game {
         if (team == null || upgradeId == null) {
             return;
         }
+
+        plugin.getDebugLogger().debug("Apply special upgrade: " + upgradeId
+                + " for team=" + team.getColor().name());
 
         String id = upgradeId.toLowerCase(Locale.ROOT);
         if (id.equals("heal-pool")) {
@@ -670,12 +717,14 @@ public class Game {
         };
 
         healPoolTask.runTaskTimer(plugin, 0L, 20L);
+        plugin.getDebugLogger().debug("Heal pool task started: arena=" + arena.getName());
     }
 
     private void stopHealPoolTask() {
         if (healPoolTask != null) {
             healPoolTask.cancel();
             healPoolTask = null;
+            plugin.getDebugLogger().debug("Heal pool task stopped: arena=" + arena.getName());
         }
     }
 
@@ -715,6 +764,8 @@ public class Game {
 
         if (!ids.isEmpty()) {
             dragonBuffs.put(team.getColor(), ids);
+            plugin.getDebugLogger().debug("Dragon buff spawned: team=" + team.getColor().name()
+                    + ", count=" + ids.size());
         }
     }
 
@@ -728,6 +779,7 @@ public class Game {
             }
         }
         dragonBuffs.clear();
+        plugin.getDebugLogger().debug("Dragon buffs cleared: arena=" + arena.getName());
     }
 
     private Location getTeamBaseLocation(Team team) {
@@ -750,6 +802,7 @@ public class Game {
                 generator.upgrade();
             }
         }
+        plugin.getDebugLogger().debug("Generators upgraded: type=" + type + ", arena=" + arena.getName());
     }
 
     private ResourceGenerator.ResourceType parseGeneratorType(String name) {

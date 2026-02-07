@@ -34,8 +34,10 @@ public class ArenaManager {
     private void loadArenasFile() {
         if (!arenasFile.exists()) {
             plugin.saveResource("arenas.yml", false);
+            plugin.getDebugLogger().debug("Created default arenas.yml");
         }
         arenasConfig = YamlConfiguration.loadConfiguration(arenasFile);
+        plugin.getDebugLogger().debug("Loaded arenas.yml from " + arenasFile.getAbsolutePath());
     }
 
     public ArenaSetupSession getOrCreateSession(UUID playerUUID) {
@@ -56,6 +58,7 @@ public class ArenaManager {
 
     public void saveArena(ArenaSetupSession session) throws IOException {
         String basePath = "arenas." + session.getArenaName();
+        plugin.getDebugLogger().debug("Saving arena: " + session.getArenaName());
 
         // Basic settings
         arenasConfig.set(basePath + ".lobby-spawn", LocationUtils.toString(session.getLobbySpawn()));
@@ -83,6 +86,7 @@ public class ArenaManager {
         }
 
         arenasConfig.save(arenasFile);
+        plugin.getDebugLogger().debug("Arena saved: " + session.getArenaName());
     }
 
     public Arena loadArena(String name) {
@@ -133,6 +137,7 @@ public class ArenaManager {
             return arena;
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to load arena " + name + ": " + e.getMessage());
+            plugin.getDebugLogger().debug("Arena load failed: " + name);
             return null;
         }
     }
@@ -145,9 +150,11 @@ public class ArenaManager {
         arenasConfig.set("arenas." + name, null);
         try {
             arenasConfig.save(arenasFile);
+            plugin.getDebugLogger().debug("Arena deleted: " + name);
             return true;
         } catch (IOException e) {
             plugin.getLogger().severe("Failed to delete arena: " + e.getMessage());
+            plugin.getDebugLogger().debug("Arena delete failed: " + name);
             return false;
         }
     }

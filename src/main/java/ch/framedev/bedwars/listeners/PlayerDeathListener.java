@@ -26,12 +26,13 @@ public class PlayerDeathListener implements Listener {
         Game game = plugin.getGameManager().getPlayerGame(player);
 
         if (game != null && game.getState() == GameState.RUNNING) {
+            Player killer = player.getKiller();
+            plugin.getDebugLogger().debug("Player death: " + player.getName()
+                    + ", killer=" + (killer != null ? killer.getName() : "none"));
             event.setDeathMessage(null);
 
             GamePlayer gamePlayer = game.getGamePlayer(player);
             if (gamePlayer != null) {
-                Player killer = player.getKiller();
-
                 if (killer != null) {
                     GamePlayer killerPlayer = game.getGamePlayer(killer);
                     if (killerPlayer != null) {

@@ -37,6 +37,8 @@ public class ItemPickupListener implements Listener {
             GamePlayer gamePlayer = game.getGamePlayer(player);
             if (gamePlayer != null && gamePlayer.getTeam() != null) {
                 ItemStack item = event.getItem().getItemStack();
+                plugin.getDebugLogger().debug("Item pickup: " + player.getName() + " " + item.getType()
+                        + " x" + item.getAmount());
                 upgradeManager.applyUpgradesToItem(item, gamePlayer.getTeam().getUpgrades());
             }
         }
@@ -55,6 +57,8 @@ public class ItemPickupListener implements Listener {
             if (gamePlayer != null && gamePlayer.getTeam() != null) {
                 // Apply upgrades when player crafts or gets items from containers
                 if (event.getCurrentItem() != null) {
+                    plugin.getDebugLogger().debug("Apply upgrades on inventory click: " + player.getName()
+                            + " " + event.getCurrentItem().getType());
                     upgradeManager.applyUpgradesToItem(event.getCurrentItem(), gamePlayer.getTeam().getUpgrades());
                 }
             }

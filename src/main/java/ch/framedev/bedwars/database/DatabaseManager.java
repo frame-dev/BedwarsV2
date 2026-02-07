@@ -18,6 +18,7 @@ public class DatabaseManager {
         this.plugin = plugin;
         this.dbPath = plugin.getDataFolder().getAbsolutePath() + File.separator + "bedwars.db";
         plugin.getLogger().info("DatabaseManager initialized with db path: " + dbPath);
+        plugin.getDebugLogger().debug("Database path set: " + dbPath);
     }
 
     /**
@@ -28,6 +29,7 @@ public class DatabaseManager {
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
             plugin.getLogger().info("Successfully connected to SQLite database!");
+            plugin.getDebugLogger().debug("SQLite connection established");
             createTables();
         } catch (ClassNotFoundException | SQLException e) {
             plugin.getLogger().severe("Failed to connect to database: " + e.getMessage());
@@ -65,6 +67,7 @@ public class DatabaseManager {
             stmt.execute(createStatsTable);
             stmt.execute(createIndexes);
             plugin.getLogger().info("Database tables created successfully!");
+            plugin.getDebugLogger().debug("Database schema ensured");
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to create database tables: " + e.getMessage());
             e.printStackTrace();
@@ -79,6 +82,7 @@ public class DatabaseManager {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
                 plugin.getLogger().info("Database connection closed.");
+                plugin.getDebugLogger().debug("SQLite connection closed");
             }
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to close database connection: " + e.getMessage());
@@ -119,6 +123,7 @@ public class DatabaseManager {
         for (int i = 0; i < params.length; i++) {
             stmt.setObject(i + 1, params[i]);
         }
+        plugin.getDebugLogger().verbose("DB query: " + query + " | params=" + params.length);
         return stmt.executeQuery();
     }
 
@@ -130,6 +135,7 @@ public class DatabaseManager {
             for (int i = 0; i < params.length; i++) {
                 stmt.setObject(i + 1, params[i]);
             }
+            plugin.getDebugLogger().verbose("DB update: " + query + " | params=" + params.length);
             return stmt.executeUpdate();
         }
     }

@@ -1,7 +1,7 @@
 package ch.framedev.bedwars.stats;
 
+import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.database.DatabaseManager;
-import org.bukkit.plugin.Plugin;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -15,15 +15,16 @@ import java.util.concurrent.CompletableFuture;
  */
 public class StatsManager {
 
-    private final Plugin plugin;
+    private final BedWarsPlugin plugin;
     private final DatabaseManager database;
     private final Map<UUID, PlayerStats> statsCache;
 
-    public StatsManager(Plugin plugin, DatabaseManager database) {
+    public StatsManager(BedWarsPlugin plugin, DatabaseManager database) {
         this.plugin = plugin;
         this.database = database;
         this.statsCache = new HashMap<>();
         plugin.getLogger().info("StatsManager initialized with database connection");
+        plugin.getDebugLogger().debug("StatsManager ready");
     }
 
     /**
@@ -35,6 +36,8 @@ public class StatsManager {
             if (statsCache.containsKey(uuid)) {
                 return statsCache.get(uuid);
             }
+
+            plugin.getDebugLogger().debug("Loading stats: " + uuid);
 
             String query = "SELECT * FROM player_stats WHERE uuid = ?";
             try (ResultSet rs = database.executeQuery(query, uuid.toString())) {
@@ -59,6 +62,7 @@ public class StatsManager {
             // Create new stats if player doesn't exist
             PlayerStats newStats = new PlayerStats(uuid);
             statsCache.put(uuid, newStats);
+            plugin.getDebugLogger().debug("Created new stats: " + uuid);
             return newStats;
         });
     }
@@ -71,6 +75,8 @@ public class StatsManager {
             PlayerStats stats = statsCache.get(uuid);
             if (stats == null)
                 return;
+
+            plugin.getDebugLogger().debug("Saving stats: " + uuid + " (" + playerName + ")");
 
             String query = """
                     INSERT INTO player_stats (uuid, player_name, wins, losses, kills, deaths,
@@ -117,6 +123,7 @@ public class StatsManager {
             savePlayerStats(entry.getKey(), "Unknown").join(); // Join to ensure completion
         }
         plugin.getLogger().info("Saved " + statsCache.size() + " player statistics to database.");
+        plugin.getDebugLogger().debug("Saved all stats: count=" + statsCache.size());
     }
 
     /**
@@ -136,6 +143,8 @@ public class StatsManager {
         return CompletableFuture.supplyAsync(() -> {
             Map<String, Integer> topPlayers = new HashMap<>();
             String query = "SELECT player_name, wins FROM player_stats ORDER BY wins DESC LIMIT ?";
+
+            plugin.getDebugLogger().debug("Leaderboard query: wins limit=" + limit);
 
             try (ResultSet rs = database.executeQuery(query, limit)) {
                 while (rs.next()) {
@@ -157,6 +166,8 @@ public class StatsManager {
             Map<String, Integer> topPlayers = new HashMap<>();
             String query = "SELECT player_name, kills FROM player_stats ORDER BY kills DESC LIMIT ?";
 
+            plugin.getDebugLogger().debug("Leaderboard query: kills limit=" + limit);
+
             try (ResultSet rs = database.executeQuery(query, limit)) {
                 while (rs.next()) {
                     topPlayers.put(rs.getString("player_name"), rs.getInt("kills"));
@@ -177,6 +188,8 @@ public class StatsManager {
             Map<String, Integer> topPlayers = new HashMap<>();
             String query = "SELECT player_name, beds_broken FROM player_stats ORDER BY beds_broken DESC LIMIT ?";
 
+            plugin.getDebugLogger().debug("Leaderboard query: beds limit=" + limit);
+
             try (ResultSet rs = database.executeQuery(query, limit)) {
                 while (rs.next()) {
                     topPlayers.put(rs.getString("player_name"), rs.getInt("beds_broken"));
@@ -194,6 +207,7 @@ public class StatsManager {
      */
     public void clearCache(UUID uuid) {
         statsCache.remove(uuid);
+        plugin.getDebugLogger().debug("Stats cache cleared: " + uuid);
     }
 
     /**
@@ -202,6 +216,7 @@ public class StatsManager {
     public CompletableFuture<Integer> getTotalPlayers() {
         return CompletableFuture.supplyAsync(() -> {
             String query = "SELECT COUNT(*) as total FROM player_stats";
+            plugin.getDebugLogger().debug("Total players query");
             try (ResultSet rs = database.executeQuery(query)) {
                 if (rs.next()) {
                     return rs.getInt("total");

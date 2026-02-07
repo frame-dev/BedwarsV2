@@ -9,6 +9,7 @@ import ch.framedev.bedwars.game.GameManager;
 import ch.framedev.bedwars.manager.UpgradeManager;
 import ch.framedev.bedwars.player.GamePlayer;
 import ch.framedev.bedwars.stats.StatsManager;
+import ch.framedev.bedwars.utils.DebugLogger;
 import ch.framedev.bedwars.utils.MessageManager;
 import ch.framedev.bedwars.listeners.*;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -26,6 +27,7 @@ public class BedWarsPlugin extends JavaPlugin {
     private BungeeManager bungeeManager;
     private MessageManager messageManager;
     private UpgradeManager upgradeManager;
+    private DebugLogger debugLogger;
 
     @Override
     public void onEnable() {
@@ -33,6 +35,12 @@ public class BedWarsPlugin extends JavaPlugin {
 
         // Save default config
         saveDefaultConfig();
+
+        // Initialize debug logger early
+        debugLogger = new DebugLogger(this);
+        if (debugLogger.isEnabled()) {
+            debugLogger.debug("Debug logging enabled");
+        }
 
         // Initialize message manager
         messageManager = new MessageManager(this);
@@ -134,5 +142,9 @@ public class BedWarsPlugin extends JavaPlugin {
 
     public UpgradeManager getUpgradeManager() {
         return upgradeManager;
+    }
+
+    public DebugLogger getDebugLogger() {
+        return debugLogger;
     }
 }

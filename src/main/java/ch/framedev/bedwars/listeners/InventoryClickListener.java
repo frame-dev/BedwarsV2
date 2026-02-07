@@ -46,6 +46,9 @@ public class InventoryClickListener implements Listener {
         if (title.contains("Item Shop") || title.contains("Team Upgrades") || isShopCategory(title)) {
             event.setCancelled(true);
 
+            plugin.getDebugLogger().debug("Shop click: " + player.getName() + ", title=" + title
+                    + ", slot=" + event.getSlot());
+
             if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR)
                 return;
 
@@ -84,6 +87,8 @@ public class InventoryClickListener implements Listener {
         // Open category based on clicked icon
         for (ShopCategory category : shopGUI.getShopManager().getCategories()) {
             if (clickedItem.getType() == category.getIcon()) {
+                plugin.getDebugLogger().debug("Open shop category: " + player.getName()
+                        + ", category=" + category.getName());
                 shopGUI.openCategory(player, category);
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                 return;
@@ -95,6 +100,7 @@ public class InventoryClickListener implements Listener {
             MessageManager mm) {
         // Back button
         if (slot == 49 && clickedItem.getType() == Material.ARROW) {
+            plugin.getDebugLogger().debug("Shop back: " + player.getName() + ", category=" + title);
             shopGUI.openMainShop(player, game);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             return;
@@ -114,6 +120,8 @@ public class InventoryClickListener implements Listener {
         // Attempt purchase
         ItemStack purchased = shopGUI.purchaseItem(player, shopItem);
         if (purchased != null) {
+            plugin.getDebugLogger().debug("Shop purchase: " + player.getName() + ", item="
+                    + shopItem.getItem().getType());
             mm.sendMessage(player, "shop.purchase-successful");
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
 
@@ -125,6 +133,8 @@ public class InventoryClickListener implements Listener {
             // Refresh the inventory to show updated purchase options
             shopGUI.openCategory(player, category);
         } else {
+            plugin.getDebugLogger().debug("Shop purchase failed: " + player.getName() + ", item="
+                    + shopItem.getItem().getType());
             ItemStack cost = shopItem.getCost();
             String resourceName = formatMaterialName(cost.getType());
             mm.sendMessage(player, "shop.not-enough-resources", resourceName);
@@ -158,6 +168,8 @@ public class InventoryClickListener implements Listener {
         // Attempt upgrade purchase
         if (upgradeShopGUI.purchaseUpgrade(player, team, upgradeId)) {
             var upgrade = upgradeShopGUI.getUpgradeManager().getUpgrade(upgradeId);
+
+            plugin.getDebugLogger().debug("Upgrade purchase: " + player.getName() + ", upgrade=" + upgradeId);
 
             mm.sendMessage(player, "shop.upgrade-purchased");
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
@@ -217,6 +229,7 @@ public class InventoryClickListener implements Listener {
             // Refresh the inventory
             upgradeShopGUI.openUpgradeShop(player, team);
         } else {
+            plugin.getDebugLogger().debug("Upgrade purchase failed: " + player.getName() + ", upgrade=" + upgradeId);
             mm.sendMessage(player, "shop.upgrade-max-level");
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
         }

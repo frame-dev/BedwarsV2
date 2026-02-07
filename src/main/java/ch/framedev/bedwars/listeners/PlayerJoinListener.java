@@ -18,6 +18,8 @@ public class PlayerJoinListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        plugin.getDebugLogger().debug("Player join: " + event.getPlayer().getName()
+                + " (" + event.getPlayer().getUniqueId() + ")");
         // Load player stats asynchronously when they join
         plugin.getStatsManager().loadPlayerStats(event.getPlayer().getUniqueId());
     }

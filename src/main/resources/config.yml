@@ -132,7 +132,9 @@ messages:
 
 # Debug Settings
 debug:
+  # Enable debug logging across the plugin
   enabled: false
+  # Include high-frequency event details (can be very noisy)
   verbose-logging: false
   show-generator-spawns: false
   

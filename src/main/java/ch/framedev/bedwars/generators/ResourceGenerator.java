@@ -1,5 +1,7 @@
 package ch.framedev.bedwars.generators;
 
+import ch.framedev.BedWarsPlugin;
+import ch.framedev.bedwars.utils.DebugLogger;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -44,6 +46,12 @@ public class ResourceGenerator {
         this.plugin = plugin;
         int delay = getDelayTicks();
 
+        DebugLogger logger = getDebugLogger();
+        if (logger != null) {
+            logger.debug("Generator started: type=" + type + ", level=" + level
+                    + ", delayTicks=" + delay + ", location=" + formatLocation());
+        }
+
         task = new BukkitRunnable() {
             @Override
             public void run() {
@@ -56,6 +64,10 @@ public class ResourceGenerator {
         if (task != null) {
             task.cancel();
             task = null;
+            DebugLogger logger = getDebugLogger();
+            if (logger != null) {
+                logger.debug("Generator stopped: type=" + type + ", location=" + formatLocation());
+            }
         }
     }
 
@@ -91,6 +103,12 @@ public class ResourceGenerator {
         ItemStack item = new ItemStack(type.getMaterial(), amount);
         Item droppedItem = world.dropItem(location, item);
         droppedItem.setVelocity(droppedItem.getVelocity().zero());
+
+        DebugLogger logger = getDebugLogger();
+        if (logger != null && logger.isVerbose() && isGeneratorSpawnDebugEnabled()) {
+            logger.verbose("Generator spawn: type=" + type + ", amount=" + amount
+                    + ", location=" + formatLocation());
+        }
     }
 
     private int getDelayTicks() {
@@ -103,6 +121,12 @@ public class ResourceGenerator {
         if (plugin != null) {
             restartTask();
         }
+
+        DebugLogger logger = getDebugLogger();
+        if (logger != null) {
+            logger.debug("Generator upgraded: type=" + type + ", level=" + level
+                    + ", location=" + formatLocation());
+        }
     }
 
     private void restartTask() {
@@ -111,12 +135,36 @@ public class ResourceGenerator {
         }
         stop();
         int delay = getDelayTicks();
+        DebugLogger logger = getDebugLogger();
+        if (logger != null) {
+            logger.debug("Generator task restarted: type=" + type + ", delayTicks=" + delay
+                    + ", location=" + formatLocation());
+        }
         task = new BukkitRunnable() {
             @Override
             public void run() {
                 spawnResource();
             }
         }.runTaskTimer(plugin, delay, delay);
+    }
+
+    private DebugLogger getDebugLogger() {
+        if (plugin instanceof BedWarsPlugin bwPlugin) {
+            return bwPlugin.getDebugLogger();
+        }
+        return null;
+    }
+
+    private boolean isGeneratorSpawnDebugEnabled() {
+        if (plugin instanceof BedWarsPlugin bwPlugin) {
+            return bwPlugin.getConfig().getBoolean("debug.show-generator-spawns", false);
+        }
+        return false;
+    }
+
+    private String formatLocation() {
+        return location.getWorld().getName() + ":" + location.getBlockX() + ","
+                + location.getBlockY() + "," + location.getBlockZ();
     }
 
     public ResourceType getType() {

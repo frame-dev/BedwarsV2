@@ -29,6 +29,14 @@ public class SpectatorListener implements Listener {
 
         Game game = plugin.getGameManager().getPlayerGame(player);
         if (game != null && game.isSpectator(player)) {
+            if (event.getTo() != null
+                    && (event.getFrom().getBlockX() != event.getTo().getBlockX()
+                            || event.getFrom().getBlockY() != event.getTo().getBlockY()
+                            || event.getFrom().getBlockZ() != event.getTo().getBlockZ())) {
+                plugin.getDebugLogger().verbose("Spectator move: " + player.getName() + " to "
+                        + event.getTo().getWorld().getName() + ":" + event.getTo().getX() + ","
+                        + event.getTo().getY() + "," + event.getTo().getZ());
+            }
             // Could add boundary checking here if needed
             // For now, spectators can move freely
         }

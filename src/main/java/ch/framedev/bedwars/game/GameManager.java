@@ -34,6 +34,7 @@ public class GameManager {
                 Game game = new Game(plugin, arena);
                 games.put(arenaName, game);
                 plugin.getLogger().info("Loaded arena: " + arenaName);
+                plugin.getDebugLogger().debug("Game created for arena: " + arenaName);
             }
         }
     }
@@ -48,10 +49,13 @@ public class GameManager {
 
     public void addPlayerToGame(Player player, Game game) {
         playerGames.put(player.getUniqueId(), game);
+        plugin.getDebugLogger().debug("Player mapped to game: " + player.getName()
+                + " -> " + game.getArena().getName());
     }
 
     public void removePlayerFromGame(Player player) {
         playerGames.remove(player.getUniqueId());
+        plugin.getDebugLogger().debug("Player removed from game mapping: " + player.getName());
     }
 
     public Collection<Game> getGames() {
@@ -62,12 +66,14 @@ public class GameManager {
         if (!games.containsKey(name)) {
             Game game = new Game(plugin, arena);
             games.put(name, game);
+            plugin.getDebugLogger().debug("Game created manually: " + name);
         }
     }
 
     public void stopAllGames() {
         for (Game game : games.values()) {
             if (game.getState() != GameState.WAITING) {
+                plugin.getDebugLogger().debug("Stopping game: " + game.getArena().getName());
                 game.endGame(null);
             }
         }

@@ -23,6 +23,9 @@ public class PlayerQuitListener implements Listener {
         Player player = event.getPlayer();
         Game game = plugin.getGameManager().getPlayerGame(player);
 
+        plugin.getDebugLogger().debug("Player quit: " + player.getName() + " (" + player.getUniqueId()
+            + "), inGame=" + (game != null));
+
         if (game != null) {
             if (game.isSpectator(player)) {
                 game.removeSpectator(player);

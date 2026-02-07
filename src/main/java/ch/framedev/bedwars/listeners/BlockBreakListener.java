@@ -27,6 +27,9 @@ public class BlockBreakListener implements Listener {
         Block block = event.getBlock();
         Game game = plugin.getGameManager().getPlayerGame(player);
 
+        plugin.getDebugLogger().debug("Block break: " + player.getName() + " " + block.getType()
+            + " at " + formatLocation(block));
+
         if (game != null && game.getState() == GameState.RUNNING) {
             if (!plugin.getConfig().getBoolean("world.allow-block-breaking", true)) {
                 event.setCancelled(true);
@@ -71,6 +74,9 @@ public class BlockBreakListener implements Listener {
 
                 team.destroyBed();
 
+                plugin.getDebugLogger().debug("Bed destroyed: team=" + team.getColor().name()
+                    + ", by=" + player.getName());
+
                 // Record bed for reset
                 game.getWorldResetManager().recordBedLocation(
                         block.getLocation(),
@@ -90,5 +96,9 @@ public class BlockBreakListener implements Listener {
                 return;
             }
         }
+    }
+
+    private String formatLocation(Block block) {
+        return block.getWorld().getName() + ":" + block.getX() + "," + block.getY() + "," + block.getZ();
     }
 }

@@ -30,8 +30,12 @@ public class EntityDamageListener implements Listener {
             Player player = (Player) event.getEntity();
             Game game = plugin.getGameManager().getPlayerGame(player);
 
+            plugin.getDebugLogger().verbose("Entity damage: " + player.getName()
+                    + ", cause=" + event.getCause() + ", game=" + (game != null));
+
             if (game != null) {
                 if (game.getState() != GameState.RUNNING) {
+                    plugin.getDebugLogger().debug("Damage cancelled (game not running) for " + player.getName());
                     event.setCancelled(true);
                     return;
                 }
@@ -41,16 +45,19 @@ public class EntityDamageListener implements Listener {
                 boolean allowPvp = plugin.getConfig().getBoolean("game.allow-pvp", true);
 
                 if (!allowFall && event.getCause() == EntityDamageEvent.DamageCause.FALL) {
+                    plugin.getDebugLogger().debug("Damage cancelled (fall) for " + player.getName());
                     event.setCancelled(true);
                     return;
                 }
 
                 if (!allowProjectile && event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
+                    plugin.getDebugLogger().debug("Damage cancelled (projectile) for " + player.getName());
                     event.setCancelled(true);
                     return;
                 }
 
                 if (!allowPvp && event instanceof EntityDamageByEntityEvent) {
+                    plugin.getDebugLogger().debug("Damage cancelled (pvp disabled) for " + player.getName());
                     event.setCancelled(true);
                     return;
                 }
@@ -73,6 +80,8 @@ public class EntityDamageListener implements Listener {
                     }
 
                     if (victim.getTeam() != null && victim.getTeam().equals(attackerPlayer.getTeam())) {
+                        plugin.getDebugLogger().debug("Damage cancelled (friendly fire) attacker="
+                                + attacker.getName() + " victim=" + player.getName());
                         event.setCancelled(true);
                     }
                 }

@@ -36,6 +36,9 @@ public class PlayerInteractListener implements Listener {
             if (event.getRightClicked().getType() == EntityType.VILLAGER) {
                 Villager villager = (Villager) event.getRightClicked();
 
+                plugin.getDebugLogger().debug("Shop interact: " + player.getName()
+                        + ", profession=" + villager.getProfession());
+
                 // Check villager profession to determine shop type
                 if (villager.getProfession() == Villager.Profession.FARMER) {
                     shopGUI.openMainShop(player, game);

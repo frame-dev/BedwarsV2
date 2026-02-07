@@ -1,5 +1,6 @@
 package ch.framedev.bedwars.upgrades;
 
+import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.manager.UpgradeManager;
 import ch.framedev.bedwars.team.Team;
 import org.bukkit.Bukkit;
@@ -9,7 +10,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +23,7 @@ public class UpgradeShopGUI {
 
     private final UpgradeManager upgradeManager;
 
-    public UpgradeShopGUI(Plugin plugin) {
+    public UpgradeShopGUI(BedWarsPlugin plugin) {
         this(new UpgradeManager(plugin));
     }
 

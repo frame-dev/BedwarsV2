@@ -30,6 +30,7 @@ public class BungeeManager implements PluginMessageListener {
             plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, "BungeeCord");
             plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, "BungeeCord", this);
             plugin.getLogger().info("BungeeCord support enabled! Lobby server: " + lobbyServer);
+            plugin.getDebugLogger().debug("Bungee channels registered");
         } else {
             plugin.getLogger().info("BungeeCord support disabled in config");
         }
@@ -64,6 +65,7 @@ public class BungeeManager implements PluginMessageListener {
 
         player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
         plugin.getLogger().info("Sending player " + player.getName() + " to server: " + server);
+        plugin.getDebugLogger().debug("Bungee connect: player=" + player.getName() + " server=" + server);
     }
 
     /**
@@ -85,6 +87,8 @@ public class BungeeManager implements PluginMessageListener {
         out.writeUTF(server);
 
         player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        plugin.getDebugLogger().debug("Bungee player count request: server=" + server
+            + " by " + player.getName());
     }
 
     /**
@@ -99,6 +103,7 @@ public class BungeeManager implements PluginMessageListener {
         out.writeUTF("ALL");
 
         player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        plugin.getDebugLogger().debug("Bungee player count request: ALL by " + player.getName());
     }
 
     /**
@@ -112,6 +117,7 @@ public class BungeeManager implements PluginMessageListener {
         out.writeUTF("GetServers");
 
         player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        plugin.getDebugLogger().debug("Bungee server list request by " + player.getName());
     }
 
     /**
@@ -125,6 +131,7 @@ public class BungeeManager implements PluginMessageListener {
         out.writeUTF("GetServer");
 
         player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        plugin.getDebugLogger().debug("Bungee current server request by " + player.getName());
     }
 
     /**
@@ -140,6 +147,7 @@ public class BungeeManager implements PluginMessageListener {
         out.writeUTF(message);
 
         sender.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+        plugin.getDebugLogger().debug("Bungee message: from=" + sender.getName() + " to=" + targetPlayer);
     }
 
     /**
@@ -164,6 +172,8 @@ public class BungeeManager implements PluginMessageListener {
         }
 
         player.sendPluginMessage(plugin, "BungeeCord", msgbytes.toByteArray());
+        plugin.getDebugLogger().debug("Bungee forward: server=" + server + " subchannel=" + subchannel
+            + " by " + player.getName());
     }
 
     /**
@@ -187,6 +197,7 @@ public class BungeeManager implements PluginMessageListener {
 
         ByteArrayDataInput in = ByteStreams.newDataInput(message);
         String subchannel = in.readUTF();
+        plugin.getDebugLogger().debug("Bungee message received: subchannel=" + subchannel);
 
         switch (subchannel) {
             case "PlayerCount":
@@ -224,6 +235,7 @@ public class BungeeManager implements PluginMessageListener {
         if (bungeeCordEnabled) {
             plugin.getServer().getMessenger().unregisterOutgoingPluginChannel(plugin);
             plugin.getServer().getMessenger().unregisterIncomingPluginChannel(plugin);
+            plugin.getDebugLogger().debug("Bungee channels unregistered");
         }
     }
 }

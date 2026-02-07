@@ -7,7 +7,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.plugin.Plugin;
+import ch.framedev.BedWarsPlugin;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.inventory.ItemStack;
@@ -25,14 +25,15 @@ import ch.framedev.bedwars.upgrades.TeamUpgrades;
  */
 public class UpgradeManager {
 
-    private final Plugin plugin;
+    private final BedWarsPlugin plugin;
     private FileConfiguration upgradesConfig;
     private final Map<String, Upgrade> upgrades = new LinkedHashMap<>();
 
-    public UpgradeManager(Plugin plugin) {
+    public UpgradeManager(BedWarsPlugin plugin) {
         this.plugin = plugin;
         loadUpgradesConfig();
         plugin.getLogger().info("UpgradeManager initialized with " + upgrades.size() + " upgrades");
+        plugin.getDebugLogger().debug("UpgradeManager ready");
     }
 
     /**
@@ -48,6 +49,7 @@ public class UpgradeManager {
                 if (input != null) {
                     Files.copy(input, upgradesFile.toPath());
                     plugin.getLogger().info("Created default upgrades.yml");
+                    plugin.getDebugLogger().debug("Created upgrades.yml from resources");
                 } else {
                     plugin.getLogger().warning("Could not find default upgrades.yml in resources");
                     createDefaultUpgradesConfig(upgradesFile);
@@ -100,6 +102,7 @@ public class UpgradeManager {
                 if (upgrade != null && upgrade.isEnabled()) {
                     upgrades.put(key, upgrade);
                     plugin.getLogger().info("Loaded upgrade: " + key + " (" + upgrade.getMaxLevel() + " levels)");
+                    plugin.getDebugLogger().debug("Upgrade loaded: " + key);
                 }
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to load upgrade '" + key + "': " + e.getMessage());
@@ -107,6 +110,7 @@ public class UpgradeManager {
         }
 
         plugin.getLogger().info("Loaded " + upgrades.size() + " upgrades from upgrades.yml");
+        plugin.getDebugLogger().debug("Upgrades loaded: count=" + upgrades.size());
     }
 
     /**
@@ -218,6 +222,7 @@ public class UpgradeManager {
         File upgradesFile = new File(plugin.getDataFolder(), "upgrades.yml");
         upgradesConfig = YamlConfiguration.loadConfiguration(upgradesFile);
         loadUpgradesFromConfig();
+        plugin.getDebugLogger().debug("Upgrades reloaded");
     }
 
     /**
@@ -267,6 +272,8 @@ public class UpgradeManager {
 
                 if (shouldApply && !item.getEnchantments().containsKey(enchantment)) {
                     item.addEnchantment(enchantment, level);
+                    plugin.getDebugLogger().verbose("Applied enchantment upgrade: " + upgrade.getId()
+                            + " level=" + level + " to " + item.getType());
                 }
             }
         }
@@ -290,6 +297,8 @@ public class UpgradeManager {
                             amplifier,
                             false,
                             false));
+                    plugin.getDebugLogger().verbose("Applied potion upgrade: " + upgrade.getId()
+                            + " level=" + level + " to " + player.getName());
                 }
             }
         }

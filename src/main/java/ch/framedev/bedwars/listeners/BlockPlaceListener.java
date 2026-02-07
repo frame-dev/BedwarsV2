@@ -24,6 +24,9 @@ public class BlockPlaceListener implements Listener {
         Player player = event.getPlayer();
         Game game = plugin.getGameManager().getPlayerGame(player);
 
+        plugin.getDebugLogger().debug("Block place: " + player.getName() + " " + event.getBlock().getType()
+            + " at " + formatLocation(event.getBlock()));
+
         if (game != null && game.getState() != GameState.RUNNING) {
             event.setCancelled(true);
             plugin.getMessageManager().sendMessage(player, "block.cannot-place-yet");
@@ -40,5 +43,9 @@ public class BlockPlaceListener implements Listener {
             // Track player-placed blocks for cleanup
             game.getWorldResetManager().recordPlacedBlock(event.getBlock());
         }
+    }
+
+    private String formatLocation(org.bukkit.block.Block block) {
+        return block.getWorld().getName() + ":" + block.getX() + "," + block.getY() + "," + block.getZ();
     }
 }

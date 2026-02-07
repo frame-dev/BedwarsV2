@@ -22,7 +22,7 @@ public class BungeeManager implements PluginMessageListener {
 
     public BungeeManager(BedWarsPlugin plugin) {
         this.plugin = plugin;
-        this.bungeeCordEnabled = plugin.getConfig().getBoolean("bungeecord.enabled", false);
+        this.bungeeCordEnabled = isModeEnabled();
         this.lobbyServer = plugin.getConfig().getString("bungeecord.lobby-server", "lobby");
 
         if (bungeeCordEnabled) {
@@ -41,6 +41,14 @@ public class BungeeManager implements PluginMessageListener {
      */
     public boolean isEnabled() {
         return bungeeCordEnabled;
+    }
+
+    private boolean isModeEnabled() {
+        String mode = plugin.getConfig().getString("network.mode", "");
+        if (mode != null && !mode.isBlank()) {
+            return "bungee".equalsIgnoreCase(mode);
+        }
+        return plugin.getConfig().getBoolean("bungeecord.enabled", false);
     }
 
     /**
@@ -183,6 +191,29 @@ public class BungeeManager implements PluginMessageListener {
         forwardToServer(player, "ALL", subchannel, data);
     }
 
+    /**
+     * Send a BedWars plugin message to all servers.
+     */
+    public void forwardBedWarsMessage(Player sender, String action, String... fields) {
+        if (!bungeeCordEnabled) {
+            return;
+        }
+
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(data);
+        try {
+            out.writeUTF(action);
+            for (String field : fields) {
+                out.writeUTF(field == null ? "" : field);
+            }
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to build BedWars message: " + e.getMessage());
+            return;
+        }
+
+        forwardToAll(sender, "BedWars", data.toByteArray());
+    }
+
     @Override
     public void onPluginMessageReceived(String channel, Player player, byte[] message) {
         if (!channel.equals("BungeeCord")) {
@@ -222,8 +253,33 @@ public class BungeeManager implements PluginMessageListener {
                 plugin.getLogger().info("Current server: " + currentServer);
                 break;
 
+            case "BedWars":
+                handleBedWarsMessage(in);
+                break;
+
             default:
                 plugin.getLogger().warning("Unknown BungeeCord subchannel: " + subchannel);
+                break;
+        }
+    }
+
+    private void handleBedWarsMessage(ByteArrayDataInput in) {
+        String action = in.readUTF();
+        switch (action) {
+            case "party-invite": {
+                String targetUuid = in.readUTF();
+                String inviterName = in.readUTF();
+                for (Player online : plugin.getServer().getOnlinePlayers()) {
+                    if (online.getUniqueId().toString().equalsIgnoreCase(targetUuid)) {
+                        plugin.getMessageManager().sendMessage(online, "party.invite-received", inviterName);
+                        break;
+                    }
+                }
+                break;
+            }
+
+            default:
+                plugin.getDebugLogger().debug("Unknown BedWars action: " + action);
                 break;
         }
     }

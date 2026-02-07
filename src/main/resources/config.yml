@@ -1,6 +1,10 @@
 # BedWars Configuration File
 
-# BungeeCord Settings
+# Network Mode (local | bungee | cloudnet)
+network:
+  mode: "local"
+
+# BungeeCord Settings (used when network.mode is bungee or unset)
 bungeecord:
   # Enable BungeeCord support (set to true if running on BungeeCord network)
   enabled: false
@@ -158,6 +162,19 @@ map-voting:
     - "&7Votes: &e{votes}"
     - "&7Queued: &e{queued}"
     - "&7Click to vote"
+
+# CloudNet Settings (used when network.mode is cloudnet or unset)
+cloudnet:
+  enabled: false
+  one-arena-per-server: true
+  use-for-map-voting: true
+  lobby-service: "Lobby-1"
+  arena-service-prefix: ""
+  game-services:
+    - "bw-1"
+    - "bw-2"
+  arena-service-map:
+    example: "bw-1"
   
 # Example arena configuration (arenas are managed via setup commands)
 # arenas:

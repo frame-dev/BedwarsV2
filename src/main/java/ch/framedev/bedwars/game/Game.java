@@ -226,9 +226,9 @@ public class Game {
 
         broadcast("game.player-left", player.getName());
 
-        // Send to lobby server if BungeeCord is enabled
-        if (plugin.getBungeeManager().isEnabled() &&
-                plugin.getConfig().getBoolean("bungeecord.send-to-lobby-on-leave", false)) {
+        boolean sendOnLeave = plugin.getConfig().getBoolean("bungeecord.send-to-lobby-on-leave", false);
+        if (sendOnLeave && (plugin.getBungeeManager().isEnabled()
+                || (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()))) {
             sendToLobbyDelayed(player);
         }
 
@@ -492,9 +492,9 @@ public class Game {
                 for (GamePlayer gamePlayer : players.values()) {
                     Player player = Bukkit.getPlayer(gamePlayer.getUuid());
                     if (player != null) {
-                        // Send to BungeeCord lobby if enabled
-                        if (plugin.getBungeeManager().isEnabled() &&
-                                plugin.getConfig().getBoolean("bungeecord.send-to-lobby-on-end", true)) {
+                        boolean sendOnEnd = plugin.getConfig().getBoolean("bungeecord.send-to-lobby-on-end", true);
+                        if (sendOnEnd && (plugin.getBungeeManager().isEnabled()
+                                || (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()))) {
                             sendToLobbyDelayed(player);
                         } else {
                             player.teleport(arena.getLobbySpawn());
@@ -522,8 +522,12 @@ public class Game {
             @Override
             public void run() {
                 if (player.isOnline()) {
-                    plugin.getMessageManager().sendMessage(player, "game.sending-to-lobby");
-                    plugin.getBungeeManager().sendPlayerToLobby(player);
+                    if (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()) {
+                        plugin.getCloudNetManager().connectToLobby(player);
+                    } else {
+                        plugin.getMessageManager().sendMessage(player, "game.sending-to-lobby");
+                        plugin.getBungeeManager().sendPlayerToLobby(player);
+                    }
                 }
             }
         }.runTaskLater(plugin, delay * 20L);

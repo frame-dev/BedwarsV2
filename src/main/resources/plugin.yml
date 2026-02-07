@@ -4,6 +4,7 @@ main: ch.framedev.BedWarsPlugin
 api-version: 1.20
 author: FrameDev
 description: A comprehensive BedWars plugin for Minecraft
+softdepend: [CloudNet-Bridge]
 libraries:
   - org.xerial:sqlite-jdbc:3.45.0.0
 

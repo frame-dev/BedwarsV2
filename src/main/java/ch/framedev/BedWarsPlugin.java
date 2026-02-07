@@ -15,6 +15,7 @@ import ch.framedev.bedwars.utils.MessageManager;
 import ch.framedev.bedwars.voting.MapVoteManager;
 import ch.framedev.bedwars.cosmetics.CosmeticsManager;
 import ch.framedev.bedwars.achievements.AchievementsManager;
+import ch.framedev.bedwars.cloudnet.CloudNetManager;
 import ch.framedev.bedwars.listeners.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -36,6 +37,7 @@ public class BedWarsPlugin extends JavaPlugin {
     private MapVoteManager mapVoteManager;
     private CosmeticsManager cosmeticsManager;
     private AchievementsManager achievementsManager;
+    private CloudNetManager cloudNetManager;
 
     @Override
     public void onEnable() {
@@ -67,6 +69,9 @@ public class BedWarsPlugin extends JavaPlugin {
 
         // Initialize BungeeCord support
         bungeeManager = new BungeeManager(this);
+
+        // Initialize CloudNet support
+        cloudNetManager = new CloudNetManager(this);
 
         // Initialize managers
         arenaManager = new ArenaManager(this);
@@ -195,5 +200,9 @@ public class BedWarsPlugin extends JavaPlugin {
 
     public AchievementsManager getAchievementsManager() {
         return achievementsManager;
+    }
+
+    public CloudNetManager getCloudNetManager() {
+        return cloudNetManager;
     }
 }

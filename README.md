@@ -100,10 +100,12 @@ The plugin uses multiple YAML configuration files for easy customization:
 - Game settings (countdown time, respawn time, generator upgrades)
 - Starting item and block/combat toggles
 - BungeeCord integration settings
+- Network mode selection (local, bungee, cloudnet)
 - Player limits and team colors
 - Debug logging toggles (enable/verbose and generator spawn tracing)
 - Party settings (max size, invite expiry)
 - Map voting settings (queue size, vote duration, GUI title)
+- CloudNet settings (service mapping, lobby service, map voting)
 
 ### arenas.yml
 - Arena definitions (lobby spawn, team spawns, beds, generators)
@@ -130,6 +132,9 @@ The plugin uses multiple YAML configuration files for easy customization:
 
 Optional runtime settings in config.yml:
 ```yaml
+network:
+  mode: "local"
+
 debug:
   enabled: false
   verbose-logging: false
@@ -153,6 +158,18 @@ map-voting:
     - "&7Votes: &e{votes}"
     - "&7Queued: &e{queued}"
     - "&7Click to vote"
+
+cloudnet:
+  enabled: false
+  one-arena-per-server: true
+  use-for-map-voting: true
+  lobby-service: "Lobby-1"
+  arena-service-prefix: ""
+  game-services:
+    - "bw-1"
+    - "bw-2"
+  arena-service-map:
+    example: "bw-1"
 
 upgrades:
   heal-pool:

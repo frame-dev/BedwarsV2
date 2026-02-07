@@ -77,9 +77,18 @@ public class PartyManager {
     public Party getParty(UUID playerUuid) {
         UUID partyId = playerToParty.get(playerUuid);
         if (partyId == null) {
-            return null;
+            partyId = getPartyIdForPlayer(playerUuid);
+            if (partyId == null) {
+                return null;
+            }
+            playerToParty.put(playerUuid, partyId);
         }
-        return parties.get(partyId);
+
+        Party party = parties.get(partyId);
+        if (party == null) {
+            party = loadParty(partyId);
+        }
+        return party;
     }
 
     public boolean isLeader(UUID playerUuid) {
@@ -109,8 +118,12 @@ public class PartyManager {
     }
 
     public void invitePlayer(Player leader, Player target) {
+        invitePlayer(leader, target.getUniqueId(), target.getName());
+    }
+
+    public void invitePlayer(Player leader, UUID targetUuid, String targetName) {
         MessageManager mm = plugin.getMessageManager();
-        if (leader.getUniqueId().equals(target.getUniqueId())) {
+        if (leader.getUniqueId().equals(targetUuid)) {
             mm.sendMessage(leader, "party.cannot-invite-self");
             return;
         }
@@ -126,7 +139,7 @@ public class PartyManager {
             return;
         }
 
-        if (getParty(target.getUniqueId()) != null) {
+        if (getPartyIdForPlayer(targetUuid) != null) {
             mm.sendMessage(leader, "party.invite-already-in-party");
             return;
         }
@@ -137,7 +150,7 @@ public class PartyManager {
             return;
         }
 
-        PartyInvite existingInvite = invites.get(target.getUniqueId());
+        PartyInvite existingInvite = loadInvite(targetUuid);
         if (existingInvite != null && !existingInvite.isExpired()) {
             mm.sendMessage(leader, "party.invite-already-sent");
             return;
@@ -145,20 +158,30 @@ public class PartyManager {
 
         long expiresAt = System.currentTimeMillis()
                 + (plugin.getConfig().getInt("party.invite-expire-seconds", 60) * 1000L);
-        invites.put(target.getUniqueId(),
-                new PartyInvite(party.getId(), leader.getUniqueId(), leader.getName(), expiresAt));
+        PartyInvite invite = new PartyInvite(party.getId(), leader.getUniqueId(), leader.getName(), expiresAt);
+        invites.put(targetUuid, invite);
+        saveInvite(targetUuid, invite);
 
-        mm.sendMessage(leader, "party.invited", target.getName());
-        mm.sendMessage(target, "party.invite-received", leader.getName());
+        String resolvedName = targetName == null ? getPlayerName(targetUuid) : targetName;
+        mm.sendMessage(leader, "party.invited", resolvedName);
 
-        plugin.getDebugLogger().debug("Party invite: leader=" + leader.getName() + " target=" + target.getName());
+        Player targetPlayer = Bukkit.getPlayer(targetUuid);
+        if (targetPlayer != null) {
+            mm.sendMessage(targetPlayer, "party.invite-received", leader.getName());
+        } else if (plugin.getBungeeManager().isEnabled()) {
+            plugin.getBungeeManager().forwardBedWarsMessage(leader, "party-invite",
+                    targetUuid.toString(), leader.getName());
+        }
+
+        plugin.getDebugLogger().debug("Party invite: leader=" + leader.getName() + " target=" + resolvedName);
     }
 
     public void acceptInvite(Player player, String inviterName) {
         MessageManager mm = plugin.getMessageManager();
-        PartyInvite invite = invites.get(player.getUniqueId());
+        PartyInvite invite = loadInvite(player.getUniqueId());
         if (invite == null || invite.isExpired()) {
             invites.remove(player.getUniqueId());
+            deleteInvite(player.getUniqueId());
             mm.sendMessage(player, "party.invite-expired");
             return;
         }
@@ -168,15 +191,19 @@ public class PartyManager {
             return;
         }
 
-        if (getParty(player.getUniqueId()) != null) {
+        if (getPartyIdForPlayer(player.getUniqueId()) != null) {
             mm.sendMessage(player, "party.already-in-party");
             return;
         }
 
         Party party = parties.get(invite.getPartyId());
         if (party == null) {
+            party = loadParty(invite.getPartyId());
+        }
+        if (party == null) {
             mm.sendMessage(player, "party.invite-expired");
             invites.remove(player.getUniqueId());
+            deleteInvite(player.getUniqueId());
             return;
         }
 
@@ -184,6 +211,7 @@ public class PartyManager {
         if (party.getSize() >= maxSize) {
             mm.sendMessage(player, "party.party-full");
             invites.remove(player.getUniqueId());
+            deleteInvite(player.getUniqueId());
             return;
         }
 
@@ -192,6 +220,7 @@ public class PartyManager {
         persistMember(party.getId(), player.getUniqueId(), PartyRole.MEMBER);
 
         invites.remove(player.getUniqueId());
+        deleteInvite(player.getUniqueId());
 
         sendPartyMessage(party, "party.joined", player.getName());
         plugin.getDebugLogger().debug("Party join: player=" + player.getName() + " party=" + party.getId());
@@ -199,9 +228,10 @@ public class PartyManager {
 
     public void denyInvite(Player player, String inviterName) {
         MessageManager mm = plugin.getMessageManager();
-        PartyInvite invite = invites.get(player.getUniqueId());
+        PartyInvite invite = loadInvite(player.getUniqueId());
         if (invite == null || invite.isExpired()) {
             invites.remove(player.getUniqueId());
+            deleteInvite(player.getUniqueId());
             mm.sendMessage(player, "party.invite-expired");
             return;
         }
@@ -212,6 +242,7 @@ public class PartyManager {
         }
 
         invites.remove(player.getUniqueId());
+        deleteInvite(player.getUniqueId());
         mm.sendMessage(player, "party.invite-denied", invite.getInviterName());
 
         Player inviter = Bukkit.getPlayer(invite.getInviterUuid());
@@ -362,6 +393,104 @@ public class PartyManager {
 
     public void shutdown() {
         invites.clear();
+    }
+
+    private UUID getPartyIdForPlayer(UUID uuid) {
+        UUID partyId = playerToParty.get(uuid);
+        if (partyId != null) {
+            return partyId;
+        }
+
+        try (ResultSet rs = database.executeQuery(
+                "SELECT party_id FROM party_members WHERE member_uuid = ?",
+                uuid.toString())) {
+            if (rs.next()) {
+                return UUID.fromString(rs.getString("party_id"));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to lookup party membership: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    private Party loadParty(UUID partyId) {
+        try (ResultSet rs = database.executeQuery(
+                "SELECT id, leader_uuid FROM parties WHERE id = ?", partyId.toString())) {
+            if (!rs.next()) {
+                return null;
+            }
+            UUID leader = UUID.fromString(rs.getString("leader_uuid"));
+            Party party = new Party(partyId, leader);
+
+            try (ResultSet members = database.executeQuery(
+                    "SELECT member_uuid, role FROM party_members WHERE party_id = ?", partyId.toString())) {
+                while (members.next()) {
+                    UUID member = UUID.fromString(members.getString("member_uuid"));
+                    String role = members.getString("role");
+                    PartyRole partyRole = "LEADER".equalsIgnoreCase(role) ? PartyRole.LEADER : PartyRole.MEMBER;
+                    if (partyRole == PartyRole.LEADER) {
+                        party.setLeader(member);
+                    }
+                    party.addMember(member, partyRole);
+                    playerToParty.put(member, partyId);
+                }
+            }
+
+            parties.put(partyId, party);
+            return party;
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to load party: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private PartyInvite loadInvite(UUID targetUuid) {
+        PartyInvite cached = invites.get(targetUuid);
+        if (cached != null && !cached.isExpired()) {
+            return cached;
+        }
+
+        try (ResultSet rs = database.executeQuery(
+                "SELECT party_id, inviter_uuid, inviter_name, expires_at FROM party_invites WHERE target_uuid = ?",
+                targetUuid.toString())) {
+            if (rs.next()) {
+                PartyInvite invite = new PartyInvite(
+                        UUID.fromString(rs.getString("party_id")),
+                        UUID.fromString(rs.getString("inviter_uuid")),
+                        rs.getString("inviter_name"),
+                        rs.getLong("expires_at"));
+                invites.put(targetUuid, invite);
+                return invite;
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to load party invite: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    private void saveInvite(UUID targetUuid, PartyInvite invite) {
+        try {
+            database.executeUpdate(
+                    "INSERT OR REPLACE INTO party_invites (target_uuid, party_id, inviter_uuid, inviter_name, expires_at) "
+                            + "VALUES (?, ?, ?, ?, ?)",
+                    targetUuid.toString(),
+                    invite.getPartyId().toString(),
+                    invite.getInviterUuid().toString(),
+                    invite.getInviterName(),
+                    invite.getExpiresAt());
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to persist party invite: " + e.getMessage());
+        }
+    }
+
+    private void deleteInvite(UUID targetUuid) {
+        try {
+            database.executeUpdate("DELETE FROM party_invites WHERE target_uuid = ?", targetUuid.toString());
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to delete party invite: " + e.getMessage());
+        }
     }
 
     private void sendPartyMessage(Party party, String key, Object... args) {

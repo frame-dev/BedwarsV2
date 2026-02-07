@@ -129,6 +129,11 @@ achievements:
   unlocked: "&6Achievement unlocked: {0}"
   progress: "&e{0}: {1}/{2}"
 
+cloudnet:
+  connecting: "&aConnecting to &e{0}&a..."
+  connect-failed: "&cFailed to connect to &e{0}&c."
+  service-not-found: "&cService not found for arena &e{0}&c."
+
 party-help:
   header: "&6╔══════════════════════════════╗"
   title: "&6║  &e&lParty Commands&6           ║"

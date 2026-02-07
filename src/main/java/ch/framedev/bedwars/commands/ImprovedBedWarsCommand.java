@@ -324,6 +324,30 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
 
         plugin.getDebugLogger().debug("Join requested: player=" + player.getName() + " arena=" + arenaName);
 
+        if (plugin.getCloudNetManager() != null
+                && plugin.getCloudNetManager().isEnabled()
+                && plugin.getCloudNetManager().isOneArenaPerServer()) {
+            var partyManager = plugin.getPartyManager();
+            var party = partyManager.getParty(player.getUniqueId());
+            if (party != null && !partyManager.isLeader(player.getUniqueId())) {
+                plugin.getMessageManager().sendMessage(player, "party.only-leader");
+                return;
+            }
+
+            if (party != null && partyManager.isLeader(player.getUniqueId())) {
+                for (var memberId : party.getMemberUuids()) {
+                    Player member = plugin.getServer().getPlayer(memberId);
+                    if (member != null) {
+                        plugin.getCloudNetManager().connectToArena(member, arenaName);
+                    }
+                }
+                return;
+            }
+
+            plugin.getCloudNetManager().connectToArena(player, arenaName);
+            return;
+        }
+
         Game game = plugin.getGameManager().getGame(arenaName);
         if (game == null) {
             plugin.getMessageManager().sendMessage(player, "command.arena-not-found", arenaName);
@@ -999,11 +1023,19 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
                     return;
                 }
                 Player target = plugin.getServer().getPlayer(args[2]);
-                if (target == null) {
+                if (target != null) {
+                    plugin.getPartyManager().invitePlayer(player, target);
+                    return;
+                }
+
+                @SuppressWarnings("deprecation")
+                var offline = plugin.getServer().getOfflinePlayer(args[2]);
+                if (offline == null || (!offline.hasPlayedBefore() && !offline.isOnline())) {
                     plugin.getMessageManager().sendMessage(player, "party.player-not-online");
                     return;
                 }
-                plugin.getPartyManager().invitePlayer(player, target);
+
+                plugin.getPartyManager().invitePlayer(player, offline.getUniqueId(), offline.getName());
                 break;
 
             case "accept":

@@ -47,6 +47,7 @@ A comprehensive, fully-featured BedWars minigame plugin for Minecraft (Spigot/Pa
 - Cosmetics system (kill effects, bed destroy effects)
 - Achievements system (progress-based unlocks)
 - Persistent data storage
+- CloudNet integration (service routing + map voting + party invites)
 
 ---
 

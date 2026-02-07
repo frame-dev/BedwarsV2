@@ -85,6 +85,16 @@ public class DatabaseManager {
             CREATE INDEX IF NOT EXISTS idx_party_member_uuid ON party_members(member_uuid);
             """;
 
+        String createPartyInvitesTable = """
+            CREATE TABLE IF NOT EXISTS party_invites (
+                target_uuid TEXT PRIMARY KEY,
+                party_id TEXT NOT NULL,
+                inviter_uuid TEXT NOT NULL,
+                inviter_name TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            )
+            """;
+
         String createCosmeticsTable = """
             CREATE TABLE IF NOT EXISTS player_cosmetics (
                 uuid TEXT PRIMARY KEY,
@@ -111,6 +121,7 @@ public class DatabaseManager {
             stmt.execute(createPartiesTable);
             stmt.execute(createPartyMembersTable);
             stmt.execute(createPartyIndexes);
+            stmt.execute(createPartyInvitesTable);
             stmt.execute(createCosmeticsTable);
             stmt.execute(createAchievementsTable);
             plugin.getLogger().info("Database tables created successfully!");

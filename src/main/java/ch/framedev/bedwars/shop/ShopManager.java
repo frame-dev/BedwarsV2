@@ -10,7 +10,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
 
 import java.io.File;
@@ -198,7 +197,7 @@ public class ShopManager {
             }
 
             if (potionType != null) {
-                potionMeta.setBasePotionData(new PotionData(potionType));
+                potionMeta.setBasePotionType(potionType);
             }
         }
 

@@ -16,6 +16,7 @@ import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -279,7 +280,7 @@ public class Game {
                 player.getInventory().clear();
                 gamePlayer.giveTeamArmor();
                 giveStartingItem(player);
-                player.setHealth(player.getMaxHealth());
+                player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
             }
         }
 
@@ -345,7 +346,7 @@ public class Game {
                         player.teleport(team.getSpawnLocation());
                         gamePlayer.giveTeamArmor();
                         giveStartingItem(player);
-                        player.setHealth(player.getMaxHealth());
+                        player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
                         plugin.getMessageManager().sendMessage(player, "game.respawned");
                         cancel();
                     } else {

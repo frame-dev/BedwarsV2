@@ -28,6 +28,12 @@ public class BlockBreakListener implements Listener {
         Game game = plugin.getGameManager().getPlayerGame(player);
 
         if (game != null && game.getState() == GameState.RUNNING) {
+            if (!plugin.getConfig().getBoolean("world.allow-block-breaking", true)) {
+                event.setCancelled(true);
+                plugin.getMessageManager().sendMessage(player, "block.break-disabled");
+                return;
+            }
+
             // Check if it's a bed
             if (block.getType().name().contains("BED")) {
                 event.setCancelled(true);
@@ -57,7 +63,8 @@ public class BlockBreakListener implements Listener {
                 if (breakerPlayer == null) {
                     return;
                 }
-                if (breakerPlayer != null && breakerPlayer.getTeam() == team) {
+                boolean bedProtection = plugin.getConfig().getBoolean("game.bed-protection", true);
+                if (bedProtection && breakerPlayer.getTeam() == team) {
                     plugin.getMessageManager().sendMessage(player, "block.cannot-break-own-bed");
                     return;
                 }

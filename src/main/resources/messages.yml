@@ -33,7 +33,9 @@ block:
   cannot-break-placed: "&cYou can only break blocks placed by players!"
   cannot-break-yet: "&cYou can't break blocks yet!"
   cannot-break-own-bed: "&cYou can't break your own bed!"
+  break-disabled: "&cBlock breaking is disabled in this arena!"
   cannot-place-yet: "&cYou can't place blocks yet!"
+  place-disabled: "&cBlock placing is disabled in this arena!"
 
 # Shop Messages
 shop:
@@ -58,6 +60,7 @@ command:
   join-usage: "&cUsage: /bedwars join <arena>"
   already-in-game: "&cYou are already in a game! Use /bedwars leave first."
   arena-not-found: "&cArena '{0}' not found!"
+  game-full: "&cThat game is full!"
   
   # Leave command
   not-in-game: "&cYou are not in a game!"

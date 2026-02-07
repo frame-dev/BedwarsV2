@@ -35,6 +35,9 @@ public class PlayerStats {
     public void addLoss() {
         losses++;
         gamesPlayed++;
+    }
+
+    public void addKill() {
         kills++;
     }
 

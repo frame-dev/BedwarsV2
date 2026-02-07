@@ -27,8 +27,8 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
   - Sharpened Swords (Sharpness I)
   - Reinforced Armor (Protection I-IV)
   - Maniac Miner (Haste I-II)
-  - Heal Pool (Regeneration field)
-  - Dragon Buff (Protective dragons)
+  - Heal Pool (Regeneration field near base)
+  - Dragon Buff (Protective dragons at base)
 
 ### Player Features
 - **Statistics Tracking**:
@@ -37,7 +37,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
   - Beds broken
   - Team wins/losses
 - **Colored Armor**: Leather armor automatically colored to team color
-- **Starting Items**: Wooden sword on game start
+- **Starting Items**: Configurable starting item (default wooden sword)
 
 ### Game Management
 - **Arena System**: Multiple arena support with configuration
@@ -51,6 +51,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 |---------|-------------|------------|
 | `/bedwars join <arena>` | Join a BedWars game | bedwars.join |
 | `/bedwars leave` | Leave your current game | bedwars.leave |
+| `/bedwars spectate <arena>` | Spectate a game | bedwars.spectate |
 | `/bedwars stats` | View your statistics | bedwars.stats |
 | `/bedwars list` | List all available arenas | bedwars.list |
 | `/bedwars setup` | Arena setup commands | bedwars.setup |
@@ -61,8 +62,10 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 |---------|-------------|
 | `/bedwars setup create <name>` | Create a new arena |
 | `/bedwars setup setlobby <arena>` | Set lobby spawn point |
+| `/bedwars setup setspectator <arena>` | Set spectator spawn point |
 | `/bedwars setup setspawn <arena> <team>` | Set team spawn point |
 | `/bedwars setup setbed <arena> <team>` | Set bed location |
+| `/bedwars setup addgenerator <name>` | Add a generator location |
 
 ## Installation
 
@@ -85,6 +88,7 @@ The plugin uses multiple YAML configuration files for easy customization:
 
 ### config.yml
 - Game settings (countdown time, respawn time, generator upgrades)
+- Starting item and block/combat toggles
 - BungeeCord integration settings
 - Arena definitions (lobby spawn, team spawns, beds, generators)
 - Player limits and team colors
@@ -98,6 +102,7 @@ The plugin uses multiple YAML configuration files for easy customization:
 ### shop.yml
 - **7 shop categories** with 30+ items
 - Fully customizable items (material, cost, amount, display name)
+- Potions and knockback stick are applied by display name
 - Add/remove items without touching code
 - Categories: Blocks, Weapons, Armor, Tools, Food, Potions, Special
 
@@ -107,6 +112,17 @@ The plugin uses multiple YAML configuration files for easy customization:
 - Three effect types: ENCHANTMENT, POTION_EFFECT, SPECIAL
 - Configurable costs, levels, and effects
 - See [docs/UPGRADE_EXAMPLES.md](docs/UPGRADE_EXAMPLES.md) for examples
+
+Optional runtime settings in config.yml:
+```yaml
+upgrades:
+  heal-pool:
+    radius: 6.0
+    amplifier: 0
+    duration-ticks: 60
+  dragon-buff:
+    count: 2
+```
 
 Example arena configuration in `config.yml`:
 ```yaml
@@ -184,6 +200,29 @@ To extend or modify the plugin:
 - [Database Setup](docs/DATABASE_GUIDE.md)
 - [BungeeCord Integration](docs/BUNGEECORD_SETUP.md)
 - And more...
+
+## Recent Updates
+
+The following files were updated to align gameplay, upgrades, and shop behavior with the docs:
+
+- [src/main/java/ch/framedev/BedWarsPlugin.java](src/main/java/ch/framedev/BedWarsPlugin.java)
+- [src/main/java/ch/framedev/bedwars/commands/ImprovedBedWarsCommand.java](src/main/java/ch/framedev/bedwars/commands/ImprovedBedWarsCommand.java)
+- [src/main/java/ch/framedev/bedwars/game/Game.java](src/main/java/ch/framedev/bedwars/game/Game.java)
+- [src/main/java/ch/framedev/bedwars/generators/ResourceGenerator.java](src/main/java/ch/framedev/bedwars/generators/ResourceGenerator.java)
+- [src/main/java/ch/framedev/bedwars/listeners/BlockBreakListener.java](src/main/java/ch/framedev/bedwars/listeners/BlockBreakListener.java)
+- [src/main/java/ch/framedev/bedwars/listeners/BlockPlaceListener.java](src/main/java/ch/framedev/bedwars/listeners/BlockPlaceListener.java)
+- [src/main/java/ch/framedev/bedwars/listeners/EntityDamageListener.java](src/main/java/ch/framedev/bedwars/listeners/EntityDamageListener.java)
+- [src/main/java/ch/framedev/bedwars/listeners/InventoryClickListener.java](src/main/java/ch/framedev/bedwars/listeners/InventoryClickListener.java)
+- [src/main/java/ch/framedev/bedwars/listeners/ItemPickupListener.java](src/main/java/ch/framedev/bedwars/listeners/ItemPickupListener.java)
+- [src/main/java/ch/framedev/bedwars/listeners/PlayerInteractListener.java](src/main/java/ch/framedev/bedwars/listeners/PlayerInteractListener.java)
+- [src/main/java/ch/framedev/bedwars/listeners/PlayerQuitListener.java](src/main/java/ch/framedev/bedwars/listeners/PlayerQuitListener.java)
+- [src/main/java/ch/framedev/bedwars/manager/UpgradeManager.java](src/main/java/ch/framedev/bedwars/manager/UpgradeManager.java)
+- [src/main/java/ch/framedev/bedwars/shop/ShopGUI.java](src/main/java/ch/framedev/bedwars/shop/ShopGUI.java)
+- [src/main/java/ch/framedev/bedwars/shop/ShopManager.java](src/main/java/ch/framedev/bedwars/shop/ShopManager.java)
+- [src/main/java/ch/framedev/bedwars/stats/PlayerStats.java](src/main/java/ch/framedev/bedwars/stats/PlayerStats.java)
+- [src/main/java/ch/framedev/bedwars/upgrades/UpgradeShopGUI.java](src/main/java/ch/framedev/bedwars/upgrades/UpgradeShopGUI.java)
+- [src/main/resources/messages.yml](src/main/resources/messages.yml)
+- [src/main/resources/plugin.yml](src/main/resources/plugin.yml)
 
 ## License
 

@@ -2,18 +2,22 @@ package ch.framedev.bedwars.manager;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.*;
+import ch.framedev.bedwars.upgrades.TeamUpgrades;
 
 /**
  * Manages team upgrades loaded from upgrades.yml configuration file.
@@ -234,6 +238,74 @@ public class UpgradeManager {
      */
     public boolean hasUpgrade(String id) {
         return upgrades.containsKey(id);
+    }
+
+    public void applyUpgradesToItem(ItemStack item, TeamUpgrades teamUpgrades) {
+        if (item == null || teamUpgrades == null) {
+            return;
+        }
+
+        for (Map.Entry<String, Upgrade> entry : upgrades.entrySet()) {
+            Upgrade upgrade = entry.getValue();
+            int level = teamUpgrades.getUpgradeLevel(entry.getKey());
+
+            if (level > 0 && upgrade.getEffectType() == EffectType.ENCHANTMENT) {
+                Enchantment enchantment = upgrade.getEnchantment();
+                if (enchantment == null) {
+                    continue;
+                }
+
+                String target = upgrade.getTarget();
+                boolean shouldApply = false;
+
+                if ("WEAPON".equalsIgnoreCase(target) && isMeleeWeapon(item.getType())) {
+                    shouldApply = true;
+                } else if ("ARMOR".equalsIgnoreCase(target) && isArmor(item.getType())) {
+                    shouldApply = true;
+                }
+
+                if (shouldApply && !item.getEnchantments().containsKey(enchantment)) {
+                    item.addEnchantment(enchantment, level);
+                }
+            }
+        }
+    }
+
+    public void applyPotionUpgrades(Player player, TeamUpgrades teamUpgrades) {
+        if (player == null || teamUpgrades == null) {
+            return;
+        }
+
+        for (Map.Entry<String, Upgrade> entry : upgrades.entrySet()) {
+            Upgrade upgrade = entry.getValue();
+            int level = teamUpgrades.getUpgradeLevel(entry.getKey());
+
+            if (level > 0 && upgrade.getEffectType() == EffectType.POTION_EFFECT) {
+                if (upgrade.getPotionType() != null) {
+                    int amplifier = upgrade.isAmplifierPerLevel() ? (level - 1) : 0;
+                    player.addPotionEffect(new PotionEffect(
+                            upgrade.getPotionType(),
+                            upgrade.getDuration(),
+                            amplifier,
+                            false,
+                            false));
+                }
+            }
+        }
+    }
+
+    private boolean isMeleeWeapon(Material material) {
+        return switch (material) {
+            case WOODEN_SWORD, STONE_SWORD, IRON_SWORD, GOLDEN_SWORD, DIAMOND_SWORD,
+                    WOODEN_AXE, STONE_AXE, IRON_AXE, GOLDEN_AXE, DIAMOND_AXE -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isArmor(Material material) {
+        String name = material.name();
+        return name.endsWith("_HELMET") || name.endsWith("_CHESTPLATE") ||
+                name.endsWith("_LEGGINGS") || name.endsWith("_BOOTS");
     }
 
     /**

@@ -74,15 +74,16 @@ public class ShopGUI {
         player.openInventory(inventory);
     }
 
-    public boolean purchaseItem(Player player, ShopItem shopItem) {
+    public ItemStack purchaseItem(Player player, ShopItem shopItem) {
         ItemStack cost = shopItem.getCost();
 
         if (player.getInventory().containsAtLeast(cost, cost.getAmount())) {
             player.getInventory().removeItem(cost);
-            player.getInventory().addItem(shopItem.getItem());
-            return true;
+            ItemStack purchased = shopItem.getItem().clone();
+            player.getInventory().addItem(purchased);
+            return purchased;
         } else {
-            return false;
+            return null;
         }
     }
 

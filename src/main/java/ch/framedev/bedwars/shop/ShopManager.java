@@ -1,11 +1,17 @@
 package ch.framedev.bedwars.shop;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.potion.PotionData;
+import org.bukkit.potion.PotionType;
 
 import java.io.File;
 import java.io.IOException;
@@ -112,6 +118,8 @@ public class ShopManager {
             ItemStack item = new ItemStack(itemMaterial, itemAmount);
             ItemStack cost = new ItemStack(costMaterial, costAmount);
 
+            applyItemMeta(item, displayName);
+
             ShopItem shopItem;
             if (displayName != null && !displayName.isEmpty()) {
                 shopItem = new ShopItem(item, cost, displayName);
@@ -140,6 +148,8 @@ public class ShopManager {
             ItemStack item = new ItemStack(itemMaterial, itemAmount);
             ItemStack cost = new ItemStack(costMaterial, costAmount);
 
+            applyItemMeta(item, displayName);
+
             ShopItem shopItem;
             if (displayName != null && !displayName.isEmpty()) {
                 shopItem = new ShopItem(item, cost, displayName);
@@ -160,6 +170,46 @@ public class ShopManager {
     public void reload() {
         loadShopConfig();
         loadShopFromConfig();
+    }
+
+    private void applyItemMeta(ItemStack item, String displayName) {
+        if (item == null) {
+            return;
+        }
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+
+        if (displayName != null && !displayName.isEmpty()) {
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', displayName));
+        }
+
+        if (meta instanceof PotionMeta potionMeta && displayName != null) {
+            String lower = displayName.toLowerCase();
+            PotionType potionType = null;
+            if (lower.contains("speed")) {
+                potionType = PotionType.SPEED;
+            } else if (lower.contains("jump")) {
+                potionType = PotionType.JUMP;
+            } else if (lower.contains("invis")) {
+                potionType = PotionType.INVISIBILITY;
+            }
+
+            if (potionType != null) {
+                potionMeta.setBasePotionData(new PotionData(potionType));
+            }
+        }
+
+        item.setItemMeta(meta);
+
+        if (item.getType() == Material.STICK && displayName != null) {
+            String lower = displayName.toLowerCase();
+            if (lower.contains("knockback")) {
+                item.addUnsafeEnchantment(Enchantment.KNOCKBACK, 1);
+            }
+        }
     }
 
     private void initializeDefaultShop() {

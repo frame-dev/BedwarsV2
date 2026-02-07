@@ -9,6 +9,7 @@ import ch.framedev.bedwars.shop.ShopItem;
 import ch.framedev.bedwars.team.Team;
 import ch.framedev.bedwars.upgrades.UpgradeShopGUI;
 import ch.framedev.bedwars.utils.MessageManager;
+import ch.framedev.bedwars.manager.UpgradeManager.EffectType;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -30,7 +31,7 @@ public class InventoryClickListener implements Listener {
     public InventoryClickListener(BedWarsPlugin plugin) {
         this.plugin = plugin;
         this.shopGUI = new ShopGUI(plugin);
-        this.upgradeShopGUI = new UpgradeShopGUI(plugin);
+        this.upgradeShopGUI = new UpgradeShopGUI(plugin.getUpgradeManager());
     }
 
     @EventHandler
@@ -111,9 +112,15 @@ public class InventoryClickListener implements Listener {
             return;
 
         // Attempt purchase
-        if (shopGUI.purchaseItem(player, shopItem)) {
+        ItemStack purchased = shopGUI.purchaseItem(player, shopItem);
+        if (purchased != null) {
             mm.sendMessage(player, "shop.purchase-successful");
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+
+            GamePlayer buyer = game.getGamePlayer(player);
+            if (buyer != null && buyer.getTeam() != null) {
+                plugin.getUpgradeManager().applyUpgradesToItem(purchased, buyer.getTeam().getUpgrades());
+            }
 
             // Refresh the inventory to show updated purchase options
             shopGUI.openCategory(player, category);
@@ -150,6 +157,8 @@ public class InventoryClickListener implements Listener {
 
         // Attempt upgrade purchase
         if (upgradeShopGUI.purchaseUpgrade(player, team, upgradeId)) {
+            var upgrade = upgradeShopGUI.getUpgradeManager().getUpgrade(upgradeId);
+
             mm.sendMessage(player, "shop.upgrade-purchased");
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
 
@@ -159,6 +168,50 @@ public class InventoryClickListener implements Listener {
                 if (p != null && !p.equals(player)) {
                     mm.sendMessage(p, "shop.team-upgrade-purchased", player.getName(), upgradeId);
                 }
+            }
+
+            if (upgrade != null && upgrade.getEffectType() == EffectType.POTION_EFFECT) {
+                for (GamePlayer teamPlayer : team.getPlayers()) {
+                    Player p = plugin.getServer().getPlayer(teamPlayer.getUuid());
+                    if (p != null) {
+                        plugin.getUpgradeManager().applyPotionUpgrades(p, team.getUpgrades());
+                    }
+                }
+            }
+
+            if (upgrade != null && upgrade.getEffectType() == EffectType.ENCHANTMENT) {
+                for (GamePlayer teamPlayer : team.getPlayers()) {
+                    Player p = plugin.getServer().getPlayer(teamPlayer.getUuid());
+                    if (p == null) {
+                        continue;
+                    }
+
+                    var inventory = p.getInventory();
+                    if (inventory.getItemInMainHand() != null) {
+                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getItemInMainHand(),
+                                team.getUpgrades());
+                    }
+                    if (inventory.getItemInOffHand() != null) {
+                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getItemInOffHand(),
+                                team.getUpgrades());
+                    }
+                    if (inventory.getHelmet() != null) {
+                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getHelmet(), team.getUpgrades());
+                    }
+                    if (inventory.getChestplate() != null) {
+                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getChestplate(), team.getUpgrades());
+                    }
+                    if (inventory.getLeggings() != null) {
+                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getLeggings(), team.getUpgrades());
+                    }
+                    if (inventory.getBoots() != null) {
+                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getBoots(), team.getUpgrades());
+                    }
+                }
+            }
+
+            if (upgrade != null && upgrade.getEffectType() == EffectType.SPECIAL) {
+                game.applySpecialUpgrade(team, upgradeId);
             }
 
             // Refresh the inventory

@@ -24,7 +24,11 @@ public class PlayerQuitListener implements Listener {
         Game game = plugin.getGameManager().getPlayerGame(player);
 
         if (game != null) {
-            game.removePlayer(player);
+            if (game.isSpectator(player)) {
+                game.removeSpectator(player);
+            } else {
+                game.removePlayer(player);
+            }
         }
 
         // Save player stats when they quit

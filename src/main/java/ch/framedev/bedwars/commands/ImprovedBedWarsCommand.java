@@ -48,6 +48,10 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
 
         switch (args[0].toLowerCase()) {
             case "join":
+                if (!player.hasPermission("bedwars.join")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
                 if (args.length < 2) {
                     plugin.getMessageManager().sendMessage(player, "command.join-usage");
                     return true;
@@ -56,10 +60,18 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
                 break;
 
             case "leave":
+                if (!player.hasPermission("bedwars.leave")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
                 handleLeave(player);
                 break;
 
             case "spectate":
+                if (!player.hasPermission("bedwars.spectate")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
                 if (args.length < 2) {
                     plugin.getMessageManager().sendMessage(player, "command.spectate-usage");
                     return true;
@@ -68,6 +80,10 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
                 break;
 
             case "stats":
+                if (!player.hasPermission("bedwars.stats")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
                 if (args.length >= 2) {
                     handleStatsOther(player, args[1]);
                 } else {
@@ -89,6 +105,10 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
                 break;
 
             case "list":
+                if (!player.hasPermission("bedwars.list")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
                 handleList(player);
                 break;
 

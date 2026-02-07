@@ -24,7 +24,11 @@ public class UpgradeShopGUI {
     private final UpgradeManager upgradeManager;
 
     public UpgradeShopGUI(Plugin plugin) {
-        this.upgradeManager = new UpgradeManager(plugin);
+        this(new UpgradeManager(plugin));
+    }
+
+    public UpgradeShopGUI(UpgradeManager upgradeManager) {
+        this.upgradeManager = upgradeManager;
     }
 
     public UpgradeManager getUpgradeManager() {

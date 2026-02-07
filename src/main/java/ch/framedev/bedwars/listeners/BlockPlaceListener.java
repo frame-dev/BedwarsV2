@@ -27,7 +27,16 @@ public class BlockPlaceListener implements Listener {
         if (game != null && game.getState() != GameState.RUNNING) {
             event.setCancelled(true);
             plugin.getMessageManager().sendMessage(player, "block.cannot-place-yet");
-        } else if (game != null) {
+            return;
+        }
+
+        if (game != null) {
+            if (!plugin.getConfig().getBoolean("world.allow-block-placing", true)) {
+                event.setCancelled(true);
+                plugin.getMessageManager().sendMessage(player, "block.place-disabled");
+                return;
+            }
+
             // Track player-placed blocks for cleanup
             game.getWorldResetManager().recordPlacedBlock(event.getBlock());
         }

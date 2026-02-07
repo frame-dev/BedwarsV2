@@ -21,6 +21,12 @@ permissions:
   bedwars.stats:
     description: Allow players to view their stats
     default: true
+  bedwars.list:
+    description: Allow players to list arenas
+    default: true
+  bedwars.spectate:
+    description: Allow players to spectate games
+    default: true
   bedwars.setup:
     description: Allow arena setup
     default: op

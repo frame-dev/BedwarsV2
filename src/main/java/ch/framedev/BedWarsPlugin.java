@@ -131,4 +131,8 @@ public class BedWarsPlugin extends JavaPlugin {
     public MessageManager getMessageManager() {
         return messageManager;
     }
+
+    public UpgradeManager getUpgradeManager() {
+        return upgradeManager;
+    }
 }

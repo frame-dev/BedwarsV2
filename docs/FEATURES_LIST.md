@@ -13,7 +13,6 @@ A detailed breakdown of all features implemented in the BedWars plugin.
 - Win condition detection
 - Automatic world reset after games
 - Player auto-join balancing
-- Game pause/resume capability
 
 ### ✅ Team System
 - 8 team colors: Red, Blue, Green, Yellow, Aqua, White, Pink, Gray
@@ -35,13 +34,13 @@ A detailed breakdown of all features implemented in the BedWars plugin.
 - Last game timestamp
 - Spectator mode (watch without playing)
 - Respawn system (5 seconds when bed alive)
-- Starting items (wooden sword)
+- Starting items (configurable, default wooden sword)
 - Inventory management
 - Health restoration on spawn
 
 ### ✅ Bed Mechanics
 - Bed protection while team alive
-- Bed breaking with proper tools
+- Bed breaking enabled
 - Visual bed destruction
 - Respawn disabling on bed destruction
 - Bed location configuration per team
@@ -64,52 +63,46 @@ A detailed breakdown of all features implemented in the BedWars plugin.
 ### ✅ Item Shop
 Complete shopping experience with 7 categories:
 
-**1. Blocks Category** (7 items)
-- Wool (1 iron) - 16 blocks
-- Terracotta (2 iron) - 16 blocks
-- Stained Clay (2 iron) - 16 blocks
-- End Stone (3 iron) - 16 blocks
-- Obsidian (4 diamonds) - 2 blocks
-- Sand (1 iron) - 16 blocks
-- Gravel (1 iron) - 16 blocks
+**1. Blocks Category** (default shop.yml)
+- White Wool (4 iron) - 16 blocks
+- Terracotta (12 iron) - 16 blocks
+- End Stone (24 iron) - 12 blocks
+- Obsidian (4 emeralds) - 4 blocks
 
-**2. Weapons Category** (5 items)
+**2. Weapons Category** (default shop.yml)
 - Stone Sword (10 iron)
-- Iron Sword (5 gold)
-- Diamond Sword (3 diamonds)
-- Knockback Stick (5 iron)
-- Fire Aspect Sword (8 diamonds)
+- Iron Sword (7 gold)
+- Diamond Sword (4 emeralds)
+- Knockback Stick (5 gold)
 
-**3. Armor Category** (3 complete sets)
-- Chainmail Armor Set (40 iron)
-- Iron Armor Set (5 gold per piece)
-- Diamond Armor Set (3 diamonds per piece)
+**3. Armor Category** (default shop.yml)
+- Chainmail Chestplate (40 iron)
+- Iron Chestplate (12 gold)
+- Diamond Chestplate (6 emeralds)
 
-**4. Tools Category** (4 items)
-- Wooden Pickaxe (free)
-- Stone Pickaxe (10 iron)
-- Iron Pickaxe (1 gold)
-- Diamond Pickaxe (1 diamond)
-- Axes and Shears (various costs)
+**4. Tools Category** (default shop.yml)
+- Wooden Pickaxe (10 iron)
+- Iron Pickaxe (3 gold)
+- Diamond Pickaxe (6 gold)
+- Wooden Axe (10 iron)
+- Stone Axe (10 iron)
+- Shears (20 iron)
 
-**5. Food Category** (3 items)
-- Apple (2 iron, restores 2.5 hearts)
-- Steak (3 iron, restores 4 hearts)
-- Golden Apple (2 diamonds, restores 4 hearts + effects)
+**5. Food Category** (default shop.yml)
+- Apple (4 iron)
+- Cooked Beef (3 for 4 iron)
+- Golden Apple (3 gold)
 
-**6. Potions Category** (5 items)
-- Speed Potion (3 gold)
-- Jump Boost Potion (2 gold)
-- Invisibility Potion (1 diamond)
-- Fire Resistance (1 gold)
-- Water Breathing (1 gold)
+**6. Potions Category** (default shop.yml)
+- Speed Potion (2 emeralds)
+- Jump Potion (2 emeralds)
+- Invisibility Potion (1 emerald)
 
-**7. Special Items Category** (5 items)
-- TNT (8 iron)
-- Ender Pearl (4 gold)
-- Fire Charge (2 iron)
-- Ladders (1 iron per 8)
-- Bed (1 emerald) - Extra bed!
+**7. Special Items Category** (default shop.yml)
+- TNT (4 gold)
+- Ender Pearl (4 emeralds)
+- Fire Charge (40 iron)
+- Ladders (4 iron for 8)
 
 ### ✅ Upgrade Shop
 Permanent team-wide upgrades:
@@ -217,10 +210,13 @@ Permanent team-wide upgrades:
 ### ✅ Configuration Options
 - Countdown timer (seconds)
 - Respawn timer (seconds)
-- Starting items
-- Allow/disallow block placement
+- Starting item (configurable)
+- Allow/disallow block placing
 - Allow/disallow block breaking
 - PvP enable/disable
+- Fall damage enable/disable
+- Projectile damage enable/disable
+- Bed protection toggle
 - Fire spread control
 - Mob spawning control
 - Auto-reset enable/disable
@@ -312,10 +308,13 @@ Permanent team-wide upgrades:
 
 ### ✅ Permissions System
 - bedwars.join - Join games
+- bedwars.leave - Leave games
 - bedwars.spectate - Watch games
 - bedwars.stats - View statistics
+- bedwars.list - List arenas
 - bedwars.setup - Create arenas
 - bedwars.admin - Admin commands
+- bedwars.bungee - BungeeCord lobby commands
 - Operator override support
 
 ### ✅ Event System

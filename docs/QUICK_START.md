@@ -30,6 +30,7 @@ mvn clean package
    ```
    plugins/BedWars/
    ├── config.yml      # Main configuration
+   ├── arenas.yml      # Arena definitions
    ├── messages.yml    # Configurable messages
    ├── shop.yml        # Shop items
    ├── upgrades.yml    # Team upgrades
@@ -39,46 +40,26 @@ mvn clean package
 2. **Stop the server** and configure your first arena
 
    **Note**: The plugin now includes multiple configuration files:
-   - `config.yml` - Main settings, arenas, generators
+    - `config.yml` - Main settings
+    - `arenas.yml` - Arenas, teams, and generators
    - `messages.yml` - All plugin messages (100+ configurable)
    - `shop.yml` - Shop items and prices (fully customizable)
    - `upgrades.yml` - Team upgrades (add new upgrades without code!)
 
-3. **Edit config.yml** to add an arena:
+3. **Edit arenas.yml** to add an arena (or use `/bw setup` commands):
    ```yaml
    arenas:
      example:
-       lobby-spawn:
-         world: world
-         x: 0
-         y: 100
-         z: 0
-         yaw: 0
-         pitch: 0
+          lobby-spawn: world,0.0,100.0,0.0,0.0,0.0
        min-players: 2
        max-players: 8
        teams:
          red:
-           spawn:
-             world: world
-             x: 50
-             y: 64
-             z: 0
-           bed:
-             world: world
-             x: 55
-             y: 64
-             z: 0
+                spawn: world,50.0,64.0,0.0,0.0,0.0
+                bed: world,55.0,64.0,0.0,0.0,0.0
          blue:
-           spawn:
-             world: world
-             x: -50
-             y: 64
-             z: 0
-           bed:
-             world: world
-             x: -55
-             y: 64
+                spawn: world,-50.0,64.0,0.0,0.0,0.0
+                bed: world,-55.0,64.0,0.0,0.0,0.0
              z: 0
    ```
 
@@ -383,6 +364,7 @@ To win, you must be the **last team standing**. This means:
 |---------|-------------|------------|
 | `/bedwars join <arena>` | Join a game | `bedwars.join` (default: true) |
 | `/bedwars leave` | Leave current game | `bedwars.leave` (default: true) |
+| `/bedwars spectate <arena>` | Spectate a game | `bedwars.spectate` (default: true) |
 | `/bedwars stats` | View your statistics | `bedwars.stats` (default: true) |
 | `/bedwars list` | List all arenas | `bedwars.list` (default: true) |
 | `/bw` | Short alias for /bedwars | Same as above |
@@ -393,8 +375,10 @@ To win, you must be the **last team standing**. This means:
 |---------|-------------|------------|
 | `/bedwars setup create <name>` | Create new arena | `bedwars.setup` (default: op) |
 | `/bedwars setup setlobby <arena>` | Set lobby spawn | `bedwars.setup` (default: op) |
+| `/bedwars setup setspectator <arena>` | Set spectator spawn | `bedwars.setup` (default: op) |
 | `/bedwars setup setspawn <arena> <team>` | Set team spawn | `bedwars.setup` (default: op) |
 | `/bedwars setup setbed <arena> <team>` | Set bed location | `bedwars.setup` (default: op) |
+| `/bedwars setup addgenerator <name>` | Add generator | `bedwars.setup` (default: op) |
 
 ## 🎯 Game Features
 
@@ -463,15 +447,15 @@ Supported colors: RED, BLUE, GREEN, YELLOW, AQUA, WHITE, PINK, GRAY
 ```yaml
 teams:
   green:
-    spawn: {...}
-    bed: {...}
+      spawn: world,10.0,64.0,10.0,0.0,0.0
+      bed: world,15.0,64.0,10.0,0.0,0.0
   yellow:
-    spawn: {...}
-    bed: {...}
+      spawn: world,-10.0,64.0,-10.0,0.0,0.0
+      bed: world,-15.0,64.0,-10.0,0.0,0.0
 ```
 
 ### Customize Messages
-Edit messages in `config.yml`:
+Edit messages in `messages.yml`:
 ```yaml
 messages:
   game-starting: "&aThe game is starting!"
@@ -487,7 +471,7 @@ messages:
 - Ensure Spigot/Paper 1.20.4+
 
 ### Arena Not Working
-- Verify all locations are set in config
+- Verify all locations are set in arenas.yml
 - Check world names match exactly
 - Ensure minimum 2 teams configured
 
@@ -498,7 +482,7 @@ messages:
 - Check game is in RUNNING state
 
 ### Resources Not Generating
-- Verify generators are defined in Game.java
+- Verify generators are defined in arenas.yml
 - Check game state is RUNNING
 - Resource drops may be picked up instantly
 
@@ -547,7 +531,7 @@ For issues or questions:
 1. Check the [README.md](../README.md) for detailed documentation
 2. Review [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) for technical details
 3. Check server console for error messages
-4. Verify configuration syntax in config.yml
+4. Verify configuration syntax in config.yml and arenas.yml
 
 ---
 

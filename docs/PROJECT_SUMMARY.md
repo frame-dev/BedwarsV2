@@ -90,7 +90,7 @@ A fully-featured BedWars plugin for Minecraft Spigot/Paper servers implementing 
 
 ### ✅ Shop System
 - 7 categories: Blocks, Weapons, Armor, Tools, Food, Potions, Special
-- 30+ purchasable items
+- 25+ purchasable items by default (configurable in shop.yml)
 - Resource-based economy (iron, gold, diamonds, emeralds)
 - Interactive GUI with category navigation
 
@@ -104,6 +104,7 @@ A fully-featured BedWars plugin for Minecraft Spigot/Paper servers implementing 
 ### ✅ Commands & Permissions
 - `/bedwars join <arena>` - Join games
 - `/bedwars leave` - Leave games
+- `/bedwars spectate <arena>` - Spectate games
 - `/bedwars stats` - View statistics
 - `/bedwars list` - List arenas
 - `/bedwars setup` - Arena configuration (admin only)
@@ -147,7 +148,7 @@ target/bedwars-1.0-SNAPSHOT.jar
 1. Build or download the plugin JAR
 2. Place in server `plugins/` folder
 3. Start server to generate config
-4. Configure arenas in `config.yml`
+4. Configure arenas in `arenas.yml`
 5. Reload or restart server
 
 ## Configuration Example
@@ -155,16 +156,16 @@ target/bedwars-1.0-SNAPSHOT.jar
 ```yaml
 arenas:
   example:
-    lobby-spawn: {world: world, x: 0, y: 100, z: 0}
+    lobby-spawn: world,0.0,100.0,0.0,0.0,0.0
     min-players: 2
     max-players: 8
     teams:
       red:
-        spawn: {world: world, x: 10, y: 100, z: 10}
-        bed: {world: world, x: 15, y: 100, z: 15}
+        spawn: world,10.0,100.0,10.0,0.0,0.0
+        bed: world,15.0,100.0,15.0,0.0,0.0
       blue:
-        spawn: {world: world, x: -10, y: 100, z: -10}
-        bed: {world: world, x: -15, y: 100, z: -15}
+        spawn: world,-10.0,100.0,-10.0,0.0,0.0
+        bed: world,-15.0,100.0,-15.0,0.0,0.0
 ```
 
 ## Dependencies
@@ -175,16 +176,12 @@ arenas:
 
 ## Future Enhancement Ideas
 
-1. **Database Integration** - MySQL/SQLite for stats
-2. **Cosmetics System** - Kill effects, victory dances, bed destroy effects
-3. **Party System** - Join games with friends
-4. **Spectator Mode** - Watch ongoing games
-5. **Custom Game Modes** - Solo, Doubles, 4v4v4v4
-6. **Achievements** - Unlock rewards for milestones
-7. **Leaderboards** - Top players by stats
-8. **Map Voting** - Vote for next arena
-9. **Custom Item Shop** - Configurable items and prices
-10. **Anti-Cheat Integration** - Prevent cheating
+1. **Cosmetics System** - Kill effects, victory dances, bed destroy effects
+2. **Party System** - Join games with friends
+3. **Custom Game Modes** - Solo, Doubles, 4v4v4v4
+4. **Achievements** - Unlock rewards for milestones
+5. **Map Voting** - Vote for next arena
+6. **Anti-Cheat Integration** - Prevent cheating
 
 ## Code Quality
 

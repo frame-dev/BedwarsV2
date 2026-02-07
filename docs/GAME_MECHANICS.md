@@ -115,44 +115,45 @@ The Item Shop allows teams to purchase equipment. Access it by interacting with 
 #### Categories
 
 **1. Blocks**
-- Wool (1 iron)
-- Terracotta (2 iron)
-- End Stone (3 iron)
-- Obsidian (4 diamonds)
+- White Wool (4 iron)
+- Terracotta (12 iron)
+- End Stone (24 iron)
+- Obsidian (4 emeralds)
 
 **2. Weapons**
 - Stone Sword (10 iron)
-- Iron Sword (5 gold)
-- Diamond Sword (3 diamonds)
-- Knockback Stick (5 iron)
+- Iron Sword (7 gold)
+- Diamond Sword (4 emeralds)
+- Knockback Stick (5 gold)
 
 **3. Armor**
-- Chainmail Helmet (40 iron)
-- Iron Armor Set (5 gold each piece)
-- Diamond Armor Set (3 diamonds each piece)
+- Chainmail Chestplate (40 iron)
+- Iron Chestplate (12 gold)
+- Diamond Chestplate (6 emeralds)
 
 **4. Tools**
-- Wooden Pickaxe (Free)
-- Iron Pickaxe (10 iron)
-- Diamond Pickaxe (1 diamond)
-- Iron Axe (8 iron)
-- Shears (10 iron)
+- Wooden Pickaxe (10 iron)
+- Iron Pickaxe (3 gold)
+- Diamond Pickaxe (6 gold)
+- Wooden Axe (10 iron)
+- Stone Axe (10 iron)
+- Shears (20 iron)
 
 **5. Food**
-- Apple (2 iron)
-- Steak (3 iron)
-- Golden Apple (2 diamonds)
+- Apple (4 iron)
+- Cooked Beef (3 for 4 iron)
+- Golden Apple (3 gold)
 
 **6. Potions**
-- Speed Potion (3 gold)
-- Jump Boost Potion (2 gold)
-- Invisibility Potion (1 diamond)
+- Speed Potion (2 emeralds)
+- Jump Potion (2 emeralds)
+- Invisibility Potion (1 emerald)
 
 **7. Special Items**
-- TNT (8 iron)
-- Ender Pearl (4 gold)
-- Fire Charge (2 iron)
-- Ladders (1 iron per 8)
+- TNT (4 gold)
+- Ender Pearl (4 emeralds)
+- Fire Charge (40 iron)
+- Ladders (4 iron for 8)
 
 ### Upgrade Shop
 

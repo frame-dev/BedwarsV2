@@ -13,13 +13,13 @@ cp target/bedwars-1.0-SNAPSHOT.jar server/plugins/
 ```yaml
 arenas:
   myarena:
-    lobby-spawn: {world: world, x: 0, y: 100, z: 0}
+    lobby-spawn: world,0.0,100.0,0.0,0.0,0.0
     min-players: 2
     max-players: 8
     teams:
       red:
-        spawn: {world: world, x: 50, y: 64, z: 0}
-        bed: {world: world, x: 55, y: 64, z: 0}
+        spawn: world,50.0,64.0,0.0,0.0,0.0
+        bed: world,55.0,64.0,0.0,0.0,0.0
 ```
 
 ## 🎮 Player Commands
@@ -27,6 +27,7 @@ arenas:
 |---------|-------------|
 | `/bw join <arena>` | Join game |
 | `/bw leave` | Leave game |
+| `/bw spectate <arena>` | Spectate game |
 | `/bw stats` | View stats |
 | `/bw list` | List arenas |
 
@@ -35,8 +36,10 @@ arenas:
 |---------|-------------|
 | `/bw setup create <name>` | Create arena |
 | `/bw setup setlobby <arena>` | Set lobby |
+| `/bw setup setspectator <arena>` | Set spectator |
 | `/bw setup setspawn <arena> <team>` | Set spawn |
 | `/bw setup setbed <arena> <team>` | Set bed |
+| `/bw setup addgenerator <name>` | Add generator |
 
 ## 🏪 Shop Categories
 1. **Blocks** - Building materials
@@ -88,7 +91,7 @@ Red • Blue • Green • Yellow • Aqua • White • Pink • Gray
 ```
 bedwars/
 ├── src/main/java/          (31 Java files)
-├── src/main/resources/     (config.yml, plugin.yml)
+├── src/main/resources/     (config.yml, arenas.yml, plugin.yml)
 ├── pom.xml                 (Maven config)
 └── README.md               (Full docs - in root)
 ```

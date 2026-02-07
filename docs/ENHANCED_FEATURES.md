@@ -370,11 +370,13 @@ Restart server to recreate fresh database.
 | Permission | Description | Default |
 |------------|-------------|---------|
 | `bedwars.join` | Join games | Everyone |
+| `bedwars.leave` | Leave games | Everyone |
 | `bedwars.spectate` | Spectate games | Everyone |
 | `bedwars.stats` | View statistics | Everyone |
-| `bedwars.leaderboard` | View leaderboards | Everyone |
+| `bedwars.list` | List arenas | Everyone |
 | `bedwars.setup` | Arena setup commands | Operators |
 | `bedwars.admin` | Administrative commands | Operators |
+| `bedwars.bungee` | BungeeCord lobby commands | Everyone |
 
 ### Permission Setup Example
 

@@ -242,7 +242,7 @@ mysql -h localhost -u bedwars_user -p bedwars
 1. Arena might be full: `/bw list`
 2. Game might be running: wait for next round
 3. Try different arena
-4. Check permissions: `bedwars.player.join`
+4. Check permissions: `bedwars.join`
 
 ### Stats not saving
 

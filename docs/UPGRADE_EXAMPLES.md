@@ -100,7 +100,7 @@ Add this to `upgrades.yml` configuration file:
         amount: 5
 ```
 
-### Example 5: Custom Special Upgrade (for future implementation)
+### Example 5: Custom Special Upgrade (requires custom logic)
 ```yaml
   trap-detector:
     enabled: true
@@ -194,13 +194,11 @@ Gives permanent potion effects to all team members.
 ### 3. SPECIAL
 Custom effects that require code implementation.
 
-**Note:** SPECIAL upgrades are for future features like:
+**Built-in SPECIAL upgrades:**
 - Heal Pool (regeneration field at base)
-- Dragon Buff (spawn ender dragons)
-- Trap Detector (alert on enemy traps)
-- Resource Boost (faster generators)
+- Dragon Buff (spawns ender dragons at base)
 
-To add functionality for SPECIAL upgrades, you need to:
+**Custom SPECIAL upgrades** still require code changes. To add one:
 1. Add the upgrade to `upgrades.yml` with `effect-type: SPECIAL`
 2. Implement custom logic in your code (e.g., in Game.java or custom listeners)
 3. Check if team has the upgrade: `team.getUpgrades().hasUpgrade("upgrade-id")`

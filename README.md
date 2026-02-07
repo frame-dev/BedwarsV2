@@ -78,7 +78,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 
 3. Start or restart your server
 
-4. Configure arenas in `plugins/BedWars/config.yml`
+4. Configure arenas in `plugins/BedWars/arenas.yml`
 
 📚 **[Full documentation available in /docs folder](docs/)**
 
@@ -90,8 +90,10 @@ The plugin uses multiple YAML configuration files for easy customization:
 - Game settings (countdown time, respawn time, generator upgrades)
 - Starting item and block/combat toggles
 - BungeeCord integration settings
-- Arena definitions (lobby spawn, team spawns, beds, generators)
 - Player limits and team colors
+
+### arenas.yml
+- Arena definitions (lobby spawn, team spawns, beds, generators)
 
 ### messages.yml
 - **100+ configurable messages** organized by category
@@ -124,24 +126,20 @@ upgrades:
     count: 2
 ```
 
-Example arena configuration in `config.yml`:
+Example arena configuration in `arenas.yml`:
 ```yaml
 arenas:
   example:
-    lobby-spawn:
-      world: world
-      x: 0
-      y: 100
-      z: 0
+    lobby-spawn: world,0.0,100.0,0.0,0.0,0.0
     min-players: 2
     max-players: 8
     teams:
       red:
-        spawn: {...}
-        bed: {...}
+        spawn: world,50.0,64.0,0.0,0.0,0.0
+        bed: world,55.0,64.0,0.0,0.0,0.0
       blue:
-        spawn: {...}
-        bed: {...}
+        spawn: world,-50.0,64.0,0.0,0.0,0.0
+        bed: world,-55.0,64.0,0.0,0.0,0.0
 ```
 
 ## Requirements

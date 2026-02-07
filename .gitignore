@@ -47,3 +47,4 @@ Desktop.ini
 # Plugin data (development)
 stats.yml
 config.yml.backup
+*.class

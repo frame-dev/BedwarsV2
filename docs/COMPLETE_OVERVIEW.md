@@ -124,7 +124,7 @@ A comprehensive, fully-featured BedWars minigame plugin for Minecraft (Spigot/Pa
 - ✅ 30-second countdown before game start
 - ✅ Automatic team assignment and balancing
 - ✅ Team-colored armor on spawn
-- ✅ Starting equipment (wooden sword)
+- ✅ Starting equipment (configurable, default wooden sword)
 - ✅ Respawn timer (5 seconds)
 - ✅ Bed destruction mechanics
 - ✅ Final kill system (no respawn after bed destroyed)
@@ -161,6 +161,7 @@ A comprehensive, fully-featured BedWars minigame plugin for Minecraft (Spigot/Pa
 **Player Commands:**
 - `/bedwars join <arena>` - Join a game
 - `/bedwars leave` - Leave current game
+- `/bedwars spectate <arena>` - Spectate a game
 - `/bedwars stats` - View statistics
 - `/bedwars list` - List all arenas
 - `/bw` - Command alias
@@ -168,8 +169,10 @@ A comprehensive, fully-featured BedWars minigame plugin for Minecraft (Spigot/Pa
 **Admin Commands:**
 - `/bedwars setup create <name>` - Create arena
 - `/bedwars setup setlobby <arena>` - Set lobby spawn
+- `/bedwars setup setspectator <arena>` - Set spectator spawn
 - `/bedwars setup setspawn <arena> <team>` - Set team spawn
 - `/bedwars setup setbed <arena> <team>` - Set bed location
+- `/bedwars setup addgenerator <name>` - Add a generator
 
 ---
 
@@ -192,20 +195,20 @@ java -jar server.jar
 ```
 
 ### 3. Configure Arena
-Edit `plugins/BedWars/config.yml`:
+Edit `plugins/BedWars/arenas.yml`:
 ```yaml
 arenas:
   example:
-    lobby-spawn: {world: world, x: 0, y: 100, z: 0}
+    lobby-spawn: world,0.0,100.0,0.0,0.0,0.0
     min-players: 2
     max-players: 8
     teams:
       red:
-        spawn: {world: world, x: 50, y: 64, z: 0}
-        bed: {world: world, x: 55, y: 64, z: 0}
+        spawn: world,50.0,64.0,0.0,0.0,0.0
+        bed: world,55.0,64.0,0.0,0.0,0.0
       blue:
-        spawn: {world: world, x: -50, y: 64, z: 0}
-        bed: {world: world, x: -55, y: 64, z: 0}
+        spawn: world,-50.0,64.0,0.0,0.0,0.0
+        bed: world,-55.0,64.0,0.0,0.0,0.0
 ```
 
 ### 4. Setup Shop NPCs
@@ -281,15 +284,11 @@ arenas:
 ## 🔮 Future Enhancement Ideas
 
 While complete, here are ideas for expansion:
-- MySQL/SQLite database integration
 - Cosmetics system (kill effects, bed destroy effects)
 - Party system (play with friends)
-- Spectator mode
 - Multiple game modes (solo, doubles, squads)
 - Achievements system
-- Leaderboards
 - Map voting
-- Custom shop items via config
 - Anti-cheat integration
 
 ---

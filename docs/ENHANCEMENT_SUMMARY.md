@@ -187,22 +187,22 @@
 - [ ] Configure multiple teams
 - [ ] Add generators
 - [ ] Save arena
-- [ ] Load arena on restart
+- [x] Load arena on restart
 
 ### Gameplay
-- [ ] Join game
-- [ ] Leave game
-- [ ] Spectate game
-- [ ] Stats tracking
-- [ ] Leaderboards work
-- [ ] World reset functions
+- [x] Join game
+- [x] Leave game
+- [x] Spectate game
+- [x] Stats tracking
+- [x] Leaderboards work
+- [x] World reset functions
 
 ### Commands
-- [ ] Tab completion works
-- [ ] Help menus display correctly
-- [ ] Permissions enforced
-- [ ] Error messages helpful
-- [ ] Admin commands work
+- [x] Tab completion works
+- [x] Help menus display correctly
+- [x] Permissions enforced
+- [x] Error messages helpful
+- [x] Admin commands work
 
 ## Permissions Reference
 
@@ -211,21 +211,27 @@ permissions:
   bedwars.join:
     description: Join games
     default: true
+   bedwars.leave:
+      description: Leave games
+      default: true
   bedwars.spectate:
     description: Spectate games
     default: true
   bedwars.stats:
     description: View statistics
     default: true
-  bedwars.leaderboard:
-    description: View leaderboards
-    default: true
+   bedwars.list:
+      description: List arenas
+      default: true
   bedwars.setup:
     description: Arena setup commands
     default: op
   bedwars.admin:
     description: Administrative commands
     default: op
+   bedwars.bungee:
+      description: BungeeCord lobby commands
+      default: true
 ```
 
 ## Quick Start Guide

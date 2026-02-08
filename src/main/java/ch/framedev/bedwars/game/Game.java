@@ -4,6 +4,7 @@ import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.player.GamePlayer;
 import ch.framedev.bedwars.stats.PlayerStats;
 import ch.framedev.bedwars.team.Team;
+import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.team.TeamColor;
 import ch.framedev.bedwars.generators.ResourceGenerator;
 import org.bukkit.Bukkit;
@@ -36,7 +37,7 @@ public class Game {
     private final Set<UUID> spectators;
     private final Map<TeamColor, Team> teams;
     private final List<ResourceGenerator> generators;
-    private final Map<TeamColor, UUID> shopVillagers;
+    private final Map<TeamColor, Map<ShopType, UUID>> shopVillagers;
     private final WorldResetManager worldResetManager;
     private final Map<TeamColor, List<UUID>> dragonBuffs;
     private GameState state;
@@ -575,29 +576,35 @@ public class Game {
         clearShopVillagers();
 
         for (Team team : teams.values()) {
-            Location shopLocation = arena.getShopLocation(team.getColor());
-            if (shopLocation == null || shopLocation.getWorld() == null) {
-                continue;
+            for (ShopType type : ShopType.values()) {
+                Location shopLocation = arena.getShopLocation(team.getColor(), type);
+                if (shopLocation == null || shopLocation.getWorld() == null) {
+                    continue;
+                }
+
+                Villager villager = (Villager) shopLocation.getWorld().spawnEntity(shopLocation, EntityType.VILLAGER);
+                villager.setProfession(type.getProfession());
+                villager.setAI(false);
+                villager.setInvulnerable(true);
+                villager.setCollidable(false);
+                villager.setSilent(true);
+                villager.setCustomName(team.getColor().getChatColor() + type.getDisplayName());
+                villager.setCustomNameVisible(true);
+
+                shopVillagers
+                        .computeIfAbsent(team.getColor(), k -> new HashMap<>())
+                        .put(type, villager.getUniqueId());
             }
-
-            Villager villager = (Villager) shopLocation.getWorld().spawnEntity(shopLocation, EntityType.VILLAGER);
-            villager.setProfession(Villager.Profession.FARMER);
-            villager.setAI(false);
-            villager.setInvulnerable(true);
-            villager.setCollidable(false);
-            villager.setSilent(true);
-            villager.setCustomName(team.getColor().getChatColor() + "Shop");
-            villager.setCustomNameVisible(true);
-
-            shopVillagers.put(team.getColor(), villager.getUniqueId());
         }
     }
 
     private void clearShopVillagers() {
-        for (UUID id : shopVillagers.values()) {
-            Entity entity = Bukkit.getEntity(id);
-            if (entity != null) {
-                entity.remove();
+        for (Map<ShopType, UUID> byType : shopVillagers.values()) {
+            for (UUID id : byType.values()) {
+                Entity entity = Bukkit.getEntity(id);
+                if (entity != null) {
+                    entity.remove();
+                }
             }
         }
         shopVillagers.clear();

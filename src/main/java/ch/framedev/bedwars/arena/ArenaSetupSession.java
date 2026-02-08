@@ -1,7 +1,9 @@
 package ch.framedev.bedwars.arena;
 
+import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.team.TeamColor;
 import org.bukkit.Location;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -19,7 +21,7 @@ public class ArenaSetupSession {
     private int maxPlayers = 8;
     private Map<TeamColor, Location> teamSpawns;
     private Map<TeamColor, Location> bedLocations;
-    private Map<TeamColor, Location> shopLocations;
+    private Map<TeamColor, Map<ShopType, Location>> shopLocations;
     private Map<String, Location> generatorLocations;
 
     public ArenaSetupSession(UUID playerUUID) {
@@ -90,12 +92,25 @@ public class ArenaSetupSession {
         bedLocations.put(color, location);
     }
 
-    public Map<TeamColor, Location> getShopLocations() {
+    public Map<TeamColor, Map<ShopType, Location>> getShopLocations() {
         return shopLocations;
     }
 
-    public void setShopLocation(TeamColor color, Location location) {
-        shopLocations.put(color, location);
+    public void setShopLocation(TeamColor color, ShopType type, Location location) {
+        if (type == null || location == null) {
+            return;
+        }
+        shopLocations
+                .computeIfAbsent(color, k -> new EnumMap<>(ShopType.class))
+                .put(type, location);
+    }
+
+    public Location getShopLocation(TeamColor color, ShopType type) {
+        Map<ShopType, Location> byType = shopLocations.get(color);
+        if (byType == null) {
+            return null;
+        }
+        return byType.get(type);
     }
 
     public Map<String, Location> getGeneratorLocations() {
@@ -136,8 +151,24 @@ public class ArenaSetupSession {
         progress.append("Max Players: ").append(maxPlayers).append("\n");
         progress.append("Team Spawns: ").append(teamSpawns.size()).append("\n");
         progress.append("Bed Locations: ").append(bedLocations.size()).append("\n");
-        progress.append("Shop Locations: ").append(shopLocations.size()).append("\n");
+        int itemShopCount = countShopLocations(ShopType.ITEM);
+        int upgradeShopCount = countShopLocations(ShopType.UPGRADE);
+        progress.append("Shop Locations: item=")
+                .append(itemShopCount)
+                .append(", upgrade=")
+                .append(upgradeShopCount)
+                .append("\n");
         progress.append("Generators: ").append(generatorLocations.size()).append("\n");
         return progress.toString();
+    }
+
+    private int countShopLocations(ShopType type) {
+        int count = 0;
+        for (Map<ShopType, Location> byType : shopLocations.values()) {
+            if (byType != null && byType.containsKey(type)) {
+                count++;
+            }
+        }
+        return count;
     }
 }

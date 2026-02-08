@@ -2,6 +2,7 @@ package ch.framedev.bedwars.arena;
 
 import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.game.Arena;
+import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.team.TeamColor;
 import ch.framedev.bedwars.utils.LocationUtils;
 import org.bukkit.Location;
@@ -79,10 +80,14 @@ public class ArenaManager {
                     LocationUtils.toString(entry.getValue()));
         }
 
-        for (Map.Entry<TeamColor, Location> entry : session.getShopLocations().entrySet()) {
+        for (Map.Entry<TeamColor, Map<ShopType, Location>> entry : session.getShopLocations().entrySet()) {
             String colorName = entry.getKey().name().toLowerCase();
-            arenasConfig.set(basePath + ".teams." + colorName + ".shop",
-                    LocationUtils.toString(entry.getValue()));
+            String shopBasePath = basePath + ".teams." + colorName + ".shop";
+            arenasConfig.set(shopBasePath, null);
+            for (Map.Entry<ShopType, Location> shopEntry : entry.getValue().entrySet()) {
+                arenasConfig.set(shopBasePath + "." + shopEntry.getKey().getConfigKey(),
+                        LocationUtils.toString(shopEntry.getValue()));
+            }
         }
 
         // Generator locations
@@ -118,14 +123,21 @@ public class ArenaManager {
                         TeamColor color = TeamColor.valueOf(colorName.toUpperCase());
                         Location spawn = LocationUtils.fromString(teams.getString(colorName + ".spawn"));
                         Location bed = LocationUtils.fromString(teams.getString(colorName + ".bed"));
-                        Location shop = LocationUtils.fromString(teams.getString(colorName + ".shop"));
+                        Location shopItem = LocationUtils.fromString(teams.getString(colorName + ".shop.item"));
+                        Location shopUpgrade = LocationUtils.fromString(teams.getString(colorName + ".shop.upgrade"));
+                        Location legacyShop = LocationUtils.fromString(teams.getString(colorName + ".shop"));
+                        if (shopItem == null) {
+                            shopItem = legacyShop;
+                        }
 
                         if (spawn != null)
                             arena.setTeamSpawn(color, spawn);
                         if (bed != null)
                             arena.setBedLocation(color, bed);
-                        if (shop != null)
-                            arena.setShopLocation(color, shop);
+                        if (shopItem != null)
+                            arena.setShopLocation(color, ShopType.ITEM, shopItem);
+                        if (shopUpgrade != null)
+                            arena.setShopLocation(color, ShopType.UPGRADE, shopUpgrade);
                     } catch (IllegalArgumentException e) {
                         plugin.getLogger().warning("Invalid team color: " + colorName);
                     }

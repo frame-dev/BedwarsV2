@@ -6,6 +6,7 @@ import ch.framedev.bedwars.arena.ArenaSetupSession;
 import ch.framedev.bedwars.game.Arena;
 import ch.framedev.bedwars.game.Game;
 import ch.framedev.bedwars.game.GameState;
+import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.stats.PlayerStats;
 import ch.framedev.bedwars.team.TeamColor;
 import ch.framedev.bedwars.utils.MessageManager;
@@ -794,17 +795,26 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
             return;
         }
 
-        if (args.length < 3) {
+        if (args.length < 4) {
             mm.sendMessage(player, "command.setup-setshop-usage");
+            mm.sendMessage(player, "command.available-shop-types", "item, upgrade");
             return;
         }
 
         try {
             TeamColor color = TeamColor.valueOf(args[2].toUpperCase());
-            session.setShopLocation(color, player.getLocation());
+            ShopType type = ShopType.fromString(args[3]);
+            if (type == null) {
+                mm.sendMessage(player, "command.invalid-shop-type");
+                mm.sendMessage(player, "command.available-shop-types", "item, upgrade");
+                return;
+            }
+            session.setShopLocation(color, type, player.getLocation());
             plugin.getDebugLogger().debug("Setup team shop set: player=" + player.getName()
-                    + " arena=" + session.getArenaName() + " team=" + color.name());
-            mm.sendMessage(player, "command.team-shop-set", color.getChatColor() + color.name());
+                    + " arena=" + session.getArenaName() + " team=" + color.name()
+                    + " type=" + type.name().toLowerCase());
+            mm.sendMessage(player, "command.team-shop-set",
+                    color.getChatColor() + color.name(), type.getDisplayName());
         } catch (IllegalArgumentException e) {
             mm.sendMessage(player, "command.invalid-team-color");
         }

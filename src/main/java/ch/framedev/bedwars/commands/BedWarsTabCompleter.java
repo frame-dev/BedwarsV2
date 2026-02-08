@@ -2,6 +2,7 @@ package ch.framedev.bedwars.commands;
 
 import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.arena.ArenaManager;
+import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.team.TeamColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -136,7 +137,12 @@ public class BedWarsTabCompleter implements TabCompleter {
 
         if (args.length == 4) {
             if ("setup".equalsIgnoreCase(args[0])) {
-                // No 4th argument suggestions needed for setup commands.
+                if ("setshop".equalsIgnoreCase(args[1])) {
+                    return Arrays.stream(ShopType.values())
+                            .map(ShopType::getConfigKey)
+                            .filter(t -> t.startsWith(args[3].toLowerCase()))
+                            .collect(Collectors.toList());
+                }
             }
         }
 

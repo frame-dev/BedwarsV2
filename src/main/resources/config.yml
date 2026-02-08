@@ -142,6 +142,14 @@ debug:
   verbose-logging: false
   show-generator-spawns: false
 
+# Sound settings
+sounds:
+  bed-destroyed:
+    enabled: true
+    sound: "ENTITY_ENDER_DRAGON_GROWL"
+    volume: 1.0
+    pitch: 1.0
+
 # Party Settings
 party:
   max-size: 4

@@ -4,6 +4,8 @@ import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.game.Game;
 import ch.framedev.bedwars.game.GameState;
 import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -97,6 +99,8 @@ public class BlockBreakListener implements Listener {
                         team.getColor().getChatColor() + team.getColor().name(),
                         breakerPlayer.getTeam().getColor().getChatColor() + player.getName());
 
+                playBedDestroyedSound(game);
+
                 if (breakerPlayer != null) {
                     breakerPlayer.addBedBroken();
                 }
@@ -108,5 +112,35 @@ public class BlockBreakListener implements Listener {
 
     private String formatLocation(Block block) {
         return block.getWorld().getName() + ":" + block.getX() + "," + block.getY() + "," + block.getZ();
+    }
+
+    private void playBedDestroyedSound(Game game) {
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("sounds.bed-destroyed");
+        if (section == null) {
+            return;
+        }
+
+        if (!section.getBoolean("enabled", true)) {
+            return;
+        }
+
+        String soundName = section.getString("sound", "ENTITY_ENDER_DRAGON_GROWL");
+        float volume = (float) section.getDouble("volume", 1.0);
+        float pitch = (float) section.getDouble("pitch", 1.0);
+
+        Sound sound;
+        try {
+            sound = Sound.valueOf(soundName.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            plugin.getDebugLogger().debug("Invalid bed-destroy sound: " + soundName);
+            return;
+        }
+
+        for (var gamePlayer : game.getPlayers().values()) {
+            Player onlinePlayer = org.bukkit.Bukkit.getPlayer(gamePlayer.getUuid());
+            if (onlinePlayer != null) {
+                onlinePlayer.playSound(onlinePlayer.getLocation(), sound, volume, pitch);
+            }
+        }
     }
 }

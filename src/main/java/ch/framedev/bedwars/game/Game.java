@@ -58,7 +58,7 @@ public class Game {
         initializeTeams();
         initializeGenerators();
         plugin.getDebugLogger().debug("Game initialized for arena: " + arena.getName()
-            + ", teams=" + teams.size() + ", generators=" + generators.size());
+                + ", teams=" + teams.size() + ", generators=" + generators.size());
     }
 
     private void initializeTeams() {
@@ -171,7 +171,7 @@ public class Game {
                     maxStack));
         }
 
-            plugin.getDebugLogger().debug("Generators initialized for arena: " + arena.getName()
+        plugin.getDebugLogger().debug("Generators initialized for arena: " + arena.getName()
                 + ", count=" + generators.size());
     }
 
@@ -245,7 +245,7 @@ public class Game {
         List<Integer> broadcastIntervals = plugin.getConfig().getIntegerList("game.countdown-broadcast-intervals");
 
         plugin.getDebugLogger().debug("Countdown started: arena=" + arena.getName()
-            + ", seconds=" + countdown);
+                + ", seconds=" + countdown);
 
         countdownTask = new BukkitRunnable() {
             @Override
@@ -288,7 +288,7 @@ public class Game {
         state = GameState.RUNNING;
         broadcast("game.game-started");
         plugin.getDebugLogger().debug("Game started: arena=" + arena.getName()
-            + ", players=" + players.size());
+                + ", players=" + players.size());
 
         // Teleport players to their team spawns
         for (GamePlayer gamePlayer : players.values()) {
@@ -321,7 +321,7 @@ public class Game {
         boolean[] upgraded = new boolean[] { false, false };
 
         plugin.getDebugLogger().debug("Game timer started: diamondUpgrade=" + diamondUpgradeTime
-            + "s, emeraldUpgrade=" + emeraldUpgradeTime + "s");
+                + "s, emeraldUpgrade=" + emeraldUpgradeTime + "s");
 
         gameTask = new BukkitRunnable() {
             int elapsed = 0;
@@ -424,7 +424,8 @@ public class Game {
         }
 
         if (aliveTeams.size() == 1) {
-            endGame(aliveTeams.get(0));
+            Team winningTeam = aliveTeams.get(0);
+            endGame(winningTeam);
         } else if (aliveTeams.isEmpty()) {
             endGame(null);
         }
@@ -433,7 +434,7 @@ public class Game {
     public void endGame(Team winningTeam) {
         state = GameState.ENDING;
         plugin.getDebugLogger().debug("Game ending: arena=" + arena.getName()
-            + ", winner=" + (winningTeam != null ? winningTeam.getColor().name() : "none"));
+                + ", winner=" + (winningTeam != null ? winningTeam.getColor().name() : "none"));
 
         if (gameTask != null) {
             gameTask.cancel();
@@ -516,7 +517,7 @@ public class Game {
         int delay = plugin.getConfig().getInt("bungeecord.lobby-send-delay", 3);
 
         plugin.getDebugLogger().debug("Sending player to lobby (delayed): " + player.getName()
-            + ", delay=" + delay + "s");
+                + ", delay=" + delay + "s");
 
         new BukkitRunnable() {
             @Override
@@ -619,7 +620,7 @@ public class Game {
         plugin.getGameManager().addPlayerToGame(player, this);
 
         plugin.getDebugLogger().debug("Spectator added: " + player.getName()
-            + ", arena=" + arena.getName());
+                + ", arena=" + arena.getName());
 
         // Set spectator mode
         player.setGameMode(GameMode.SPECTATOR);

@@ -130,10 +130,11 @@ public class StatsManager {
      * Get player stats from cache (synchronous)
      */
     public PlayerStats getPlayerStats(UUID uuid) {
-        return statsCache.computeIfAbsent(uuid, k -> {
-            loadPlayerStats(uuid).join(); // Load synchronously if not in cache
+        if (statsCache.containsKey(uuid)) {
             return statsCache.get(uuid);
-        });
+        } else {
+            return loadPlayerStats(uuid).join(); // Load asynchronously but return null for now
+        }
     }
 
     /**

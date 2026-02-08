@@ -21,7 +21,6 @@ mvn clean package
 ```
 
 #### Option 2: Use Pre-built JAR
-1. Download the latest release JAR
 2. Place it in your server's `plugins/` folder
 
 ### First Time Setup

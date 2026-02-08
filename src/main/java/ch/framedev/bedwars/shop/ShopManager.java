@@ -275,6 +275,7 @@ public class ShopManager {
         categories.add(special);
     }
 
+    @SuppressWarnings("deprecation")
     private void applyBasePotionType(PotionMeta potionMeta, PotionType potionType) {
         try {
             potionMeta.setBasePotionType(potionType);

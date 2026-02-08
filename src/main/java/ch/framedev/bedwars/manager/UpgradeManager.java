@@ -151,7 +151,8 @@ public class UpgradeManager {
         Enchantment enchantment = null;
         if (!enchantmentStr.isEmpty()) {
             try {
-                NamespacedKey key = NamespacedKey.minecraft(enchantmentStr.toLowerCase());
+                String enchantmentKey = normalizeEnchantmentKey(enchantmentStr);
+                NamespacedKey key = NamespacedKey.minecraft(enchantmentKey);
                 enchantment = Enchantment.getByKey(key);
                 if (enchantment == null) {
                     plugin.getLogger().warning("Invalid enchantment '" + enchantmentStr + "' for upgrade " + id);
@@ -164,7 +165,8 @@ public class UpgradeManager {
         PotionEffectType potionType = null;
         if (!potionTypeStr.isEmpty()) {
             try {
-                NamespacedKey key = NamespacedKey.minecraft(potionTypeStr.toLowerCase());
+                String potionKey = normalizePotionEffectKey(potionTypeStr);
+                NamespacedKey key = NamespacedKey.minecraft(potionKey);
                 potionType = PotionEffectType.getByKey(key);
                 if (potionType == null) {
                     plugin.getLogger().warning("Invalid potion-type '" + potionTypeStr + "' for upgrade " + id);
@@ -317,6 +319,23 @@ public class UpgradeManager {
         String name = material.name();
         return name.endsWith("_HELMET") || name.endsWith("_CHESTPLATE") ||
                 name.endsWith("_LEGGINGS") || name.endsWith("_BOOTS");
+    }
+
+    private String normalizeEnchantmentKey(String value) {
+        String upper = value.trim().toUpperCase(Locale.ROOT);
+        return switch (upper) {
+            case "DAMAGE_ALL" -> "sharpness";
+            case "PROTECTION_ENVIRONMENTAL" -> "protection";
+            default -> value.trim().toLowerCase(Locale.ROOT);
+        };
+    }
+
+    private String normalizePotionEffectKey(String value) {
+        String upper = value.trim().toUpperCase(Locale.ROOT);
+        return switch (upper) {
+            case "FAST_DIGGING" -> "haste";
+            default -> value.trim().toLowerCase(Locale.ROOT);
+        };
     }
 
     /**

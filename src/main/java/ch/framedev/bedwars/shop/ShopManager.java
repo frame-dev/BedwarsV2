@@ -10,6 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
 
 import java.io.File;
@@ -198,7 +199,7 @@ public class ShopManager {
             }
 
             if (potionType != null) {
-                potionMeta.setBasePotionType(potionType);
+                applyBasePotionType(potionMeta, potionType);
             }
         }
 
@@ -272,6 +273,15 @@ public class ShopManager {
         special.addItem(new ShopItem(new ItemStack(Material.FIRE_CHARGE, 1), new ItemStack(Material.IRON_INGOT, 40)));
         special.addItem(new ShopItem(new ItemStack(Material.LADDER, 8), new ItemStack(Material.IRON_INGOT, 4)));
         categories.add(special);
+    }
+
+    private void applyBasePotionType(PotionMeta potionMeta, PotionType potionType) {
+        try {
+            potionMeta.setBasePotionType(potionType);
+        } catch (NoSuchMethodError e) {
+            // 1.18 uses PotionData instead of setBasePotionType.
+            potionMeta.setBasePotionData(new PotionData(potionType));
+        }
     }
 
     public List<ShopCategory> getCategories() {

@@ -45,7 +45,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         Player player = (Player) sender;
 
         plugin.getDebugLogger().debug("Command: /" + label + " " + Arrays.toString(args)
-            + " by " + player.getName());
+                + " by " + player.getName());
 
         if (args.length == 0) {
             sendHelp(player);
@@ -449,7 +449,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
     private void handleStatsOther(Player player, String targetName) {
         // Lookup player by name (async to avoid blocking)
         plugin.getDebugLogger().debug("Stats requested: player=" + player.getName()
-            + " target=" + targetName);
+                + " target=" + targetName);
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             @SuppressWarnings("deprecation")
             org.bukkit.OfflinePlayer target = plugin.getServer().getOfflinePlayer(targetName);
@@ -617,6 +617,9 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
             case "setbed":
                 handleSetupSetBed(player, args);
                 break;
+            case "setshop":
+                handleSetupSetShop(player, args);
+                break;
             case "addgenerator":
                 handleSetupAddGenerator(player, args);
                 break;
@@ -655,6 +658,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         mm.sendMessage(player, "setup-help.setspectator");
         mm.sendMessage(player, "setup-help.setspawn");
         mm.sendMessage(player, "setup-help.setbed");
+        mm.sendMessage(player, "setup-help.setshop");
         mm.sendMessage(player, "setup-help.addgenerator");
         mm.sendMessage(player, "setup-help.setminplayers");
         mm.sendMessage(player, "setup-help.setmaxplayers");
@@ -681,7 +685,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         ArenaSetupSession session = arenaManager.getOrCreateSession(player.getUniqueId());
         session.setArenaName(arenaName);
         plugin.getDebugLogger().debug("Setup create: player=" + player.getName()
-            + " arena=" + arenaName);
+                + " arena=" + arenaName);
         mm.sendMessage(player, "command.setup-started", arenaName);
         mm.sendMessage(player, "command.setup-use-commands");
     }
@@ -782,6 +786,30 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         }
     }
 
+    private void handleSetupSetShop(Player player, String[] args) {
+        MessageManager mm = plugin.getMessageManager();
+        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
+        if (session == null) {
+            mm.sendMessage(player, "command.no-setup-session");
+            return;
+        }
+
+        if (args.length < 3) {
+            mm.sendMessage(player, "command.setup-setshop-usage");
+            return;
+        }
+
+        try {
+            TeamColor color = TeamColor.valueOf(args[2].toUpperCase());
+            session.setShopLocation(color, player.getLocation());
+            plugin.getDebugLogger().debug("Setup team shop set: player=" + player.getName()
+                    + " arena=" + session.getArenaName() + " team=" + color.name());
+            mm.sendMessage(player, "command.team-shop-set", color.getChatColor() + color.name());
+        } catch (IllegalArgumentException e) {
+            mm.sendMessage(player, "command.invalid-team-color");
+        }
+    }
+
     private void handleSetupAddGenerator(Player player, String[] args) {
         MessageManager mm = plugin.getMessageManager();
         ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
@@ -798,7 +826,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         String genName = args[2];
         session.addGenerator(genName, player.getLocation());
         plugin.getDebugLogger().debug("Setup generator added: player=" + player.getName()
-            + " arena=" + session.getArenaName() + " generator=" + genName);
+                + " arena=" + session.getArenaName() + " generator=" + genName);
         mm.sendMessage(player, "command.generator-added", genName);
     }
 
@@ -864,7 +892,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         player.sendMessage(ChatColor.YELLOW + session.getProgress());
         mm.sendMessage(player, "command.setup-info-footer");
         plugin.getDebugLogger().debug("Setup info shown: player=" + player.getName()
-            + " arena=" + session.getArenaName());
+                + " arena=" + session.getArenaName());
     }
 
     private void handleSetupSave(Player player) {
@@ -939,7 +967,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
 
         mm.sendMessage(player, "command.force-starting");
         plugin.getDebugLogger().debug("Force start: player=" + player.getName()
-            + " arena=" + game.getArena().getName());
+                + " arena=" + game.getArena().getName());
         game.forceStart();
     }
 
@@ -953,7 +981,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
 
         game.endGame(null);
         plugin.getDebugLogger().debug("Force stop: player=" + player.getName()
-            + " arena=" + game.getArena().getName());
+                + " arena=" + game.getArena().getName());
         mm.sendMessage(player, "command.game-stopped");
     }
 
@@ -968,7 +996,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         int blockCount = game.getWorldResetManager().getBlockChangeCount();
         game.getWorldResetManager().resetWorld();
         plugin.getDebugLogger().debug("World reset: player=" + player.getName()
-            + " arena=" + game.getArena().getName() + " blocks=" + blockCount);
+                + " arena=" + game.getArena().getName() + " blocks=" + blockCount);
         mm.sendMessage(player, "command.world-reset", String.valueOf(blockCount));
     }
 

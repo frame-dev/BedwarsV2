@@ -15,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Villager;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.potion.PotionEffect;
@@ -35,6 +36,7 @@ public class Game {
     private final Set<UUID> spectators;
     private final Map<TeamColor, Team> teams;
     private final List<ResourceGenerator> generators;
+    private final Map<TeamColor, UUID> shopVillagers;
     private final WorldResetManager worldResetManager;
     private final Map<TeamColor, List<UUID>> dragonBuffs;
     private GameState state;
@@ -51,6 +53,7 @@ public class Game {
         this.spectators = new HashSet<>();
         this.teams = new HashMap<>();
         this.generators = new ArrayList<>();
+        this.shopVillagers = new HashMap<>();
         this.worldResetManager = new WorldResetManager();
         this.dragonBuffs = new HashMap<>();
         this.state = GameState.WAITING;
@@ -99,13 +102,16 @@ public class Game {
         int emeraldSpawnAmount = config.getInt("generators.emerald.spawn-amount", 1);
         int emeraldMaxStack = config.getInt("generators.emerald.max-stack", 8);
 
+        boolean hasIronGenerators = arena.hasGeneratorTypePrefix("iron");
+        boolean hasGoldGenerators = arena.hasGeneratorTypePrefix("gold");
+
         // Add team generators
         for (Team team : teams.values()) {
-            if (ironEnabled) {
+            if (ironEnabled && !hasIronGenerators) {
                 generators.add(new ResourceGenerator(team.getSpawnLocation(), ResourceGenerator.ResourceType.IRON, 1,
                         ironTier1Delay, ironTier2Delay, ironSpawnAmount, ironMaxStack));
             }
-            if (goldEnabled) {
+            if (goldEnabled && !hasGoldGenerators) {
                 generators.add(new ResourceGenerator(team.getSpawnLocation().clone().add(2, 0, 0),
                         ResourceGenerator.ResourceType.GOLD, 1, goldTier1Delay, goldTier2Delay, goldSpawnAmount,
                         goldMaxStack));
@@ -230,6 +236,8 @@ public class Game {
         if (sendOnLeave && (plugin.getBungeeManager().isEnabled()
                 || (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()))) {
             sendToLobbyDelayed(player);
+        } else {
+            player.teleport(arena.getLobbySpawn());
         }
 
         if (state == GameState.RUNNING) {
@@ -307,6 +315,9 @@ public class Game {
             generator.start(plugin);
         }
         plugin.getDebugLogger().debug("Resource generators started: count=" + generators.size());
+
+        // Spawn shop villagers for teams
+        spawnShopVillagers();
 
         // Start game timer
         startGameTimer();
@@ -545,6 +556,8 @@ public class Game {
             }
         }
 
+        clearShopVillagers();
+
         stopHealPoolTask();
         clearDragonBuffs();
         players.clear();
@@ -556,6 +569,38 @@ public class Game {
         }
 
         plugin.getDebugLogger().debug("Game reset to WAITING: arena=" + arena.getName());
+    }
+
+    private void spawnShopVillagers() {
+        clearShopVillagers();
+
+        for (Team team : teams.values()) {
+            Location shopLocation = arena.getShopLocation(team.getColor());
+            if (shopLocation == null || shopLocation.getWorld() == null) {
+                continue;
+            }
+
+            Villager villager = (Villager) shopLocation.getWorld().spawnEntity(shopLocation, EntityType.VILLAGER);
+            villager.setProfession(Villager.Profession.FARMER);
+            villager.setAI(false);
+            villager.setInvulnerable(true);
+            villager.setCollidable(false);
+            villager.setSilent(true);
+            villager.setCustomName(team.getColor().getChatColor() + "Shop");
+            villager.setCustomNameVisible(true);
+
+            shopVillagers.put(team.getColor(), villager.getUniqueId());
+        }
+    }
+
+    private void clearShopVillagers() {
+        for (UUID id : shopVillagers.values()) {
+            Entity entity = Bukkit.getEntity(id);
+            if (entity != null) {
+                entity.remove();
+            }
+        }
+        shopVillagers.clear();
     }
 
     private Team getSmallestTeam() {

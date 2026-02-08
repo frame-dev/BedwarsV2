@@ -31,8 +31,8 @@ public class BedWarsTabCompleter implements TabCompleter {
         if (args.length == 1) {
             // Main commands
             List<String> commands = new ArrayList<>(
-                Arrays.asList("join", "leave", "stats", "leaderboard", "top", "list", "spectate", "party",
-                        "queue", "vote", "cosmetics", "achievements"));
+                    Arrays.asList("join", "leave", "stats", "leaderboard", "top", "list", "spectate", "party",
+                            "queue", "vote", "cosmetics", "achievements"));
             if (sender.hasPermission("bedwars.setup")) {
                 commands.add("setup");
             }
@@ -66,7 +66,7 @@ public class BedWarsTabCompleter implements TabCompleter {
                 case "setup":
                     List<String> setupCommands = Arrays.asList(
                             "create", "delete", "setlobby", "setspectator",
-                            "setspawn", "setbed", "addgenerator", "setminplayers",
+                            "setspawn", "setbed", "setshop", "addgenerator", "setminplayers",
                             "setmaxplayers", "info", "save", "cancel", "list");
                     return setupCommands.stream()
                             .filter(c -> c.toLowerCase().startsWith(args[1].toLowerCase()))
@@ -82,8 +82,8 @@ public class BedWarsTabCompleter implements TabCompleter {
 
                 case "vote":
                     return Arrays.asList("open", "start", "end", "force").stream()
-                        .filter(c -> c.toLowerCase().startsWith(args[1].toLowerCase()))
-                        .collect(Collectors.toList());
+                            .filter(c -> c.toLowerCase().startsWith(args[1].toLowerCase()))
+                            .collect(Collectors.toList());
             }
         }
 
@@ -91,11 +91,16 @@ public class BedWarsTabCompleter implements TabCompleter {
             switch (args[0].toLowerCase()) {
                 case "setup":
                     switch (args[1].toLowerCase()) {
+                        case "setspawn":
+                        case "setbed":
+                        case "setshop":
+                            return Arrays.stream(TeamColor.values())
+                                    .map(c -> c.name().toLowerCase())
+                                    .filter(c -> c.startsWith(args[2].toLowerCase()))
+                                    .collect(Collectors.toList());
                         case "delete":
                         case "setlobby":
                         case "setspectator":
-                        case "setspawn":
-                        case "setbed":
                         case "addgenerator":
                         case "setminplayers":
                         case "setmaxplayers":
@@ -131,13 +136,7 @@ public class BedWarsTabCompleter implements TabCompleter {
 
         if (args.length == 4) {
             if ("setup".equalsIgnoreCase(args[0])) {
-                if ("setspawn".equalsIgnoreCase(args[1]) || "setbed".equalsIgnoreCase(args[1])) {
-                    // Team colors
-                    return Arrays.stream(TeamColor.values())
-                            .map(c -> c.name().toLowerCase())
-                            .filter(c -> c.startsWith(args[3].toLowerCase()))
-                            .collect(Collectors.toList());
-                }
+                // No 4th argument suggestions needed for setup commands.
             }
         }
 

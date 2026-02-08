@@ -79,6 +79,12 @@ public class ArenaManager {
                     LocationUtils.toString(entry.getValue()));
         }
 
+        for (Map.Entry<TeamColor, Location> entry : session.getShopLocations().entrySet()) {
+            String colorName = entry.getKey().name().toLowerCase();
+            arenasConfig.set(basePath + ".teams." + colorName + ".shop",
+                    LocationUtils.toString(entry.getValue()));
+        }
+
         // Generator locations
         for (Map.Entry<String, Location> entry : session.getGeneratorLocations().entrySet()) {
             arenasConfig.set(basePath + ".generators." + entry.getKey(),
@@ -112,11 +118,14 @@ public class ArenaManager {
                         TeamColor color = TeamColor.valueOf(colorName.toUpperCase());
                         Location spawn = LocationUtils.fromString(teams.getString(colorName + ".spawn"));
                         Location bed = LocationUtils.fromString(teams.getString(colorName + ".bed"));
+                        Location shop = LocationUtils.fromString(teams.getString(colorName + ".shop"));
 
                         if (spawn != null)
                             arena.setTeamSpawn(color, spawn);
                         if (bed != null)
                             arena.setBedLocation(color, bed);
+                        if (shop != null)
+                            arena.setShopLocation(color, shop);
                     } catch (IllegalArgumentException e) {
                         plugin.getLogger().warning("Invalid team color: " + colorName);
                     }

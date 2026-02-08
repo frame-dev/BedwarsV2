@@ -17,6 +17,7 @@ public class Arena {
     private final Location spectatorSpawn;
     private final Map<TeamColor, Location> teamSpawns;
     private final Map<TeamColor, Location> bedLocations;
+    private final Map<TeamColor, Location> shopLocations;
     private final Map<String, Location> generators;
     private final int minPlayers;
     private final int maxPlayers;
@@ -27,6 +28,7 @@ public class Arena {
         this.spectatorSpawn = spectatorSpawn;
         this.teamSpawns = new HashMap<>();
         this.bedLocations = new HashMap<>();
+        this.shopLocations = new HashMap<>();
         this.generators = new HashMap<>();
         this.minPlayers = minPlayers;
         this.maxPlayers = maxPlayers;
@@ -44,12 +46,26 @@ public class Arena {
         generators.put(name, location);
     }
 
+    public void setShopLocation(TeamColor color, Location location) {
+        shopLocations.put(color, location);
+    }
+
     public Location getSpectatorSpawn() {
         return spectatorSpawn;
     }
 
     public Map<String, Location> getGenerators() {
         return generators;
+    }
+
+    public Location getShopLocation(TeamColor color) {
+        return shopLocations.get(color);
+    }
+
+    public boolean hasGeneratorTypePrefix(String prefix) {
+        String normalized = prefix.toLowerCase();
+        return generators.keySet().stream()
+                .anyMatch(name -> name != null && name.toLowerCase().startsWith(normalized));
     }
 
     public static Arena fromConfig(ConfigurationSection section) {
@@ -71,11 +87,14 @@ public class Arena {
                     TeamColor color = TeamColor.valueOf(colorName.toUpperCase());
                     Location spawn = (Location) teams.get(colorName + ".spawn");
                     Location bed = (Location) teams.get(colorName + ".bed");
+                    Location shop = (Location) teams.get(colorName + ".shop");
 
                     if (spawn != null)
                         arena.setTeamSpawn(color, spawn);
                     if (bed != null)
                         arena.setBedLocation(color, bed);
+                    if (shop != null)
+                        arena.setShopLocation(color, shop);
                 }
             }
 

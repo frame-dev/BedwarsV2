@@ -19,12 +19,14 @@ public class ArenaSetupSession {
     private int maxPlayers = 8;
     private Map<TeamColor, Location> teamSpawns;
     private Map<TeamColor, Location> bedLocations;
+    private Map<TeamColor, Location> shopLocations;
     private Map<String, Location> generatorLocations;
 
     public ArenaSetupSession(UUID playerUUID) {
         this.playerUUID = playerUUID;
         this.teamSpawns = new HashMap<>();
         this.bedLocations = new HashMap<>();
+        this.shopLocations = new HashMap<>();
         this.generatorLocations = new HashMap<>();
     }
 
@@ -88,6 +90,14 @@ public class ArenaSetupSession {
         bedLocations.put(color, location);
     }
 
+    public Map<TeamColor, Location> getShopLocations() {
+        return shopLocations;
+    }
+
+    public void setShopLocation(TeamColor color, Location location) {
+        shopLocations.put(color, location);
+    }
+
     public Map<String, Location> getGeneratorLocations() {
         return generatorLocations;
     }
@@ -126,6 +136,7 @@ public class ArenaSetupSession {
         progress.append("Max Players: ").append(maxPlayers).append("\n");
         progress.append("Team Spawns: ").append(teamSpawns.size()).append("\n");
         progress.append("Bed Locations: ").append(bedLocations.size()).append("\n");
+        progress.append("Shop Locations: ").append(shopLocations.size()).append("\n");
         progress.append("Generators: ").append(generatorLocations.size()).append("\n");
         return progress.toString();
     }

@@ -130,7 +130,8 @@ public class CosmeticsManager {
 
         cache.put(player.getUniqueId(), cosmetics);
         saveToDatabase(cosmetics);
-        plugin.getMessageManager().sendMessage(player, "cosmetics.selected", definition.getDisplayName());
+        String name = ChatColor.translateAlternateColorCodes('&', definition.getDisplayName());
+        plugin.getMessageManager().sendMessage(player, "cosmetics.selected", name);
 
         Inventory inventory = buildMenu(player);
         player.openInventory(inventory);

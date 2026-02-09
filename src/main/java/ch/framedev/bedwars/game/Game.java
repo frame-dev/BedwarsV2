@@ -7,7 +7,10 @@ import ch.framedev.bedwars.team.Team;
 import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.team.TeamColor;
 import ch.framedev.bedwars.generators.ResourceGenerator;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -22,6 +25,8 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 
@@ -42,9 +47,11 @@ public class Game {
     private final Map<TeamColor, List<UUID>> dragonBuffs;
     private GameState state;
     private int countdown;
+    private int gameElapsedSeconds;
     private BukkitRunnable countdownTask;
     private BukkitRunnable gameTask;
     private BukkitRunnable healPoolTask;
+    private GameScoreboard gameScoreboard;
 
     public Game(BedWarsPlugin plugin, Arena arena) {
         this.plugin = plugin;
@@ -61,6 +68,9 @@ public class Game {
 
         initializeTeams();
         initializeGenerators();
+        if (plugin.getConfig().getBoolean("scoreboard.enabled", true)) {
+            gameScoreboard = new GameScoreboard(plugin, this);
+        }
         plugin.getDebugLogger().debug("Game initialized for arena: " + arena.getName()
                 + ", teams=" + teams.size() + ", generators=" + generators.size());
     }
@@ -82,6 +92,11 @@ public class Game {
         boolean goldEnabled = config.getBoolean("generators.gold.enabled", true);
         boolean diamondEnabled = config.getBoolean("generators.diamond.enabled", true);
         boolean emeraldEnabled = config.getBoolean("generators.emerald.enabled", true);
+        boolean onlyIronGold = config.getBoolean("generators.only-iron-gold", false);
+        if (onlyIronGold) {
+            diamondEnabled = false;
+            emeraldEnabled = false;
+        }
 
         int ironTier1Delay = secondsToTicks(config.getDouble("generators.iron.base-delay", 1));
         int ironTier2Delay = secondsToTicks(config.getDouble("generators.iron.upgraded-delay", 1));
@@ -103,21 +118,26 @@ public class Game {
         int emeraldSpawnAmount = config.getInt("generators.emerald.spawn-amount", 1);
         int emeraldMaxStack = config.getInt("generators.emerald.max-stack", 8);
 
-        boolean hasIronGenerators = arena.hasGeneratorTypePrefix("iron");
-        boolean hasGoldGenerators = arena.hasGeneratorTypePrefix("gold");
-
-        // Add team generators
-        for (Team team : teams.values()) {
-            if (ironEnabled && !hasIronGenerators) {
-                generators.add(new ResourceGenerator(team.getSpawnLocation(), ResourceGenerator.ResourceType.IRON, 1,
-                        ironTier1Delay, ironTier2Delay, ironSpawnAmount, ironMaxStack));
-            }
-            if (goldEnabled && !hasGoldGenerators) {
-                generators.add(new ResourceGenerator(team.getSpawnLocation().clone().add(2, 0, 0),
-                        ResourceGenerator.ResourceType.GOLD, 1, goldTier1Delay, goldTier2Delay, goldSpawnAmount,
-                        goldMaxStack));
-            }
-        }
+        /**
+         * boolean hasIronGenerators = arena.hasGeneratorTypePrefix("iron");
+         * boolean hasGoldGenerators = arena.hasGeneratorTypePrefix("gold");
+         * 
+         * // Add team generators
+         * for (Team team : teams.values()) {
+         * if (ironEnabled && !hasIronGenerators) {
+         * generators.add(new ResourceGenerator(team.getSpawnLocation(),
+         * ResourceGenerator.ResourceType.IRON, 1,
+         * ironTier1Delay, ironTier2Delay, ironSpawnAmount, ironMaxStack));
+         * }
+         * if (goldEnabled && !hasGoldGenerators) {
+         * generators.add(new ResourceGenerator(team.getSpawnLocation().clone().add(2,
+         * 0, 0),
+         * ResourceGenerator.ResourceType.GOLD, 1, goldTier1Delay, goldTier2Delay,
+         * goldSpawnAmount,
+         * goldMaxStack));
+         * }
+         * }
+         */
 
         // Add arena-configured generators by name prefix
         for (Map.Entry<String, org.bukkit.Location> entry : arena.getGenerators().entrySet()) {
@@ -209,10 +229,16 @@ public class Game {
 
         plugin.getGameManager().addPlayerToGame(player, this);
 
-        // Teleport to lobby
+        // Teleport to lobby and give lobby items
         player.teleport(arena.getLobbySpawn());
+        giveLobbyItems(player);
 
         broadcast("game.player-joined", player.getName(), players.size(), arena.getMaxPlayers());
+
+        if (gameScoreboard != null) {
+            gameScoreboard.show(player);
+            gameScoreboard.startUpdateTask();
+        }
 
         if (players.size() >= arena.getMinPlayers() && state == GameState.WAITING) {
             startCountdown();
@@ -230,6 +256,10 @@ public class Game {
         participants.remove(player.getUniqueId());
 
         plugin.getGameManager().removePlayerFromGame(player);
+
+        if (gameScoreboard != null) {
+            gameScoreboard.hide(player);
+        }
 
         broadcast("game.player-left", player.getName());
 
@@ -263,12 +293,39 @@ public class Game {
                     startGame();
                     cancel();
                 } else if (shouldBroadcastCountdown(countdown, broadcastIntervals)) {
-                    broadcast("game.countdown", countdown);
+                    String color = getCountdownColorCode(countdown);
+                    broadcast("game.countdown", countdown, color);
+                    sendCountdownVisuals(countdown, color);
                 }
                 countdown--;
             }
         };
         countdownTask.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private void sendCountdownVisuals(int seconds, String colorCode) {
+        String title = plugin.getMessageManager().getMessage("game.countdown-title", seconds, colorCode);
+        String subtitle = plugin.getMessageManager().getMessage("game.countdown-subtitle", seconds, colorCode);
+        String actionBar = plugin.getMessageManager().getMessage("game.countdown-actionbar", seconds, colorCode);
+
+        for (GamePlayer gamePlayer : players.values()) {
+            Player player = Bukkit.getPlayer(gamePlayer.getUuid());
+            if (player == null) {
+                continue;
+            }
+            player.sendTitle(title, subtitle, 5, 20, 5);
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(actionBar));
+        }
+    }
+
+    private String getCountdownColorCode(int seconds) {
+        if (seconds <= 5) {
+            return ChatColor.RED.toString();
+        }
+        if (seconds <= 10) {
+            return ChatColor.YELLOW.toString();
+        }
+        return ChatColor.GREEN.toString();
     }
 
     private void cancelCountdown() {
@@ -341,6 +398,7 @@ public class Game {
             @Override
             public void run() {
                 elapsed++;
+                gameElapsedSeconds = elapsed;
 
                 // Diamond generators upgrade at 12 minutes
                 if (!upgraded[0] && diamondUpgradeTime > 0 && elapsed >= diamondUpgradeTime) {
@@ -447,6 +505,10 @@ public class Game {
         state = GameState.ENDING;
         plugin.getDebugLogger().debug("Game ending: arena=" + arena.getName()
                 + ", winner=" + (winningTeam != null ? winningTeam.getColor().name() : "none"));
+
+        if (gameScoreboard != null) {
+            gameScoreboard.stopUpdateTask();
+        }
 
         if (gameTask != null) {
             gameTask.cancel();
@@ -561,8 +623,20 @@ public class Game {
 
         stopHealPoolTask();
         clearDragonBuffs();
+        if (gameScoreboard != null) {
+            gameScoreboard.stopUpdateTask();
+            for (GamePlayer gp : new ArrayList<>(players.values())) {
+                Player p = Bukkit.getPlayer(gp.getUuid());
+                if (p != null) gameScoreboard.hide(p);
+            }
+            for (UUID specId : new HashSet<>(spectators)) {
+                Player p = Bukkit.getPlayer(specId);
+                if (p != null) gameScoreboard.hide(p);
+            }
+        }
         players.clear();
         participants.clear();
+        gameElapsedSeconds = 0;
         state = GameState.WAITING;
 
         for (Team team : teams.values()) {
@@ -624,6 +698,81 @@ public class Game {
         return smallest;
     }
 
+    /**
+     * Give lobby items (including team selector) to a player waiting in the lobby
+     */
+    private void giveLobbyItems(Player player) {
+        // Clear to avoid keeping old items between games
+        player.getInventory().clear();
+
+        // Team selector item in hotbar slot 0
+        ItemStack selector = new ItemStack(Material.NETHER_STAR);
+        ItemMeta meta = selector.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.AQUA + "" + ChatColor.BOLD + "Team Selector");
+            selector.setItemMeta(meta);
+        }
+        player.getInventory().setItem(0, selector);
+    }
+
+    /**
+     * Change a player's team (only allowed in WAITING or STARTING state)
+     * @param player The player to change team for
+     * @param newTeamColor The color of the team to join
+     * @return true if team was changed successfully, false otherwise
+     */
+    public boolean changeTeam(Player player, TeamColor newTeamColor) {
+        if (state != GameState.WAITING && state != GameState.STARTING) {
+            plugin.getMessageManager().sendMessage(player, "team.change-only-in-lobby");
+            return false;
+        }
+
+        GamePlayer gamePlayer = players.get(player.getUniqueId());
+        if (gamePlayer == null) {
+            plugin.getMessageManager().sendMessage(player, "command.not-in-game");
+            return false;
+        }
+
+        // Check if already on this team
+        if (gamePlayer.getTeam() != null && gamePlayer.getTeam().getColor() == newTeamColor) {
+            plugin.getMessageManager().sendMessage(player, "team.already-on-team",
+                    newTeamColor.getChatColor() + newTeamColor.name());
+            return false;
+        }
+
+        Team newTeam = teams.get(newTeamColor);
+        if (newTeam == null) {
+            plugin.getMessageManager().sendMessage(player, "command.invalid-team-color");
+            return false;
+        }
+
+        // Check if team is full
+        int maxTeamSize = arena.getMaxPlayers() / teams.size();
+        if (newTeam.getPlayers().size() >= maxTeamSize) {
+            plugin.getMessageManager().sendMessage(player, "team.team-full", 
+                    newTeamColor.getChatColor() + newTeamColor.name());
+            return false;
+        }
+
+        // Remove from old team
+        Team oldTeam = gamePlayer.getTeam();
+        if (oldTeam != null) {
+            oldTeam.removePlayer(gamePlayer);
+        }
+
+        // Add to new team
+        newTeam.addPlayer(gamePlayer);
+        gamePlayer.setTeam(newTeam);
+
+        plugin.getDebugLogger().debug("Team changed: " + player.getName() 
+                + " -> " + newTeamColor.name());
+
+        plugin.getMessageManager().sendMessage(player, "team.changed", 
+                newTeamColor.getChatColor() + newTeamColor.name());
+
+        return true;
+    }
+
     public void broadcast(String messageKey, Object... args) {
         String message = plugin.getMessageManager().getMessage(messageKey, args);
         for (GamePlayer gamePlayer : players.values()) {
@@ -636,6 +785,22 @@ public class Game {
 
     public GameState getState() {
         return state;
+    }
+
+    public int getCountdown() {
+        return countdown;
+    }
+
+    public int getGameElapsedSeconds() {
+        return gameElapsedSeconds;
+    }
+
+    public int getDiamondUpgradeTime() {
+        return plugin.getConfig().getInt("game.diamond-upgrade-time", 720);
+    }
+
+    public int getEmeraldUpgradeTime() {
+        return plugin.getConfig().getInt("game.emerald-upgrade-time", 1440);
     }
 
     public Arena getArena() {
@@ -677,6 +842,10 @@ public class Game {
         // Set spectator mode
         player.setGameMode(GameMode.SPECTATOR);
         player.teleport(arena.getSpectatorSpawn());
+        if (gameScoreboard != null) {
+            gameScoreboard.show(player);
+            gameScoreboard.startUpdateTask();
+        }
         plugin.getMessageManager().sendMessage(player, "spectator.now-spectating");
 
         // Make them invisible to players (they can still see)
@@ -691,6 +860,9 @@ public class Game {
     public void removeSpectator(Player player) {
         if (spectators.remove(player.getUniqueId())) {
             plugin.getGameManager().removePlayerFromGame(player);
+            if (gameScoreboard != null) {
+                gameScoreboard.hide(player);
+            }
             player.setGameMode(GameMode.SURVIVAL);
             player.teleport(arena.getLobbySpawn());
             plugin.getMessageManager().sendMessage(player, "spectator.stopped-spectating");

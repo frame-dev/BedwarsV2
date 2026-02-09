@@ -104,8 +104,9 @@ public class AchievementsManager {
             return;
         }
         if (definition.isEnabled()) {
+            String name = ChatColor.translateAlternateColorCodes('&', definition.getDisplayName());
             plugin.getMessageManager().sendMessage(player, "achievements.progress",
-                    definition.getDisplayName(),
+                    name,
                     getProgressValue(player.getUniqueId(), definition.getId()),
                     definition.getTarget());
         }
@@ -204,7 +205,8 @@ public class AchievementsManager {
         Player player = Bukkit.getPlayer(uuid);
         if (player != null) {
             MessageManager mm = plugin.getMessageManager();
-            mm.sendMessage(player, "achievements.unlocked", definition.getDisplayName());
+            String name = ChatColor.translateAlternateColorCodes('&', definition.getDisplayName());
+            mm.sendMessage(player, "achievements.unlocked", name);
         }
     }
 

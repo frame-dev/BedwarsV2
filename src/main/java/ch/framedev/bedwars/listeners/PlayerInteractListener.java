@@ -5,12 +5,16 @@ import ch.framedev.bedwars.game.Game;
 import ch.framedev.bedwars.game.GameState;
 import ch.framedev.bedwars.shop.ShopGUI;
 import ch.framedev.bedwars.upgrades.UpgradeShopGUI;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.block.Action;
 
 /**
  * Handles player interact events
@@ -25,6 +29,47 @@ public class PlayerInteractListener implements Listener {
         this.plugin = plugin;
         this.shopGUI = new ShopGUI(plugin);
         this.upgradeShopGUI = new UpgradeShopGUI(plugin.getUpgradeManager());
+    }
+
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        Game game = plugin.getGameManager().getPlayerGame(player);
+
+        if (game == null) {
+            return;
+        }
+
+        // Only allow in lobby (WAITING/STARTING)
+        if (game.getState() != GameState.WAITING && game.getState() != GameState.STARTING) {
+            return;
+        }
+
+        // Only care about right-click with item
+        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+
+        if (event.getItem() == null || event.getItem().getType() != Material.NETHER_STAR) {
+            return;
+        }
+
+        // Check display name to ensure it's our selector
+        var meta = event.getItem().getItemMeta();
+        if (meta == null || meta.getDisplayName() == null) {
+            return;
+        }
+
+        String name = ChatColor.stripColor(meta.getDisplayName());
+        if (!name.equalsIgnoreCase("Team Selector")) {
+            return;
+        }
+
+        if (plugin.getTeamSelectionGUI() != null) {
+            plugin.getTeamSelectionGUI().openTeamSelection(player, game);
+        }
+
+        event.setCancelled(true);
     }
 
     @EventHandler

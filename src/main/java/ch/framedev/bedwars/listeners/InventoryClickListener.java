@@ -7,6 +7,7 @@ import ch.framedev.bedwars.shop.ShopCategory;
 import ch.framedev.bedwars.shop.ShopGUI;
 import ch.framedev.bedwars.shop.ShopItem;
 import ch.framedev.bedwars.team.Team;
+import ch.framedev.bedwars.team.TeamSelectionGUI;
 import ch.framedev.bedwars.upgrades.UpgradeShopGUI;
 import ch.framedev.bedwars.utils.MessageManager;
 import ch.framedev.bedwars.manager.UpgradeManager.EffectType;
@@ -57,6 +58,18 @@ public class InventoryClickListener implements Listener {
                 return;
             }
             plugin.getAchievementsManager().handleMenuClick(player, event.getSlot());
+            return;
+        }
+
+        if (plugin.getTeamSelectionGUI() != null && TeamSelectionGUI.isTeamSelectionTitle(title)) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
+                return;
+            }
+            Game game = plugin.getGameManager().getPlayerGame(player);
+            if (game != null) {
+                plugin.getTeamSelectionGUI().handleMenuClick(player, event.getSlot(), game);
+            }
             return;
         }
 
@@ -120,7 +133,7 @@ public class InventoryClickListener implements Listener {
             if (clickedItem.getType() == category.getIcon()) {
                 plugin.getDebugLogger().debug("Open shop category: " + player.getName()
                         + ", category=" + category.getName());
-                shopGUI.openCategory(player, category);
+                shopGUI.openCategory(player, category, game);
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
                 return;
             }
@@ -149,7 +162,7 @@ public class InventoryClickListener implements Listener {
             return;
 
         // Attempt purchase
-        ItemStack purchased = shopGUI.purchaseItem(player, shopItem);
+        ItemStack purchased = shopGUI.purchaseItem(player, shopItem, game);
         if (purchased != null) {
             plugin.getDebugLogger().debug("Shop purchase: " + player.getName() + ", item="
                     + shopItem.getItem().getType());
@@ -162,7 +175,7 @@ public class InventoryClickListener implements Listener {
             }
 
             // Refresh the inventory to show updated purchase options
-            shopGUI.openCategory(player, category);
+            shopGUI.openCategory(player, category, game);
         } else {
             plugin.getDebugLogger().debug("Shop purchase failed: " + player.getName() + ", item="
                     + shopItem.getItem().getType());

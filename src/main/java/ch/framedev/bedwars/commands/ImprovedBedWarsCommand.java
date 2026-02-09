@@ -262,6 +262,14 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
                 }
                 break;
 
+            case "team":
+                if (!player.hasPermission("bedwars.team")) {
+                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
+                    return true;
+                }
+                handleTeam(player, args);
+                break;
+
             default:
                 sendHelp(player);
                 break;
@@ -285,6 +293,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         player.sendMessage(plugin.getMessageManager().getMessage("help.party"));
         player.sendMessage(plugin.getMessageManager().getMessage("help.cosmetics"));
         player.sendMessage(plugin.getMessageManager().getMessage("help.achievements"));
+        player.sendMessage(plugin.getMessageManager().getMessage("help.team"));
 
         if (player.hasPermission("bedwars.setup")) {
             player.sendMessage(plugin.getMessageManager().getMessage("help.separator"));
@@ -413,10 +422,35 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         plugin.getDebugLogger().debug("Leave requested: player=" + player.getName()
                 + " arena=" + game.getArena().getName());
 
-        if (game.isSpectator(player)) {
-            game.removeSpectator(player);
+        var partyManager = plugin.getPartyManager();
+        var party = partyManager != null ? partyManager.getParty(player.getUniqueId()) : null;
+        if (party != null) {
+            for (var memberId : party.getMemberUuids()) {
+                Player member = plugin.getServer().getPlayer(memberId);
+                if (member == null) {
+                    continue;
+                }
+                Game memberGame = plugin.getGameManager().getPlayerGame(member);
+                if (memberGame == null || !memberGame.equals(game)) {
+                    continue;
+                }
+
+                if (memberGame.isSpectator(member)) {
+                    memberGame.removeSpectator(member);
+                } else {
+                    memberGame.removePlayer(member);
+                }
+
+                if (!member.getUniqueId().equals(player.getUniqueId())) {
+                    plugin.getMessageManager().sendMessage(member, "command.left-game");
+                }
+            }
         } else {
-            game.removePlayer(player);
+            if (game.isSpectator(player)) {
+                game.removeSpectator(player);
+            } else {
+                game.removePlayer(player);
+            }
         }
 
         plugin.getMessageManager().sendMessage(player, "command.left-game");
@@ -1037,6 +1071,37 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         mm.sendMessage(player, "command.sending-to-lobby");
         plugin.getDebugLogger().debug("Lobby command: player=" + player.getName());
         plugin.getBungeeManager().sendPlayerToLobby(player);
+    }
+
+    /**
+     * Handle team selection command
+     */
+    private void handleTeam(Player player, String[] args) {
+        MessageManager mm = plugin.getMessageManager();
+        Game game = plugin.getGameManager().getPlayerGame(player);
+        
+        if (game == null) {
+            mm.sendMessage(player, "command.not-in-game");
+            return;
+        }
+
+        // If team color is provided, change directly
+        if (args.length >= 2) {
+            try {
+                TeamColor color = TeamColor.valueOf(args[1].toUpperCase());
+                game.changeTeam(player, color);
+            } catch (IllegalArgumentException e) {
+                mm.sendMessage(player, "command.invalid-team-color");
+            }
+            return;
+        }
+
+        // Otherwise open GUI
+        if (plugin.getTeamSelectionGUI() != null) {
+            plugin.getTeamSelectionGUI().openTeamSelection(player, game);
+        } else {
+            mm.sendMessage(player, "team.gui-not-available");
+        }
     }
 
     private void handleParty(Player player, String[] args) {

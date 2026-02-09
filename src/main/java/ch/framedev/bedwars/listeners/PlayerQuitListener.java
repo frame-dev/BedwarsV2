@@ -43,5 +43,10 @@ public class PlayerQuitListener implements Listener {
         if (plugin.getMapVoteManager() != null) {
             plugin.getMapVoteManager().removePlayer(player);
         }
+
+        // Clear team selection GUI slots
+        if (plugin.getTeamSelectionGUI() != null) {
+            plugin.getTeamSelectionGUI().clearMenuSlots(player.getUniqueId());
+        }
     }
 }

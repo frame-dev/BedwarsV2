@@ -16,6 +16,7 @@ import ch.framedev.bedwars.voting.MapVoteManager;
 import ch.framedev.bedwars.cosmetics.CosmeticsManager;
 import ch.framedev.bedwars.achievements.AchievementsManager;
 import ch.framedev.bedwars.cloudnet.CloudNetManager;
+import ch.framedev.bedwars.team.TeamSelectionGUI;
 import ch.framedev.bedwars.listeners.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -38,6 +39,7 @@ public class BedWarsPlugin extends JavaPlugin {
     private CosmeticsManager cosmeticsManager;
     private AchievementsManager achievementsManager;
     private CloudNetManager cloudNetManager;
+    private TeamSelectionGUI teamSelectionGUI;
 
     @Override
     public void onEnable() {
@@ -86,6 +88,9 @@ public class BedWarsPlugin extends JavaPlugin {
 
         // Initialize achievements manager
         achievementsManager = new AchievementsManager(this, databaseManager);
+
+        // Initialize team selection GUI
+        teamSelectionGUI = new TeamSelectionGUI();
 
         // Register commands with tab completion
         ImprovedBedWarsCommand commandExecutor = new ImprovedBedWarsCommand(this, arenaManager);
@@ -204,5 +209,9 @@ public class BedWarsPlugin extends JavaPlugin {
 
     public CloudNetManager getCloudNetManager() {
         return cloudNetManager;
+    }
+
+    public TeamSelectionGUI getTeamSelectionGUI() {
+        return teamSelectionGUI;
     }
 }

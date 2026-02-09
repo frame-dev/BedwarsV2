@@ -6,7 +6,10 @@
 game:
   player-joined: "&e{0} has joined the game! ({1}/{2})"
   player-left: "&e{0} has left the game!"
-  countdown: "&aGame starting in {0} seconds!"
+  countdown: "&eMatch starts in {1}{0}&e seconds!"
+  countdown-title: "&6&lBedWars"
+  countdown-subtitle: "{1}&lStarting in {0}s"
+  countdown-actionbar: "&7Get ready... {1}{0}s"
   countdown-cancelled: "&cCountdown cancelled! Need more players."
   game-started: "&aGame started! Protect your bed and destroy enemy beds!"
   diamond-upgrade: "&bDiamond generators upgraded to level 2!"
@@ -126,8 +129,15 @@ cosmetics:
 achievements:
   disabled: "&cAchievements are disabled."
   opened: "&aOpened achievements menu."
-  unlocked: "&6Achievement unlocked: {0}"
-  progress: "&e{0}: {1}/{2}"
+  unlocked: "&6Achievement unlocked: &e{0}"
+  progress: "&e{0}: &a{1}&7/&c{2}"
+
+team:
+  change-only-in-lobby: "&cYou can only change teams in the lobby!"
+  changed: "&aYou joined the {0} &ateam!"
+  team-full: "&cThe {0} &cteam is full!"
+  already-on-team: "&cYou are already on the {0} &cteam!"
+  gui-not-available: "&cTeam selection GUI is not available!"
 
 cloudnet:
   connecting: "&aConnecting to &e{0}&a..."
@@ -250,6 +260,7 @@ help:
   party: "&e /bedwars party&7 - Party commands"
   cosmetics: "&e /bedwars cosmetics&7 - Cosmetics menu"
   achievements: "&e /bedwars achievements&7 - Achievements menu"
+  team: "&e /bedwars team [color]&7 - Change team in lobby"
   setup: "&e /bedwars setup&7 - Arena setup"
   lobby: "&e /bedwars lobby&7 - Return to lobby"
   start: "&e /bedwars start&7 - Force start game"

@@ -57,8 +57,16 @@ game:
     - PINK
     - GRAY
 
+# Scoreboard
+scoreboard:
+  enabled: true
+  title: "&6&lBEDWARS"
+  update-interval-ticks: 20  # 1 second
+
 # Resource Generator Settings
 generators:
+  # If true, only iron and gold generators are used (diamond/emerald disabled)
+  only-iron-gold: false
   # Iron generators (spawn at each team base)
   iron:
     enabled: true

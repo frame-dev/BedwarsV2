@@ -62,7 +62,9 @@ public class CosmeticsManager {
     public void loadConfig() {
         File cosmeticsFile = new File(plugin.getDataFolder(), "cosmetics.yml");
         if (!cosmeticsFile.exists()) {
-            plugin.getDataFolder().mkdirs();
+            if(!plugin.getDataFolder().mkdirs()) {
+                plugin.getLogger().severe("Failed to create Directory: " + plugin.getDataFolder().getAbsolutePath());
+            }
             try (InputStream in = plugin.getResource("cosmetics.yml")) {
                 if (in != null) {
                     Files.copy(in, cosmeticsFile.toPath());

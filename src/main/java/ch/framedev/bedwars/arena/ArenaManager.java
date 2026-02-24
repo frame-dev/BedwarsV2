@@ -15,18 +15,26 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Manages arena creation, modification, and persistence
+ * Manages arena creation, modification, and persistence.
+ * <p>
+ * De-duplication:
+ * - Save teams uses ONE loop (union of colors in session)
+ * - Load teams uses ONE loop (colors in config)
+ * - Central helpers for team paths + read/set location
+ * - Legacy shop path handled once (shop -> item fallback)
  */
 public class ArenaManager {
 
+    private static final String ARENAS_ROOT = "arenas";
+
     private final BedWarsPlugin plugin;
-    private final Map<UUID, ArenaSetupSession> setupSessions;
+    private final Map<UUID, ArenaSetupSession> setupSessions = new HashMap<>();
+
     private final File arenasFile;
     private FileConfiguration arenasConfig;
 
     public ArenaManager(BedWarsPlugin plugin) {
         this.plugin = plugin;
-        this.setupSessions = new HashMap<>();
         this.arenasFile = new File(plugin.getDataFolder(), "arenas.yml");
         loadArenasFile();
         plugin.getLogger().info("ArenaManager initialized with " + getArenaNames().size() + " arenas loaded");
@@ -41,6 +49,10 @@ public class ArenaManager {
         plugin.getDebugLogger().debug("Loaded arenas.yml from " + arenasFile.getAbsolutePath());
     }
 
+    /* --------------------------------------------------------------------- */
+    /* Sessions                                                               */
+    /* --------------------------------------------------------------------- */
+
     public ArenaSetupSession getOrCreateSession(UUID playerUUID) {
         return setupSessions.computeIfAbsent(playerUUID, ArenaSetupSession::new);
     }
@@ -53,59 +65,35 @@ public class ArenaManager {
         setupSessions.remove(playerUUID);
     }
 
+    /* --------------------------------------------------------------------- */
+    /* CRUD                                                                   */
+    /* --------------------------------------------------------------------- */
+
     public boolean arenaExists(String name) {
-        return arenasConfig.contains("arenas." + name);
+        return arenasConfig.contains(pathArena(name));
     }
 
     public void saveArena(ArenaSetupSession session) throws IOException {
-        String basePath = "arenas." + session.getArenaName();
+        String base = pathArena(session.getArenaName());
         plugin.getDebugLogger().debug("Saving arena: " + session.getArenaName());
 
-        // Basic settings
-        arenasConfig.set(basePath + ".lobby-spawn", LocationUtils.toString(session.getLobbySpawn()));
-        arenasConfig.set(basePath + ".spectator-spawn", LocationUtils.toString(session.getSpectatorSpawn()));
-        arenasConfig.set(basePath + ".min-players", session.getMinPlayers());
-        arenasConfig.set(basePath + ".max-players", session.getMaxPlayers());
+        setLocation(base + ".lobby-spawn", session.getLobbySpawn());
+        setLocation(base + ".spectator-spawn", session.getSpectatorSpawn());
+        arenasConfig.set(base + ".min-players", session.getMinPlayers());
+        arenasConfig.set(base + ".max-players", session.getMaxPlayers());
 
-        // Team data
-        for (Map.Entry<TeamColor, Location> entry : session.getTeamSpawns().entrySet()) {
-            String colorName = entry.getKey().name().toLowerCase();
-            arenasConfig.set(basePath + ".teams." + colorName + ".spawn",
-                    LocationUtils.toString(entry.getValue()));
-        }
-
-        for (Map.Entry<TeamColor, Location> entry : session.getBedLocations().entrySet()) {
-            String colorName = entry.getKey().name().toLowerCase();
-            arenasConfig.set(basePath + ".teams." + colorName + ".bed",
-                    LocationUtils.toString(entry.getValue()));
-        }
-
-        for (Map.Entry<TeamColor, Map<ShopType, Location>> entry : session.getShopLocations().entrySet()) {
-            String colorName = entry.getKey().name().toLowerCase();
-            String shopBasePath = basePath + ".teams." + colorName + ".shop";
-            arenasConfig.set(shopBasePath, null);
-            for (Map.Entry<ShopType, Location> shopEntry : entry.getValue().entrySet()) {
-                arenasConfig.set(shopBasePath + "." + shopEntry.getKey().getConfigKey(),
-                        LocationUtils.toString(shopEntry.getValue()));
-            }
-        }
-
-        // Generator locations
-        for (Map.Entry<String, Location> entry : session.getGeneratorLocations().entrySet()) {
-            arenasConfig.set(basePath + ".generators." + entry.getKey(),
-                    LocationUtils.toString(entry.getValue()));
-        }
+        saveTeams(base, session);
+        saveGenerators(base, session);
 
         arenasConfig.save(arenasFile);
         plugin.getDebugLogger().debug("Arena saved: " + session.getArenaName());
     }
 
     public Arena loadArena(String name) {
-        if (!arenaExists(name)) {
-            return null;
-        }
+        if (!arenaExists(name)) return null;
 
-        ConfigurationSection section = arenasConfig.getConfigurationSection("arenas." + name);
+        ConfigurationSection section = arenasConfig.getConfigurationSection(pathArena(name));
+        if (section == null) return null;
 
         try {
             Location lobbySpawn = LocationUtils.fromString(section.getString("lobby-spawn"));
@@ -115,45 +103,8 @@ public class ArenaManager {
 
             Arena arena = new Arena(name, lobbySpawn, spectatorSpawn, minPlayers, maxPlayers);
 
-            // Load teams
-            if (section.contains("teams")) {
-                ConfigurationSection teams = section.getConfigurationSection("teams");
-                for (String colorName : teams.getKeys(false)) {
-                    try {
-                        TeamColor color = TeamColor.valueOf(colorName.toUpperCase());
-                        Location spawn = LocationUtils.fromString(teams.getString(colorName + ".spawn"));
-                        Location bed = LocationUtils.fromString(teams.getString(colorName + ".bed"));
-                        Location shopItem = LocationUtils.fromString(teams.getString(colorName + ".shop.item"));
-                        Location shopUpgrade = LocationUtils.fromString(teams.getString(colorName + ".shop.upgrade"));
-                        Location legacyShop = LocationUtils.fromString(teams.getString(colorName + ".shop"));
-                        if (shopItem == null) {
-                            shopItem = legacyShop;
-                        }
-
-                        if (spawn != null)
-                            arena.setTeamSpawn(color, spawn);
-                        if (bed != null)
-                            arena.setBedLocation(color, bed);
-                        if (shopItem != null)
-                            arena.setShopLocation(color, ShopType.ITEM, shopItem);
-                        if (shopUpgrade != null)
-                            arena.setShopLocation(color, ShopType.UPGRADE, shopUpgrade);
-                    } catch (IllegalArgumentException e) {
-                        plugin.getLogger().warning("Invalid team color: " + colorName);
-                    }
-                }
-            }
-
-            // Load generators
-            if (section.contains("generators")) {
-                ConfigurationSection generators = section.getConfigurationSection("generators");
-                for (String genName : generators.getKeys(false)) {
-                    Location loc = LocationUtils.fromString(generators.getString(genName));
-                    if (loc != null) {
-                        arena.addGenerator(genName, loc);
-                    }
-                }
-            }
+            loadTeams(section, arena);
+            loadGenerators(section, arena);
 
             return arena;
         } catch (Exception e) {
@@ -164,11 +115,9 @@ public class ArenaManager {
     }
 
     public boolean deleteArena(String name) {
-        if (!arenaExists(name)) {
-            return false;
-        }
+        if (!arenaExists(name)) return false;
 
-        arenasConfig.set("arenas." + name, null);
+        arenasConfig.set(pathArena(name), null);
         try {
             arenasConfig.save(arenasFile);
             plugin.getDebugLogger().debug("Arena deleted: " + name);
@@ -181,9 +130,125 @@ public class ArenaManager {
     }
 
     public Set<String> getArenaNames() {
-        if (!arenasConfig.contains("arenas")) {
-            return Collections.emptySet();
+        ConfigurationSection root = arenasConfig.getConfigurationSection(ARENAS_ROOT);
+        if (root == null) return Collections.emptySet();
+        return Collections.unmodifiableSet(root.getKeys(false));
+    }
+
+    /* --------------------------------------------------------------------- */
+    /* Save helpers                                                           */
+    /* --------------------------------------------------------------------- */
+
+    private void saveTeams(String base, ArenaSetupSession session) {
+        // Build a union of all colors referenced by the session to avoid multiple loops
+        Set<TeamColor> colors = new HashSet<>();
+        colors.addAll(session.getTeamSpawns().keySet());
+        colors.addAll(session.getBedLocations().keySet());
+        colors.addAll(session.getShopLocations().keySet());
+
+        for (TeamColor color : colors) {
+            String teamBase = teamBasePath(base, color);
+
+            // spawn / bed
+            setLocation(teamBase + ".spawn", session.getTeamSpawns().get(color));
+            setLocation(teamBase + ".bed", session.getBedLocations().get(color));
+
+            // shops
+            String shopBase = teamBase + ".shop";
+            arenasConfig.set(shopBase, null); // wipe per team to avoid stale keys
+
+            Map<ShopType, Location> shops = session.getShopLocations().get(color);
+            if (shops != null) {
+                for (Map.Entry<ShopType, Location> shop : shops.entrySet()) {
+                    setLocation(shopBase + "." + shop.getKey().getConfigKey(), shop.getValue());
+                }
+            }
         }
-        return arenasConfig.getConfigurationSection("arenas").getKeys(false);
+    }
+
+    private void saveGenerators(String base, ArenaSetupSession session) {
+        arenasConfig.set(base + ".generators", null);
+        for (Map.Entry<String, Location> e : session.getGeneratorLocations().entrySet()) {
+            setLocation(base + ".generators." + e.getKey(), e.getValue());
+        }
+    }
+
+    private void setLocation(String path, Location location) {
+        arenasConfig.set(path, location == null ? null : LocationUtils.toString(location));
+    }
+
+    /* --------------------------------------------------------------------- */
+    /* Load helpers                                                           */
+    /* --------------------------------------------------------------------- */
+
+    private void loadTeams(ConfigurationSection arenaSection, Arena arena) {
+        ConfigurationSection teams = arenaSection.getConfigurationSection("teams");
+        if (teams == null) return;
+
+        for (String colorKey : teams.getKeys(false)) {
+            TeamColor color = parseTeamColor(colorKey);
+            if (color == null) continue;
+
+            String teamBase = "teams." + colorKey;
+
+            // spawn/bed
+            setIfPresent(teams, teamBase + ".spawn", loc -> arena.setTeamSpawn(color, loc));
+            setIfPresent(teams, teamBase + ".bed", loc -> arena.setBedLocation(color, loc));
+
+            // shops (new format)
+            Location shopItem = readLocation(teams, teamBase + ".shop.item");
+            Location shopUpgrade = readLocation(teams, teamBase + ".shop.upgrade");
+
+            // legacy format fallback: teams.<color>.shop
+            if (shopItem == null) {
+                shopItem = readLocation(teams, teamBase + ".shop");
+            }
+
+            if (shopItem != null) arena.setShopLocation(color, ShopType.ITEM, shopItem);
+            if (shopUpgrade != null) arena.setShopLocation(color, ShopType.UPGRADE, shopUpgrade);
+        }
+    }
+
+    private void loadGenerators(ConfigurationSection arenaSection, Arena arena) {
+        ConfigurationSection generators = arenaSection.getConfigurationSection("generators");
+        if (generators == null) return;
+
+        for (String genName : generators.getKeys(false)) {
+            Location loc = LocationUtils.fromString(generators.getString(genName));
+            if (loc != null) arena.addGenerator(genName, loc);
+        }
+    }
+
+    private void setIfPresent(ConfigurationSection section, String path, java.util.function.Consumer<Location> setter) {
+        Location loc = readLocation(section, path);
+        if (loc != null) setter.accept(loc);
+    }
+
+    private Location readLocation(ConfigurationSection section, String path) {
+        if (section == null) return null;
+        String raw = section.getString(path);
+        if (raw == null || raw.isEmpty()) return null;
+        return LocationUtils.fromString(raw);
+    }
+
+    private TeamColor parseTeamColor(String colorName) {
+        try {
+            return TeamColor.valueOf(colorName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Invalid team color: " + colorName);
+            return null;
+        }
+    }
+
+    /* --------------------------------------------------------------------- */
+    /* Path helpers                                                           */
+    /* --------------------------------------------------------------------- */
+
+    private String pathArena(String name) {
+        return ARENAS_ROOT + "." + name;
+    }
+
+    private String teamBasePath(String arenaBase, TeamColor color) {
+        return arenaBase + ".teams." + color.name().toLowerCase(Locale.ROOT);
     }
 }

@@ -15,17 +15,17 @@ import org.bukkit.potion.PotionEffect;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 /**
  * Represents a player in a BedWars game.
- *
- * Fixes / improvements:
- * - Null-safe armor coloring (avoid NPE if meta is null)
- * - Avoids giving infinite wooden swords on every call (only adds if none present)
- * - Applies enchantments via addUnsafeEnchantment if needed (optional; kept safe here)
- * - Does not overwrite non-leather armor already equipped (optional behavior; see comments)
- * - Clears/appends potion effects in a controlled way (re-applies upgrades cleanly)
+ * <p>
+ * De-duplication:
+ * - One generic method for applying ENCHANTMENT upgrades to any item by target ("ARMOR"/"WEAPON")
+ * - One helper for iterating upgrades and resolving levels
+ * - Potion upgrade loop stays separate (different effect type)
  */
+@SuppressWarnings("unused")
 public class GamePlayer {
 
     private final UUID uuid;
@@ -48,12 +48,6 @@ public class GamePlayer {
 
     public GamePlayer(Player player) {
         this.uuid = player.getUniqueId();
-        this.kills = 0;
-        this.deaths = 0;
-        this.finalKills = 0;
-        this.bedsBroken = 0;
-        this.eliminated = false;
-        this.spectating = false;
     }
 
     /**
@@ -73,25 +67,25 @@ public class GamePlayer {
         ItemStack legs = coloredLeather(Material.LEATHER_LEGGINGS, armorColor);
         ItemStack boots = coloredLeather(Material.LEATHER_BOOTS, armorColor);
 
-        // Apply upgrade enchantments
-        if (upgradeManager != null) {
-            applyEnchantUpgradesToArmor(helmet, chest, legs, boots);
-        }
+        // Apply upgrade enchantments (ARMOR)
+        applyEnchantmentUpgrades("ARMOR", (ench, level) -> {
+            helmet.addEnchantment(ench, level);
+            chest.addEnchantment(ench, level);
+            legs.addEnchantment(ench, level);
+            boots.addEnchantment(ench, level);
+        });
 
         // BedWars typically always forces team leather armor.
-        // If you want to NOT overwrite diamond/iron armor, add checks here.
         inv.setHelmet(helmet);
         inv.setChestplate(chest);
         inv.setLeggings(legs);
         inv.setBoots(boots);
 
-        // Give starting sword only if player doesn't already have a sword
+        // Ensure starting sword & apply WEAPON upgrades
         ensureStartingSword(inv);
 
         // Apply potion upgrades (refresh)
-        if (upgradeManager != null) {
-            applyPotionUpgrades(player);
-        }
+        applyPotionUpgrades(player);
     }
 
     private ItemStack coloredLeather(Material material, Color color) {
@@ -104,88 +98,67 @@ public class GamePlayer {
         return item;
     }
 
-    private void applyEnchantUpgradesToArmor(ItemStack helmet, ItemStack chest, ItemStack legs, ItemStack boots) {
-        for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
-            String upgradeId = entry.getKey();
-            UpgradeManager.Upgrade upgrade = entry.getValue();
-            if (upgrade == null) continue;
-
-            int level = team.getUpgrades().getUpgradeLevel(upgradeId);
-            if (level <= 0) continue;
-
-            if (upgrade.getEffectType() != UpgradeManager.EffectType.ENCHANTMENT) continue;
-            if (!"ARMOR".equalsIgnoreCase(upgrade.getTarget())) continue;
-
-            Enchantment ench = upgrade.getEnchantment();
-            if (ench == null) continue;
-
-            // Use safe enchant; if you need levels beyond vanilla, switch to addUnsafeEnchantment.
-            helmet.addEnchantment(ench, level);
-            chest.addEnchantment(ench, level);
-            legs.addEnchantment(ench, level);
-            boots.addEnchantment(ench, level);
-        }
-    }
-
     private void ensureStartingSword(PlayerInventory inv) {
         if (inv == null) return;
 
-        boolean hasSword = false;
-        for (ItemStack it : inv.getContents()) {
-            if (it == null) continue;
-            String name = it.getType().name();
-            if (name.endsWith("_SWORD")) {
-                hasSword = true;
-                break;
-            }
-        }
-
-        if (!hasSword) {
-            Material swordMat = materialOr("WOODEN_SWORD", "WOOD_SWORD", Material.WOODEN_SWORD);
+        if (!hasSword(inv)) {
+            Material swordMat = materialOr();
             ItemStack sword = new ItemStack(swordMat);
 
-            if (upgradeManager != null) {
-                applyEnchantUpgradesToWeapon(sword);
-            }
-
+            applyEnchantmentUpgradesToItem(sword);
             inv.addItem(sword);
         }
     }
 
-    private void applyEnchantUpgradesToWeapon(ItemStack weapon) {
-        for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
-            String upgradeId = entry.getKey();
-            UpgradeManager.Upgrade upgrade = entry.getValue();
-            if (upgrade == null) continue;
-
-            int level = team.getUpgrades().getUpgradeLevel(upgradeId);
-            if (level <= 0) continue;
-
-            if (upgrade.getEffectType() != UpgradeManager.EffectType.ENCHANTMENT) continue;
-            if (!"WEAPON".equalsIgnoreCase(upgrade.getTarget())) continue;
-
-            Enchantment ench = upgrade.getEnchantment();
-            if (ench == null) continue;
-
-            weapon.addEnchantment(ench, level);
+    private boolean hasSword(PlayerInventory inv) {
+        for (ItemStack it : inv.getContents()) {
+            if (it == null) continue;
+            if (it.getType().name().endsWith("_SWORD")) return true;
         }
+        return false;
     }
 
+    /**
+     * Apply ENCHANTMENT upgrades with matching target to an item.
+     */
+    private void applyEnchantmentUpgradesToItem(ItemStack item) {
+        if (item == null) return;
+        applyEnchantmentUpgrades("WEAPON", item::addEnchantment);
+    }
+
+    /**
+     * Generic iterator over ENCHANTMENT upgrades for a target.
+     * De-duplicates the upgrade loops for armor/weapon.
+     */
+    private void applyEnchantmentUpgrades(String target, BiConsumer<Enchantment, Integer> applier) {
+        if (upgradeManager == null || team == null || team.getUpgrades() == null) return;
+        if (target == null || applier == null) return;
+
+        forEachUpgradeLevel((id, upgrade, level) -> {
+            if (upgrade.getEffectType() != UpgradeManager.EffectType.ENCHANTMENT) return;
+            if (!target.equalsIgnoreCase(upgrade.getTarget())) return;
+
+            Enchantment enchantment = upgrade.getEnchantment();
+            if (enchantment == null) return;
+
+            // If you need levels above vanilla limits, change to addUnsafeEnchantment in the applier usage.
+            applier.accept(enchantment, level);
+        });
+    }
+
+    /**
+     * Applies POTION_EFFECT upgrades.
+     */
     private void applyPotionUpgrades(Player player) {
-        for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
-            String upgradeId = entry.getKey();
-            UpgradeManager.Upgrade upgrade = entry.getValue();
-            if (upgrade == null) continue;
+        if (player == null) return;
+        if (upgradeManager == null || team == null || team.getUpgrades() == null) return;
 
-            int level = team.getUpgrades().getUpgradeLevel(upgradeId);
-            if (level <= 0) continue;
-
-            if (upgrade.getEffectType() != UpgradeManager.EffectType.POTION_EFFECT) continue;
-            if (upgrade.getPotionType() == null) continue;
+        forEachUpgradeLevel((id, upgrade, level) -> {
+            if (upgrade.getEffectType() != UpgradeManager.EffectType.POTION_EFFECT) return;
+            if (upgrade.getPotionType() == null) return;
 
             int amplifier = upgrade.isAmplifierPerLevel() ? Math.max(0, level - 1) : 0;
 
-            // Optional: remove existing effect to prevent weird stacking edge cases
             if (player.hasPotionEffect(upgrade.getPotionType())) {
                 player.removePotionEffect(upgrade.getPotionType());
             }
@@ -197,74 +170,62 @@ public class GamePlayer {
                     false,
                     false
             ));
+        });
+    }
+
+    /**
+     * Central helper to iterate over upgrades and resolve levels once.
+     */
+    private void forEachUpgradeLevel(UpgradeConsumer consumer) {
+        if (upgradeManager == null || team == null || team.getUpgrades() == null || consumer == null) return;
+
+        for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
+            String id = entry.getKey();
+            UpgradeManager.Upgrade upgrade = entry.getValue();
+            if (upgrade == null) continue;
+
+            int level = team.getUpgrades().getUpgradeLevel(id);
+            if (level <= 0) continue;
+
+            consumer.accept(id, upgrade, level);
         }
     }
 
-    private Material materialOr(String preferred, String legacy, Material fallback) {
-        Material m = Material.matchMaterial(preferred);
+    @FunctionalInterface
+    private interface UpgradeConsumer {
+        void accept(String id, UpgradeManager.Upgrade upgrade, int level);
+    }
+
+    private Material materialOr() {
+        Material m = Material.matchMaterial("WOODEN_SWORD");
         if (m != null) return m;
-        m = Material.matchMaterial(legacy);
+        m = Material.matchMaterial("WOOD_SWORD");
         if (m != null) return m;
-        return fallback;
+        return Material.WOODEN_SWORD;
     }
 
-    public void addKill() {
-        kills++;
-    }
+    /* --------------------------------------------------------------------- */
+    /* Stats                                                                  */
+    /* --------------------------------------------------------------------- */
 
-    public void addDeath() {
-        deaths++;
-    }
+    public void addKill() { kills++; }
+    public void addDeath() { deaths++; }
+    public void addFinalKill() { finalKills++; }
+    public void addBedBroken() { bedsBroken++; }
 
-    public void addFinalKill() {
-        finalKills++;
-    }
+    public UUID getUuid() { return uuid; }
 
-    public void addBedBroken() {
-        bedsBroken++;
-    }
+    public Team getTeam() { return team; }
+    public void setTeam(Team team) { this.team = team; }
 
-    public UUID getUuid() {
-        return uuid;
-    }
+    public int getKills() { return kills; }
+    public int getDeaths() { return deaths; }
+    public int getFinalKills() { return finalKills; }
+    public int getBedsBroken() { return bedsBroken; }
 
-    public Team getTeam() {
-        return team;
-    }
+    public boolean isEliminated() { return eliminated; }
+    public void setEliminated(boolean eliminated) { this.eliminated = eliminated; }
 
-    public void setTeam(Team team) {
-        this.team = team;
-    }
-
-    public int getKills() {
-        return kills;
-    }
-
-    public int getDeaths() {
-        return deaths;
-    }
-
-    public int getFinalKills() {
-        return finalKills;
-    }
-
-    public int getBedsBroken() {
-        return bedsBroken;
-    }
-
-    public boolean isEliminated() {
-        return eliminated;
-    }
-
-    public void setEliminated(boolean eliminated) {
-        this.eliminated = eliminated;
-    }
-
-    public boolean isSpectating() {
-        return spectating;
-    }
-
-    public void setSpectating(boolean spectating) {
-        this.spectating = spectating;
-    }
+    public boolean isSpectating() { return spectating; }
+    public void setSpectating(boolean spectating) { this.spectating = spectating; }
 }

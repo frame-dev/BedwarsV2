@@ -6,11 +6,13 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Utility class for common item operations
  */
+@SuppressWarnings("unused")
 public class ItemBuilder {
 
     private final ItemStack item;
@@ -38,6 +40,7 @@ public class ItemBuilder {
 
     public ItemBuilder addLore(String line) {
         List<String> lore = meta.hasLore() ? meta.getLore() : new java.util.ArrayList<>();
+        if(lore == null) lore = new ArrayList<>();
         lore.add(ChatColor.translateAlternateColorCodes('&', line));
         meta.setLore(lore);
         return this;

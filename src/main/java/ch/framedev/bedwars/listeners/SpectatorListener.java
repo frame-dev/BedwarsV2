@@ -12,7 +12,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 
 /**
  * Prevents spectators from leaving the arena.
- *
+ * <p>
  * Improvements:
  * - Only runs when the player actually changes block (cheap)
  * - Teleports spectators back if they leave the arena world (safe default)

@@ -14,7 +14,7 @@ import java.util.Set;
 
 /**
  * Manages world changes during a game for reset after game ends.
- *
+ * <p>
  * Fixes / improvements:
  * - O(1) lookup for "isPlayerPlacedBlock" (no stream scan)
  * - Correctly records BROKEN block "original state" BEFORE it is changed

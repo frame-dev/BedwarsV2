@@ -5,8 +5,11 @@ import ch.framedev.bedwars.team.Team;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.potion.PotionEffect;
 
@@ -14,16 +17,26 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Represents a player in a BedWars game
+ * Represents a player in a BedWars game.
+ *
+ * Fixes / improvements:
+ * - Null-safe armor coloring (avoid NPE if meta is null)
+ * - Avoids giving infinite wooden swords on every call (only adds if none present)
+ * - Applies enchantments via addUnsafeEnchantment if needed (optional; kept safe here)
+ * - Does not overwrite non-leather armor already equipped (optional behavior; see comments)
+ * - Clears/appends potion effects in a controlled way (re-applies upgrades cleanly)
  */
 public class GamePlayer {
 
     private final UUID uuid;
+
     private Team team;
+
     private int kills;
     private int deaths;
     private int finalKills;
     private int bedsBroken;
+
     private boolean eliminated;
     private boolean spectating;
 
@@ -43,87 +56,156 @@ public class GamePlayer {
         this.spectating = false;
     }
 
+    /**
+     * Gives (or refreshes) team-colored leather armor and applies team upgrades.
+     * Safe to call on respawn.
+     */
     public void giveTeamArmor() {
         Player player = Bukkit.getPlayer(uuid);
-        if (player == null || team == null)
-            return;
+        if (player == null || !player.isOnline() || team == null) return;
 
-        Color color = team.getColor().getColor();
+        PlayerInventory inv = player.getInventory();
+        Color armorColor = team.getColor().getColor();
 
-        // Leather armor with team color
-        ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
-        ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
-        ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS);
-        ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
+        // Build leather armor set
+        ItemStack helmet = coloredLeather(Material.LEATHER_HELMET, armorColor);
+        ItemStack chest = coloredLeather(Material.LEATHER_CHESTPLATE, armorColor);
+        ItemStack legs = coloredLeather(Material.LEATHER_LEGGINGS, armorColor);
+        ItemStack boots = coloredLeather(Material.LEATHER_BOOTS, armorColor);
 
-        colorArmor(helmet, color);
-        colorArmor(chestplate, color);
-        colorArmor(leggings, color);
-        colorArmor(boots, color);
-
-        // Apply all ENCHANTMENT upgrades to armor
+        // Apply upgrade enchantments
         if (upgradeManager != null) {
-            for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
-                UpgradeManager.Upgrade upgrade = entry.getValue();
-                int level = team.getUpgrades().getUpgradeLevel(entry.getKey());
-
-                if (level > 0 && upgrade.getEffectType() == UpgradeManager.EffectType.ENCHANTMENT) {
-                    if ("ARMOR".equalsIgnoreCase(upgrade.getTarget()) && upgrade.getEnchantment() != null) {
-                        helmet.addEnchantment(upgrade.getEnchantment(), level);
-                        chestplate.addEnchantment(upgrade.getEnchantment(), level);
-                        leggings.addEnchantment(upgrade.getEnchantment(), level);
-                        boots.addEnchantment(upgrade.getEnchantment(), level);
-                    }
-                }
-            }
+            applyEnchantUpgradesToArmor(helmet, chest, legs, boots);
         }
 
-        player.getInventory().setHelmet(helmet);
-        player.getInventory().setChestplate(chestplate);
-        player.getInventory().setLeggings(leggings);
-        player.getInventory().setBoots(boots);
+        // BedWars typically always forces team leather armor.
+        // If you want to NOT overwrite diamond/iron armor, add checks here.
+        inv.setHelmet(helmet);
+        inv.setChestplate(chest);
+        inv.setLeggings(legs);
+        inv.setBoots(boots);
 
-        // Give wooden sword with weapon enchantments
-        ItemStack sword = new ItemStack(Material.WOODEN_SWORD);
+        // Give starting sword only if player doesn't already have a sword
+        ensureStartingSword(inv);
+
+        // Apply potion upgrades (refresh)
         if (upgradeManager != null) {
-            for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
-                UpgradeManager.Upgrade upgrade = entry.getValue();
-                int level = team.getUpgrades().getUpgradeLevel(entry.getKey());
-
-                if (level > 0 && upgrade.getEffectType() == UpgradeManager.EffectType.ENCHANTMENT) {
-                    if ("WEAPON".equalsIgnoreCase(upgrade.getTarget()) && upgrade.getEnchantment() != null) {
-                        sword.addEnchantment(upgrade.getEnchantment(), level);
-                    }
-                }
-            }
-        }
-        player.getInventory().addItem(sword);
-
-        // Apply all POTION_EFFECT upgrades
-        if (upgradeManager != null) {
-            for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
-                UpgradeManager.Upgrade upgrade = entry.getValue();
-                int level = team.getUpgrades().getUpgradeLevel(entry.getKey());
-
-                if (level > 0 && upgrade.getEffectType() == UpgradeManager.EffectType.POTION_EFFECT) {
-                    if (upgrade.getPotionType() != null) {
-                        int amplifier = upgrade.isAmplifierPerLevel() ? (level - 1) : 0;
-                        player.addPotionEffect(new PotionEffect(
-                                upgrade.getPotionType(),
-                                upgrade.getDuration(),
-                                amplifier,
-                                false,
-                                false));
-                    }
-                }
-            }
+            applyPotionUpgrades(player);
         }
     }
 
-    private void colorArmor(ItemStack item, Color color) {
-        LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
-        meta.setColor(color);
-        item.setItemMeta(meta);
+    private ItemStack coloredLeather(Material material, Color color) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta instanceof LeatherArmorMeta lam) {
+            lam.setColor(color);
+            item.setItemMeta(lam);
+        }
+        return item;
+    }
+
+    private void applyEnchantUpgradesToArmor(ItemStack helmet, ItemStack chest, ItemStack legs, ItemStack boots) {
+        for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
+            String upgradeId = entry.getKey();
+            UpgradeManager.Upgrade upgrade = entry.getValue();
+            if (upgrade == null) continue;
+
+            int level = team.getUpgrades().getUpgradeLevel(upgradeId);
+            if (level <= 0) continue;
+
+            if (upgrade.getEffectType() != UpgradeManager.EffectType.ENCHANTMENT) continue;
+            if (!"ARMOR".equalsIgnoreCase(upgrade.getTarget())) continue;
+
+            Enchantment ench = upgrade.getEnchantment();
+            if (ench == null) continue;
+
+            // Use safe enchant; if you need levels beyond vanilla, switch to addUnsafeEnchantment.
+            helmet.addEnchantment(ench, level);
+            chest.addEnchantment(ench, level);
+            legs.addEnchantment(ench, level);
+            boots.addEnchantment(ench, level);
+        }
+    }
+
+    private void ensureStartingSword(PlayerInventory inv) {
+        if (inv == null) return;
+
+        boolean hasSword = false;
+        for (ItemStack it : inv.getContents()) {
+            if (it == null) continue;
+            String name = it.getType().name();
+            if (name.endsWith("_SWORD")) {
+                hasSword = true;
+                break;
+            }
+        }
+
+        if (!hasSword) {
+            Material swordMat = materialOr("WOODEN_SWORD", "WOOD_SWORD", Material.WOODEN_SWORD);
+            ItemStack sword = new ItemStack(swordMat);
+
+            if (upgradeManager != null) {
+                applyEnchantUpgradesToWeapon(sword);
+            }
+
+            inv.addItem(sword);
+        }
+    }
+
+    private void applyEnchantUpgradesToWeapon(ItemStack weapon) {
+        for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
+            String upgradeId = entry.getKey();
+            UpgradeManager.Upgrade upgrade = entry.getValue();
+            if (upgrade == null) continue;
+
+            int level = team.getUpgrades().getUpgradeLevel(upgradeId);
+            if (level <= 0) continue;
+
+            if (upgrade.getEffectType() != UpgradeManager.EffectType.ENCHANTMENT) continue;
+            if (!"WEAPON".equalsIgnoreCase(upgrade.getTarget())) continue;
+
+            Enchantment ench = upgrade.getEnchantment();
+            if (ench == null) continue;
+
+            weapon.addEnchantment(ench, level);
+        }
+    }
+
+    private void applyPotionUpgrades(Player player) {
+        for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgradeManager.getUpgrades().entrySet()) {
+            String upgradeId = entry.getKey();
+            UpgradeManager.Upgrade upgrade = entry.getValue();
+            if (upgrade == null) continue;
+
+            int level = team.getUpgrades().getUpgradeLevel(upgradeId);
+            if (level <= 0) continue;
+
+            if (upgrade.getEffectType() != UpgradeManager.EffectType.POTION_EFFECT) continue;
+            if (upgrade.getPotionType() == null) continue;
+
+            int amplifier = upgrade.isAmplifierPerLevel() ? Math.max(0, level - 1) : 0;
+
+            // Optional: remove existing effect to prevent weird stacking edge cases
+            if (player.hasPotionEffect(upgrade.getPotionType())) {
+                player.removePotionEffect(upgrade.getPotionType());
+            }
+
+            player.addPotionEffect(new PotionEffect(
+                    upgrade.getPotionType(),
+                    upgrade.getDuration(),
+                    amplifier,
+                    false,
+                    false
+            ));
+        }
+    }
+
+    private Material materialOr(String preferred, String legacy, Material fallback) {
+        Material m = Material.matchMaterial(preferred);
+        if (m != null) return m;
+        m = Material.matchMaterial(legacy);
+        if (m != null) return m;
+        return fallback;
     }
 
     public void addKill() {

@@ -153,6 +153,8 @@ public class BedWarsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new InventoryClickListener(this), this);
         getServer().getPluginManager().registerEvents(new SpectatorListener(this), this);
         getServer().getPluginManager().registerEvents(new ItemPickupListener(this, upgradeManager), this);
+        getServer().getPluginManager().registerEvents(new PlayerChatListener(this), this);
+        getServer().getPluginManager().registerEvents(new InventoryCloseListener(this), this);
     }
 
     public static BedWarsPlugin getInstance() {

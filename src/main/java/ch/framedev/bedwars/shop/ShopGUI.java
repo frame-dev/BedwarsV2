@@ -45,12 +45,12 @@ public class ShopGUI {
     public void openCategory(Player player, ShopCategory category) {
         openCategory(player, category, null);
     }
-    
+
     public void openCategory(Player player, ShopCategory category, Game game) {
         if (player == null) {
             return;
         }
-        
+
         String categoryName = ChatColor.translateAlternateColorCodes('&', category.getName());
         Inventory inventory = Bukkit.createInventory(null, 54, ChatColor.BOLD + categoryName);
 
@@ -67,7 +67,7 @@ public class ShopGUI {
         for (int i = 0; i < items.size() && i < 45; i++) {
             ShopItem shopItem = items.get(i);
             ItemStack displayItem = shopItem.getItem().clone();
-            
+
             // Convert white wool to team-colored wool
             if (teamColor != null && displayItem.getType() == Material.WHITE_WOOL) {
                 Material teamWool = getTeamWool(teamColor);
@@ -75,7 +75,7 @@ public class ShopGUI {
                     displayItem.setType(teamWool);
                 }
             }
-            
+
             ItemMeta meta = displayItem.getItemMeta();
 
             List<String> lore = new ArrayList<>();
@@ -107,18 +107,18 @@ public class ShopGUI {
     public ItemStack purchaseItem(Player player, ShopItem shopItem) {
         return purchaseItem(player, shopItem, null);
     }
-    
+
     public ItemStack purchaseItem(Player player, ShopItem shopItem, Game game) {
         if (player == null) {
             return null;
         }
-        
+
         ItemStack cost = shopItem.getCost();
 
         if (player.getInventory().containsAtLeast(cost, cost.getAmount())) {
             player.getInventory().removeItem(cost);
             ItemStack purchased = shopItem.getItem().clone();
-            
+
             // Convert white wool to team-colored wool when purchasing
             if (purchased.getType() == Material.WHITE_WOOL && game != null) {
                 ch.framedev.bedwars.player.GamePlayer gamePlayer = game.getGamePlayer(player);
@@ -130,38 +130,33 @@ public class ShopGUI {
                     }
                 }
             }
-            
+            if (purchased.getType() == Material.CHAINMAIL_CHESTPLATE || purchased.getType() == Material.IRON_CHESTPLATE ||
+                    purchased.getType() == Material.DIAMOND_CHESTPLATE) {
+                player.getInventory().setChestplate(purchased);
+                return purchased;
+            }
+
             player.getInventory().addItem(purchased);
             return purchased;
         } else {
             return null;
         }
     }
-    
+
     /**
      * Get the wool material for a team color
      */
     private Material getTeamWool(TeamColor teamColor) {
-        switch (teamColor) {
-            case RED:
-                return Material.RED_WOOL;
-            case BLUE:
-                return Material.BLUE_WOOL;
-            case GREEN:
-                return Material.GREEN_WOOL;
-            case YELLOW:
-                return Material.YELLOW_WOOL;
-            case AQUA:
-                return Material.CYAN_WOOL;
-            case WHITE:
-                return Material.WHITE_WOOL;
-            case PINK:
-                return Material.PINK_WOOL;
-            case GRAY:
-                return Material.GRAY_WOOL;
-            default:
-                return Material.WHITE_WOOL;
-        }
+        return switch (teamColor) {
+            case RED -> Material.RED_WOOL;
+            case BLUE -> Material.BLUE_WOOL;
+            case GREEN -> Material.GREEN_WOOL;
+            case YELLOW -> Material.YELLOW_WOOL;
+            case AQUA -> Material.CYAN_WOOL;
+            case PINK -> Material.PINK_WOOL;
+            case GRAY -> Material.GRAY_WOOL;
+            default -> Material.WHITE_WOOL;
+        };
     }
 
     private String formatMaterialName(Material material) {

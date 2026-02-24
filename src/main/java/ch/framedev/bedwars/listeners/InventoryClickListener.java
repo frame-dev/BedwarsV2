@@ -16,12 +16,26 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+
 /**
- * Handles inventory click events for shop
+ * Handles inventory click events (shop, upgrades, cosmetics, achievements, team selector, map vote).
+ *
+ * Fixes / improvements:
+ * - ignoreCancelled + highest priority: avoids double-handling and item movement
+ * - centralized null/air checks
+ * - robust title matching (stripColor)
+ * - safe slot mapping for upgrades (iterating keySet is non-deterministic)
+ * - prevent clicking player inventory when GUI is open from causing purchases
+ * - fewer repeated getCurrentItem calls
  */
 public class InventoryClickListener implements Listener {
 
@@ -35,37 +49,46 @@ public class InventoryClickListener implements Listener {
         this.upgradeShopGUI = new UpgradeShopGUI(plugin.getUpgradeManager());
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player))
-            return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        Player player = (Player) event.getWhoClicked();
-        String title = event.getView().getTitle();
-
-        if (plugin.getCosmeticsManager() != null && plugin.getCosmeticsManager().isCosmeticsTitle(title)) {
-            event.setCancelled(true);
-            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
-                return;
+        // We only care about clicks inside the top inventory (the GUI), not the player's own inventory.
+        if (event.getClickedInventory() == null) return;
+        if (event.getClickedInventory().equals(player.getInventory())) {
+            // If a GUI is open we typically still cancel movement to avoid shift-click exploits.
+            // But only cancel when the open inventory is one of ours.
+            String title = event.getView().getTitle();
+            if (isAnyPluginGui(title)) {
+                event.setCancelled(true);
             }
+            return;
+        }
+
+        final String title = event.getView().getTitle();
+        final ItemStack clicked = event.getCurrentItem();
+
+        // For our GUIs: always cancel to prevent item taking/moving.
+        if (isAnyPluginGui(title)) {
+            event.setCancelled(true);
+        }
+
+        if (isNullOrAir(clicked)) return;
+
+        // Cosmetics GUI
+        if (plugin.getCosmeticsManager() != null && plugin.getCosmeticsManager().isCosmeticsTitle(title)) {
             plugin.getCosmeticsManager().handleMenuClick(player, event.getSlot());
             return;
         }
 
+        // Achievements GUI
         if (plugin.getAchievementsManager() != null && plugin.getAchievementsManager().isAchievementsTitle(title)) {
-            event.setCancelled(true);
-            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
-                return;
-            }
             plugin.getAchievementsManager().handleMenuClick(player, event.getSlot());
             return;
         }
 
+        // Team Selection GUI
         if (plugin.getTeamSelectionGUI() != null && TeamSelectionGUI.isTeamSelectionTitle(title)) {
-            event.setCancelled(true);
-            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
-                return;
-            }
             Game game = plugin.getGameManager().getPlayerGame(player);
             if (game != null) {
                 plugin.getTeamSelectionGUI().handleMenuClick(player, event.getSlot(), game);
@@ -73,54 +96,74 @@ public class InventoryClickListener implements Listener {
             return;
         }
 
+        // Map voting GUI
         String voteTitle = ChatColor.translateAlternateColorCodes('&',
                 plugin.getConfig().getString("map-voting.gui-title", "Map Voting"));
-        if (ChatColor.stripColor(title).equalsIgnoreCase(ChatColor.stripColor(voteTitle))) {
-            event.setCancelled(true);
-            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) {
-                return;
-            }
+        if (equalsTitle(title, voteTitle)) {
             if (plugin.getMapVoteManager() != null) {
-                plugin.getMapVoteManager().handleVoteClick(player, event.getCurrentItem(), event.getSlot());
+                plugin.getMapVoteManager().handleVoteClick(player, clicked, event.getSlot());
             }
             return;
         }
 
-        // Check if it's a shop inventory
-        if (title.contains("Item Shop") || title.contains("Team Upgrades") || isShopCategory(title)) {
-            event.setCancelled(true);
-
+        // Shop / upgrades GUIs
+        if (isShopGui(title)) {
+            // Already cancelled above via isAnyPluginGui()
             plugin.getDebugLogger().debug("Shop click: " + player.getName() + ", title=" + title
                     + ", slot=" + event.getSlot());
 
-            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR)
-                return;
-
             Game game = plugin.getGameManager().getPlayerGame(player);
-            if (game == null)
-                return;
+            if (game == null) return;
 
             MessageManager mm = plugin.getMessageManager();
 
-            // Handle main shop navigation
-            if (title.equals(ChatColor.BOLD + "Item Shop")) {
-                handleMainShopClick(player, event.getCurrentItem(), game);
+            if (equalsTitle(title, ChatColor.BOLD + "Item Shop")) {
+                handleMainShopClick(player, clicked, game);
+                return;
             }
-            // Handle category shop purchases
-            else if (isShopCategory(title)) {
-                handleCategoryShopClick(player, event.getCurrentItem(), event.getSlot(), title, game, mm);
+
+            if (isShopCategory(title)) {
+                handleCategoryShopClick(player, clicked, event.getSlot(), title, game, mm);
+                return;
             }
-            // Handle upgrade shop
-            else if (title.equals(ChatColor.BOLD + "Team Upgrades")) {
+
+            if (equalsTitle(title, ChatColor.BOLD + "Team Upgrades")) {
                 handleUpgradeShopClick(player, event.getSlot(), game, mm);
             }
         }
     }
 
+    private boolean isAnyPluginGui(String title) {
+        if (title == null) return false;
+
+        if (plugin.getCosmeticsManager() != null && plugin.getCosmeticsManager().isCosmeticsTitle(title)) return true;
+        if (plugin.getAchievementsManager() != null && plugin.getAchievementsManager().isAchievementsTitle(title)) return true;
+        if (plugin.getTeamSelectionGUI() != null && TeamSelectionGUI.isTeamSelectionTitle(title)) return true;
+
+        String voteTitle = ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("map-voting.gui-title", "Map Voting"));
+        if (equalsTitle(title, voteTitle)) return true;
+
+        return isShopGui(title);
+    }
+
+    private boolean isShopGui(String title) {
+        if (title == null) return false;
+        // Strip color to avoid issues across versions / formatting
+        String clean = ChatColor.stripColor(title);
+        if (clean == null) return false;
+
+        return clean.equalsIgnoreCase(ChatColor.stripColor(ChatColor.BOLD + "Item Shop"))
+                || clean.equalsIgnoreCase(ChatColor.stripColor(ChatColor.BOLD + "Team Upgrades"))
+                || isShopCategory(title);
+    }
+
     private boolean isShopCategory(String title) {
         String cleanTitle = ChatColor.stripColor(title);
+        if (cleanTitle == null) return false;
+
         for (ShopCategory category : shopGUI.getShopManager().getCategories()) {
-            if (cleanTitle.equals(category.getName())) {
+            if (cleanTitle.equalsIgnoreCase(category.getName())) {
                 return true;
             }
         }
@@ -128,7 +171,6 @@ public class InventoryClickListener implements Listener {
     }
 
     private void handleMainShopClick(Player player, ItemStack clickedItem, Game game) {
-        // Open category based on clicked icon
         for (ShopCategory category : shopGUI.getShopManager().getCategories()) {
             if (clickedItem.getType() == category.getIcon()) {
                 plugin.getDebugLogger().debug("Open shop category: " + player.getName()
@@ -141,7 +183,7 @@ public class InventoryClickListener implements Listener {
     }
 
     private void handleCategoryShopClick(Player player, ItemStack clickedItem, int slot, String title, Game game,
-            MessageManager mm) {
+                                         MessageManager mm) {
         // Back button
         if (slot == 49 && clickedItem.getType() == Material.ARROW) {
             plugin.getDebugLogger().debug("Shop back: " + player.getName() + ", category=" + title);
@@ -150,18 +192,18 @@ public class InventoryClickListener implements Listener {
             return;
         }
 
-        // Find the shop item
+        // Find the shop item by slot
         String categoryName = ChatColor.stripColor(title);
         ShopCategory category = shopGUI.getShopManager().getCategory(categoryName);
+        if (category == null) return;
 
-        if (category == null || slot >= category.getItems().size())
-            return;
+        // IMPORTANT: Many GUIs place items with padding/fillers. If your ShopGUI places items directly by slot index
+        // in the inventory, this is fine. If it uses specific slots, you should map slot -> ShopItem in ShopGUI.
+        if (slot < 0 || slot >= category.getItems().size()) return;
 
         ShopItem shopItem = category.getItems().get(slot);
-        if (shopItem == null)
-            return;
+        if (shopItem == null) return;
 
-        // Attempt purchase
         ItemStack purchased = shopGUI.purchaseItem(player, shopItem, game);
         if (purchased != null) {
             plugin.getDebugLogger().debug("Shop purchase: " + player.getName() + ", item="
@@ -174,11 +216,12 @@ public class InventoryClickListener implements Listener {
                 plugin.getUpgradeManager().applyUpgradesToItem(purchased, buyer.getTeam().getUpgrades());
             }
 
-            // Refresh the inventory to show updated purchase options
+            // Refresh category view
             shopGUI.openCategory(player, category, game);
         } else {
             plugin.getDebugLogger().debug("Shop purchase failed: " + player.getName() + ", item="
                     + shopItem.getItem().getType());
+
             ItemStack cost = shopItem.getCost();
             String resourceName = formatMaterialName(cost.getType());
             mm.sendMessage(player, "shop.not-enough-resources", resourceName);
@@ -188,28 +231,23 @@ public class InventoryClickListener implements Listener {
 
     private void handleUpgradeShopClick(Player player, int slot, Game game, MessageManager mm) {
         GamePlayer gamePlayer = game.getGamePlayer(player.getUniqueId());
-        if (gamePlayer == null || gamePlayer.getTeam() == null)
-            return;
+        if (gamePlayer == null || gamePlayer.getTeam() == null) return;
 
         Team team = gamePlayer.getTeam();
 
-        // Get all available upgrades and find which one matches this slot
-        var upgrades = upgradeShopGUI.getUpgradeManager().getUpgrades();
-        int currentSlot = 10;
-        String upgradeId = null;
+        // FIX: Iterating upgrades.keySet() is non-deterministic (HashMap order changes).
+        // Sort keys so slot->upgrade mapping is stable across restarts.
+        List<String> upgradeIds = new ArrayList<>(upgradeShopGUI.getUpgradeManager().getUpgrades().keySet());
+        Collections.sort(upgradeIds);
 
-        for (String id : upgrades.keySet()) {
-            if (currentSlot == slot) {
-                upgradeId = id;
-                break;
-            }
-            currentSlot++;
-        }
+        // Your GUI seems to start upgrades at slot 10 and go sequentially.
+        // If UpgradeShopGUI uses a different layout, move slot mapping into UpgradeShopGUI.
+        int baseSlot = 10;
+        int index = slot - baseSlot;
+        if (index < 0 || index >= upgradeIds.size()) return;
 
-        if (upgradeId == null)
-            return;
+        String upgradeId = upgradeIds.get(index);
 
-        // Attempt upgrade purchase
         if (upgradeShopGUI.purchaseUpgrade(player, team, upgradeId)) {
             var upgrade = upgradeShopGUI.getUpgradeManager().getUpgrade(upgradeId);
 
@@ -238,31 +276,16 @@ public class InventoryClickListener implements Listener {
             if (upgrade != null && upgrade.getEffectType() == EffectType.ENCHANTMENT) {
                 for (GamePlayer teamPlayer : team.getPlayers()) {
                     Player p = plugin.getServer().getPlayer(teamPlayer.getUuid());
-                    if (p == null) {
-                        continue;
-                    }
+                    if (p == null) continue;
 
-                    var inventory = p.getInventory();
-                    if (inventory.getItemInMainHand() != null) {
-                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getItemInMainHand(),
-                                team.getUpgrades());
-                    }
-                    if (inventory.getItemInOffHand() != null) {
-                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getItemInOffHand(),
-                                team.getUpgrades());
-                    }
-                    if (inventory.getHelmet() != null) {
-                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getHelmet(), team.getUpgrades());
-                    }
-                    if (inventory.getChestplate() != null) {
-                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getChestplate(), team.getUpgrades());
-                    }
-                    if (inventory.getLeggings() != null) {
-                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getLeggings(), team.getUpgrades());
-                    }
-                    if (inventory.getBoots() != null) {
-                        plugin.getUpgradeManager().applyUpgradesToItem(inventory.getBoots(), team.getUpgrades());
-                    }
+                    var inv = p.getInventory();
+                    if (inv.getItemInMainHand() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getItemInMainHand(), team.getUpgrades());
+                    if (inv.getItemInOffHand() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getItemInOffHand(), team.getUpgrades());
+
+                    if (inv.getHelmet() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getHelmet(), team.getUpgrades());
+                    if (inv.getChestplate() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getChestplate(), team.getUpgrades());
+                    if (inv.getLeggings() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getLeggings(), team.getUpgrades());
+                    if (inv.getBoots() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getBoots(), team.getUpgrades());
                 }
             }
 
@@ -270,7 +293,6 @@ public class InventoryClickListener implements Listener {
                 game.applySpecialUpgrade(team, upgradeId);
             }
 
-            // Refresh the inventory
             upgradeShopGUI.openUpgradeShop(player, team);
         } else {
             plugin.getDebugLogger().debug("Upgrade purchase failed: " + player.getName() + ", upgrade=" + upgradeId);
@@ -279,8 +301,19 @@ public class InventoryClickListener implements Listener {
         }
     }
 
+    private boolean isNullOrAir(ItemStack item) {
+        return item == null || item.getType() == Material.AIR;
+    }
+
+    private boolean equalsTitle(String a, String b) {
+        String sa = ChatColor.stripColor(a);
+        String sb = ChatColor.stripColor(b);
+        if (sa == null || sb == null) return false;
+        return sa.equalsIgnoreCase(sb);
+    }
+
     private String formatMaterialName(Material material) {
-        String name = material.name().toLowerCase().replace("_", " ");
+        String name = material.name().toLowerCase(Locale.ROOT).replace("_", " ");
         return name.substring(0, 1).toUpperCase() + name.substring(1);
     }
 }

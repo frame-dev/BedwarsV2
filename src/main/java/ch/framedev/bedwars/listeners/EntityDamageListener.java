@@ -4,100 +4,111 @@ import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.game.Game;
 import ch.framedev.bedwars.game.GameState;
 import ch.framedev.bedwars.player.GamePlayer;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.projectiles.ProjectileSource;
 
 /**
- * Handles entity damage events
+ * Handles entity damage events for BedWars.
  */
 public class EntityDamageListener implements Listener {
 
     private final BedWarsPlugin plugin;
 
+    // Cache config flags (recreate listener on reload or add setters)
+    private final boolean allowFall;
+    private final boolean allowProjectile;
+    private final boolean allowPvp;
+    private final boolean allowExplosionDamage;
+
     public EntityDamageListener(BedWarsPlugin plugin) {
         this.plugin = plugin;
+
+        this.allowFall = plugin.getConfig().getBoolean("game.allow-fall-damage", true);
+        this.allowProjectile = plugin.getConfig().getBoolean("game.allow-projectile-damage", true);
+        this.allowPvp = plugin.getConfig().getBoolean("game.allow-pvp", true);
+        this.allowExplosionDamage = plugin.getConfig().getBoolean("game.allow-explosion-damage", false); // default BedWars: off
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamage(EntityDamageEvent event) {
-        if (event.getEntity() instanceof Player) {
-            Player player = (Player) event.getEntity();
-            Game game = plugin.getGameManager().getPlayerGame(player);
+        if (!(event.getEntity() instanceof Player victimBukkit)) return;
 
-            plugin.getDebugLogger().verbose("Entity damage: " + player.getName()
-                    + ", cause=" + event.getCause() + ", game=" + (game != null));
+        Game game = plugin.getGameManager().getPlayerGame(victimBukkit);
+        if (game == null) return; // not in a BedWars game -> don't interfere
 
-            if (game != null) {
-                if (game.getState() != GameState.RUNNING) {
-                    plugin.getDebugLogger().debug("Damage cancelled (game not running) for " + player.getName());
-                    event.setCancelled(true);
-                    return;
-                }
+        // Game not running -> no damage at all
+        if (game.getState() != GameState.RUNNING) {
+            event.setCancelled(true);
+            return;
+        }
 
-                boolean allowFall = plugin.getConfig().getBoolean("game.allow-fall-damage", true);
-                boolean allowProjectile = plugin.getConfig().getBoolean("game.allow-projectile-damage", true);
-                boolean allowPvp = plugin.getConfig().getBoolean("game.allow-pvp", true);
+        // Cause-based rules (non-PVP too)
+        EntityDamageEvent.DamageCause cause = event.getCause();
 
-                if (!allowFall && event.getCause() == EntityDamageEvent.DamageCause.FALL) {
-                    plugin.getDebugLogger().debug("Damage cancelled (fall) for " + player.getName());
-                    event.setCancelled(true);
-                    return;
-                }
+        if (!allowFall && cause == EntityDamageEvent.DamageCause.FALL) {
+            event.setCancelled(true);
+            return;
+        }
 
-                if (!allowProjectile && event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE) {
-                    plugin.getDebugLogger().debug("Damage cancelled (projectile) for " + player.getName());
-                    event.setCancelled(true);
-                    return;
-                }
+        // Explosion damage toggle
+        if (!allowExplosionDamage &&
+                (cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION
+                        || cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION)) {
+            event.setCancelled(true);
+            return;
+        }
 
-                if (!allowPvp && event instanceof EntityDamageByEntityEvent) {
-                    plugin.getDebugLogger().debug("Damage cancelled (pvp disabled) for " + player.getName());
-                    event.setCancelled(true);
-                    return;
-                }
+        // If it's not damage by an entity/projectile, we're done here
+        if (!(event instanceof EntityDamageByEntityEvent byEntity)) return;
 
-                if (event instanceof EntityDamageByEntityEvent damageEvent) {
-                    Player attacker = resolveAttacker(damageEvent.getDamager());
-                    if (attacker == null) {
-                        return;
-                    }
+        Player attackerBukkit = resolveAttacker(byEntity.getDamager());
+        if (attackerBukkit == null) {
+            // Example: mobs, TNT source unknown, etc.
+            return;
+        }
 
-                    Game attackerGame = plugin.getGameManager().getPlayerGame(attacker);
-                    if (attackerGame != game) {
-                        return;
-                    }
+        // Attacker must be in same game (prevents cross-world / cross-arena abuse)
+        Game attackerGame = plugin.getGameManager().getPlayerGame(attackerBukkit);
+        if (attackerGame != game) {
+            event.setCancelled(true);
+            return;
+        }
 
-                    GamePlayer victim = game.getGamePlayer(player);
-                    GamePlayer attackerPlayer = game.getGamePlayer(attacker);
-                    if (victim == null || attackerPlayer == null) {
-                        return;
-                    }
+        // Global PVP toggle
+        if (!allowPvp) {
+            event.setCancelled(true);
+            return;
+        }
 
-                    if (victim.getTeam() != null && victim.getTeam().equals(attackerPlayer.getTeam())) {
-                        plugin.getDebugLogger().debug("Damage cancelled (friendly fire) attacker="
-                                + attacker.getName() + " victim=" + player.getName());
-                        event.setCancelled(true);
-                    }
-                }
-            }
+        // Projectile toggle (applies to arrows/snowballs/etc.)
+        if (!allowProjectile && byEntity.getDamager() instanceof Projectile) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Friendly fire check
+        GamePlayer victim = game.getGamePlayer(victimBukkit);
+        GamePlayer attacker = game.getGamePlayer(attackerBukkit);
+        if (victim == null || attacker == null) return;
+
+        if (victim.getTeam() != null && victim.getTeam().equals(attacker.getTeam())) {
+            event.setCancelled(true);
         }
     }
 
     private Player resolveAttacker(Entity damager) {
-        if (damager instanceof Player) {
-            return (Player) damager;
-        }
+        if (damager instanceof Player p) return p;
+
         if (damager instanceof Projectile projectile) {
             ProjectileSource source = projectile.getShooter();
-            if (source instanceof Player) {
-                return (Player) source;
-            }
+            if (source instanceof Player p) return p;
         }
         return null;
     }

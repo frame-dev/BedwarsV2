@@ -23,6 +23,7 @@ import ch.framedev.bedwars.upgrades.TeamUpgrades;
  * Manages team upgrades loaded from upgrades.yml configuration file.
  * Allows server owners to add, remove, or modify upgrades without code changes.
  */
+@SuppressWarnings({"ResultOfMethodCallIgnored", "SwitchStatementWithTooFewBranches"})
 public class UpgradeManager {
 
     private final BedWarsPlugin plugin;
@@ -116,7 +117,6 @@ public class UpgradeManager {
     /**
      * Load a single upgrade from configuration
      */
-    @SuppressWarnings("deprecation")
     private Upgrade loadUpgrade(String id, ConfigurationSection section) {
         if (section == null)
             return null;
@@ -442,6 +442,7 @@ public class UpgradeManager {
     /**
      * Represents the cost of upgrading to a specific level
      */
+    @SuppressWarnings("ClassCanBeRecord")
     public static class UpgradeCost {
         private final Material material;
         private final int amount;

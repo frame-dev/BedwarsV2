@@ -8,7 +8,7 @@ import java.util.*;
 
 /**
  * Represents a team in BedWars.
- *
+ * <p>
  * Improvements:
  * - Uses a Set to avoid duplicate GamePlayers
  * - Exposes an unmodifiable view of members

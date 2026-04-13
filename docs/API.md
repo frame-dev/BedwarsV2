@@ -25,7 +25,7 @@ Add to your `pom.xml`:
 <dependency>
     <groupId>ch.framedev</groupId>
     <artifactId>bedwars</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.2-SNAPSHOT</version>
 </dependency>
 ```
 

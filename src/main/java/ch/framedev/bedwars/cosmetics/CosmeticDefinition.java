@@ -6,6 +6,7 @@ import org.bukkit.Material;
 /**
  * Defines a cosmetic option.
  */
+@SuppressWarnings("ClassCanBeRecord")
 public class CosmeticDefinition {
 
     private final String id;

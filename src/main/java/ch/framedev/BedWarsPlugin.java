@@ -18,6 +18,7 @@ import ch.framedev.bedwars.achievements.AchievementsManager;
 import ch.framedev.bedwars.cloudnet.CloudNetManager;
 import ch.framedev.bedwars.team.TeamSelectionGUI;
 import ch.framedev.bedwars.listeners.*;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -95,8 +96,14 @@ public class BedWarsPlugin extends JavaPlugin {
         // Register commands with tab completion
         ImprovedBedWarsCommand commandExecutor = new ImprovedBedWarsCommand(this, arenaManager);
         BedWarsTabCompleter tabCompleter = new BedWarsTabCompleter(this, arenaManager);
-        getCommand("bedwars").setExecutor(commandExecutor);
-        getCommand("bedwars").setTabCompleter(tabCompleter);
+        PluginCommand bedwarsCommand = getCommand("bedwars");
+        if (bedwarsCommand == null) {
+            getLogger().severe("Command 'bedwars' is not defined in plugin.yml. Disabling plugin.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+        bedwarsCommand.setExecutor(commandExecutor);
+        bedwarsCommand.setTabCompleter(tabCompleter);
 
         // Register listeners
         registerListeners();

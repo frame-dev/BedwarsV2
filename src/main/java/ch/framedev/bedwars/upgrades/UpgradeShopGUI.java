@@ -12,27 +12,36 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Handles the upgrades shop GUI
  * Now configurable via upgrades.yml
  */
-public class UpgradeShopGUI {
+public record UpgradeShopGUI(UpgradeManager upgradeManager) {
 
-    private final UpgradeManager upgradeManager;
+    public UpgradeShopGUI {
+        upgradeManager = Objects.requireNonNull(upgradeManager, "upgradeManager");
+    }
 
     public UpgradeShopGUI(BedWarsPlugin plugin) {
         this(new UpgradeManager(plugin));
     }
 
-    public UpgradeShopGUI(UpgradeManager upgradeManager) {
-        this.upgradeManager = upgradeManager;
-    }
-
     public UpgradeManager getUpgradeManager() {
         return upgradeManager;
+    }
+
+    /**
+     * Returns the upgrade ids in deterministic GUI order.
+     */
+    public List<String> getOrderedUpgradeIds() {
+        List<String> ids = new ArrayList<>(upgradeManager.getUpgrades().keySet());
+        Collections.sort(ids);
+        return ids;
     }
 
     public void openUpgradeShop(Player player, Team team) {
@@ -40,18 +49,21 @@ public class UpgradeShopGUI {
 
         TeamUpgrades teamUpgrades = team.getUpgrades();
         Map<String, UpgradeManager.Upgrade> upgrades = upgradeManager.getUpgrades();
+        List<String> orderedIds = getOrderedUpgradeIds();
 
         int slot = 10; // Start placing items at slot 10
 
-        for (Map.Entry<String, UpgradeManager.Upgrade> entry : upgrades.entrySet()) {
-            String upgradeId = entry.getKey();
-            UpgradeManager.Upgrade upgrade = entry.getValue();
+        for (String upgradeId : orderedIds) {
+            UpgradeManager.Upgrade upgrade = upgrades.get(upgradeId);
+            if (upgrade == null) continue;
 
             ItemStack item = new ItemStack(upgrade.getIcon());
             ItemMeta meta = item.getItemMeta();
 
             // Set display name with color codes
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', upgrade.getDisplayName()));
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', upgrade.getDisplayName()));
+            }
 
             // Set lore with description and cost
             List<String> lore = new ArrayList<>();
@@ -91,7 +103,9 @@ public class UpgradeShopGUI {
                 lore.add(ChatColor.GOLD + "MAX LEVEL");
             }
 
-            meta.setLore(lore);
+            if (meta != null) {
+                meta.setLore(lore);
+            }
             item.setItemMeta(meta);
 
             inventory.setItem(slot, item);
@@ -120,7 +134,7 @@ public class UpgradeShopGUI {
         String[] words = name.split(" ");
         StringBuilder result = new StringBuilder();
         for (String word : words) {
-            if (result.length() > 0)
+            if (!result.isEmpty())
                 result.append(" ");
             result.append(word.charAt(0)).append(word.substring(1).toLowerCase());
         }

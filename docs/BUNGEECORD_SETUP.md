@@ -5,6 +5,7 @@ This guide explains how to configure and use the BedWars plugin on a BungeeCord 
 ## 📋 Overview
 
 The BedWars plugin now supports BungeeCord, allowing players to:
+
 - Automatically be sent to a lobby server when games end
 - Use `/bedwars lobby` command to return to lobby
 - Seamlessly integrate with multi-server networks
@@ -58,6 +59,7 @@ servers:
 ### Automatic Lobby Redirection
 
 When `send-to-lobby-on-end` is enabled:
+
 - Players are automatically sent to the lobby server when a game ends
 - Configurable delay before sending (default: 3 seconds)
 - Shows "Sending you to lobby..." message
@@ -65,6 +67,7 @@ When `send-to-lobby-on-end` is enabled:
 ### Manual Lobby Command
 
 Players can use `/bedwars lobby` to:
+
 - Leave their current game
 - Return to the lobby server instantly
 - Works from any game state
@@ -80,9 +83,9 @@ permissions:
 
 ## 🎮 Commands
 
-| Command | Description | Permission |
-|---------|-------------|------------|
-| `/bedwars lobby` | Return to lobby server | `bedwars.bungee` |
+| Command          | Description             | Permission        |
+| ---------------- | ----------------------- | ----------------- |
+| `/bedwars lobby` | Return to lobby server  | `bedwars.bungee`  |
 
 ## 🔍 How It Works
 
@@ -107,7 +110,7 @@ When sending a player to another server:
 
 ### Game End Flow
 
-```
+```text
 Game Ends → Wait 5 seconds (show winners) → 
 Wait lobby-send-delay seconds → Send to lobby server
 ```
@@ -205,7 +208,7 @@ void forwardToAll(Player player, String subchannel, byte[] data)
 
 ### Typical BungeeCord Network Structure
 
-```
+```text
 BungeeCord Proxy (port 25577)
 ├── Lobby Server (port 25565)
 │   └── Hub plugin, spawn management

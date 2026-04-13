@@ -56,7 +56,6 @@ public class StatsManager {
                 }
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load stats for " + uuid + ": " + e.getMessage());
-                e.printStackTrace();
             }
 
             // Create new stats if player doesn't exist
@@ -110,7 +109,6 @@ public class StatsManager {
                         now);
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to save stats for " + uuid + ": " + e.getMessage());
-                e.printStackTrace();
             }
         });
     }

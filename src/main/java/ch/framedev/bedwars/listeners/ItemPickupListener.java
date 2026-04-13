@@ -11,12 +11,11 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 
 /**
  * Applies team upgrades to items when they are obtained.
- *
+ * <p>
  * Fixes / improvements:
  * - Uses HIGH priority + ignoreCancelled to avoid applying to cancelled pickups/clicks
  * - Applies to the ACTUAL item that ends up in the player's inventory:
@@ -46,7 +45,6 @@ public class ItemPickupListener implements Listener {
         if (gp == null || gp.getTeam() == null) return;
 
         ItemStack stack = event.getItem().getItemStack();
-        if (stack == null) return;
 
         // Apply upgrades directly to the picked-up stack before it is added to inventory
         upgradeManager.applyUpgradesToItem(stack, gp.getTeam().getUpgrades());
@@ -64,14 +62,6 @@ public class ItemPickupListener implements Listener {
 
         GamePlayer gp = game.getGamePlayer(player);
         if (gp == null || gp.getTeam() == null) return;
-
-        // Only care about inventories where items are commonly obtained/manipulated
-        InventoryType type = event.getView().getTopInventory() != null
-                ? event.getView().getTopInventory().getType()
-                : null;
-
-        // If you want: restrict further, e.g. CHEST, ENDER_CHEST, CRAFTING, ANVIL, etc.
-        // if (type != InventoryType.CHEST && type != InventoryType.CRAFTING && type != InventoryType.WORKBENCH) return;
 
         ItemStack current = event.getCurrentItem();
         ItemStack cursor = event.getCursor();
@@ -93,10 +83,10 @@ public class ItemPickupListener implements Listener {
             plugin.getServer().getScheduler().runTask(plugin, () -> {
                 // Re-apply to main hand + armor as the common important targets
                 ItemStack main = player.getInventory().getItemInMainHand();
-                if (main != null) upgradeManager.applyUpgradesToItem(main, gp.getTeam().getUpgrades());
+                upgradeManager.applyUpgradesToItem(main, gp.getTeam().getUpgrades());
 
                 ItemStack off = player.getInventory().getItemInOffHand();
-                if (off != null) upgradeManager.applyUpgradesToItem(off, gp.getTeam().getUpgrades());
+                upgradeManager.applyUpgradesToItem(off, gp.getTeam().getUpgrades());
 
                 ItemStack helmet = player.getInventory().getHelmet();
                 if (helmet != null) upgradeManager.applyUpgradesToItem(helmet, gp.getTeam().getUpgrades());

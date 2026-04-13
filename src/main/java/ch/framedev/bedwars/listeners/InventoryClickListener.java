@@ -21,14 +21,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 /**
  * Handles inventory click events (shop, upgrades, cosmetics, achievements, team selector, map vote).
- *
+ * <p>
  * Fixes / improvements:
  * - ignoreCancelled + highest priority: avoids double-handling and item movement
  * - centralized null/air checks
@@ -118,7 +116,7 @@ public class InventoryClickListener implements Listener {
             MessageManager mm = plugin.getMessageManager();
 
             if (equalsTitle(title, ChatColor.BOLD + "Item Shop")) {
-                handleMainShopClick(player, clicked, game);
+                handleMainShopClick(player, event.getSlot(), game);
                 return;
             }
 
@@ -151,7 +149,6 @@ public class InventoryClickListener implements Listener {
         if (title == null) return false;
         // Strip color to avoid issues across versions / formatting
         String clean = ChatColor.stripColor(title);
-        if (clean == null) return false;
 
         return clean.equalsIgnoreCase(ChatColor.stripColor(ChatColor.BOLD + "Item Shop"))
                 || clean.equalsIgnoreCase(ChatColor.stripColor(ChatColor.BOLD + "Team Upgrades"))
@@ -170,16 +167,16 @@ public class InventoryClickListener implements Listener {
         return false;
     }
 
-    private void handleMainShopClick(Player player, ItemStack clickedItem, Game game) {
-        for (ShopCategory category : shopGUI.getShopManager().getCategories()) {
-            if (clickedItem.getType() == category.getIcon()) {
-                plugin.getDebugLogger().debug("Open shop category: " + player.getName()
-                        + ", category=" + category.getName());
-                shopGUI.openCategory(player, category, game);
-                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-                return;
-            }
-        }
+    private void handleMainShopClick(Player player, int slot, Game game) {
+        int index = slot - 19;
+        List<ShopCategory> categories = shopGUI.getShopManager().getCategories();
+        if (index < 0 || index >= categories.size()) return;
+
+        ShopCategory category = categories.get(index);
+        plugin.getDebugLogger().debug("Open shop category: " + player.getName()
+                + ", category=" + category.getName());
+        shopGUI.openCategory(player, category, game);
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
     }
 
     private void handleCategoryShopClick(Player player, ItemStack clickedItem, int slot, String title, Game game,
@@ -187,7 +184,7 @@ public class InventoryClickListener implements Listener {
         // Back button
         if (slot == 49 && clickedItem.getType() == Material.ARROW) {
             plugin.getDebugLogger().debug("Shop back: " + player.getName() + ", category=" + title);
-            shopGUI.openMainShop(player, game);
+            shopGUI.openMainShop(player);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             return;
         }
@@ -235,10 +232,7 @@ public class InventoryClickListener implements Listener {
 
         Team team = gamePlayer.getTeam();
 
-        // FIX: Iterating upgrades.keySet() is non-deterministic (HashMap order changes).
-        // Sort keys so slot->upgrade mapping is stable across restarts.
-        List<String> upgradeIds = new ArrayList<>(upgradeShopGUI.getUpgradeManager().getUpgrades().keySet());
-        Collections.sort(upgradeIds);
+        List<String> upgradeIds = upgradeShopGUI.getOrderedUpgradeIds();
 
         // Your GUI seems to start upgrades at slot 10 and go sequentially.
         // If UpgradeShopGUI uses a different layout, move slot mapping into UpgradeShopGUI.
@@ -279,8 +273,8 @@ public class InventoryClickListener implements Listener {
                     if (p == null) continue;
 
                     var inv = p.getInventory();
-                    if (inv.getItemInMainHand() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getItemInMainHand(), team.getUpgrades());
-                    if (inv.getItemInOffHand() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getItemInOffHand(), team.getUpgrades());
+                    plugin.getUpgradeManager().applyUpgradesToItem(inv.getItemInMainHand(), team.getUpgrades());
+                    plugin.getUpgradeManager().applyUpgradesToItem(inv.getItemInOffHand(), team.getUpgrades());
 
                     if (inv.getHelmet() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getHelmet(), team.getUpgrades());
                     if (inv.getChestplate() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getChestplate(), team.getUpgrades());

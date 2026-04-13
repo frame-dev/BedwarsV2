@@ -22,11 +22,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * Manages achievements and progress.
- *
+ * <p>
  * De-duplication:
  * - Single "record(...)" method used by all recordX calls
  * - Single "stripTitleEquals(...)" helper for GUI title comparisons
@@ -34,6 +34,7 @@ import java.util.function.BiConsumer;
  * - Single "safeMaterial(...)" helper for icon parsing
  * - Single "buildLore(...)" helper for GUI lore rendering
  */
+@SuppressWarnings("unchecked")
 public class AchievementsManager {
 
     private final BedWarsPlugin plugin;
@@ -182,14 +183,14 @@ public class AchievementsManager {
     /* Recording                                                              */
     /* --------------------------------------------------------------------- */
 
-    public void recordKill(UUID uuid)       { record(uuid, AchievementType.KILLS, 1); }
-    public void recordFinalKill(UUID uuid)  { record(uuid, AchievementType.FINAL_KILLS, 1); }
-    public void recordBedBroken(UUID uuid)  { record(uuid, AchievementType.BEDS_BROKEN, 1); }
-    public void recordWin(UUID uuid)        { record(uuid, AchievementType.WINS, 1); }
-    public void recordGamePlayed(UUID uuid) { record(uuid, AchievementType.GAMES_PLAYED, 1); }
+    public void recordKill(UUID uuid)       { record(uuid, AchievementType.KILLS); }
+    public void recordFinalKill(UUID uuid)  { record(uuid, AchievementType.FINAL_KILLS); }
+    public void recordBedBroken(UUID uuid)  { record(uuid, AchievementType.BEDS_BROKEN); }
+    public void recordWin(UUID uuid)        { record(uuid, AchievementType.WINS); }
+    public void recordGamePlayed(UUID uuid) { record(uuid, AchievementType.GAMES_PLAYED); }
 
-    private void record(UUID uuid, AchievementType type, int amount) {
-        if (!isEnabled() || uuid == null || type == null || amount <= 0) return;
+    private void record(UUID uuid, AchievementType type) {
+        if (!isEnabled() || uuid == null || type == null) return;
 
         Map<String, AchievementProgress> progressMap = getOrCreateProgressMap(uuid);
 
@@ -199,7 +200,7 @@ public class AchievementsManager {
             AchievementProgress progress = progressMap.computeIfAbsent(def.getId(), k -> new AchievementProgress(0, 0));
             if (progress.isUnlocked()) return;
 
-            int newProgress = progress.getProgress() + amount;
+            int newProgress = progress.getProgress() + 1;
             progress.setProgress(newProgress);
 
             if (newProgress >= def.getTarget()) {
@@ -236,12 +237,11 @@ public class AchievementsManager {
             boolean enabled = entry.getBoolean("enabled", true);
             String displayName = entry.getString("display-name", key);
 
-            Material icon = safeMaterial(entry.getString("icon", "PAPER"), Material.PAPER);
+            Material icon = safeMaterial(entry.getString("icon", "PAPER"));
             List<String> lore = entry.getStringList("lore");
 
             AchievementType type = safeEnum(
                     entry.getString("type", "KILLS"),
-                    AchievementType.KILLS,
                     AchievementType::valueOf,
                     () -> plugin.getLogger().warning("Invalid achievement type for " + key + ", defaulting to KILLS")
             );
@@ -331,21 +331,20 @@ public class AchievementsManager {
         return ChatColor.translateAlternateColorCodes('&', s == null ? "" : s);
     }
 
-    private Material safeMaterial(String name, Material fallback) {
-        if (name == null) return fallback;
+    private Material safeMaterial(String name) {
+        if (name == null) return Material.PAPER;
         Material m = Material.matchMaterial(name.toUpperCase(Locale.ROOT));
-        return (m != null) ? m : fallback;
+        return (m != null) ? m : Material.PAPER;
     }
 
     private <T> T safeEnum(String raw,
-                           T fallback,
-                           java.util.function.Function<String, T> parser,
+                           Function<String, T> parser,
                            Runnable onError) {
         try {
             return parser.apply(raw.toUpperCase(Locale.ROOT));
         } catch (Exception e) {
             if (onError != null) onError.run();
-            return fallback;
+            return (T) AchievementType.KILLS;
         }
     }
 }

@@ -1,5 +1,6 @@
 package ch.framedev.bedwars.game;
 
+import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.team.TeamColor;
 import org.bukkit.Location;
@@ -8,6 +9,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 /**
  * Represents a BedWars arena/map
@@ -98,6 +100,7 @@ public class Arena {
             // Load team spawns and bed locations
             if (section.contains("teams")) {
                 ConfigurationSection teams = section.getConfigurationSection("teams");
+                if(teams == null) return null;
                 for (String colorName : teams.getKeys(false)) {
                     TeamColor color = TeamColor.valueOf(colorName.toUpperCase());
                     Location spawn = (Location) teams.get(colorName + ".spawn");
@@ -122,7 +125,7 @@ public class Arena {
 
             return arena;
         } catch (Exception e) {
-            e.printStackTrace();
+            BedWarsPlugin.getInstance().getLogger().log(Level.SEVERE, e.getMessage(), e);
             return null;
         }
     }

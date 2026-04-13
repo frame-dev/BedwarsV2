@@ -50,7 +50,7 @@ public class GameScoreboard {
     public void show(Player player) {
         if (player == null) return;
 
-        Scoreboard sb = Bukkit.getScoreboardManager().getNewScoreboard();
+        Scoreboard sb = Objects.requireNonNull(Bukkit.getScoreboardManager()).getNewScoreboard();
         Objective obj = sb.registerNewObjective(
                 OBJECTIVE_NAME,
                 "dummy",
@@ -72,14 +72,13 @@ public class GameScoreboard {
     public void hide(Player player) {
         if (player == null) return;
         lineTeams.remove(player.getUniqueId());
-        player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+        player.setScoreboard(Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard());
     }
 
     public void update(Player player) {
         if (player == null) return;
 
         Scoreboard sb = player.getScoreboard();
-        if (sb == null) return;
 
         Objective obj = sb.getObjective(DisplaySlot.SIDEBAR);
         if (obj == null || !OBJECTIVE_NAME.equals(obj.getName())) return;
@@ -103,7 +102,7 @@ public class GameScoreboard {
                 if (raw == null) raw = "";
 
                 // Split into prefix/suffix safely
-                SplitText split = splitLegacy(raw, 64); // total target; we still split for compatibility
+                SplitText split = splitLegacy(raw); // total target; we still split for compatibility
                 team.setPrefix(split.prefix);
                 team.setSuffix(split.suffix);
             } else {
@@ -174,6 +173,11 @@ public class GameScoreboard {
         // RUNNING
         int elapsed = game.getGameElapsedSeconds();
         lines.add(ChatColor.AQUA + "Time: " + ChatColor.WHITE + formatTime(elapsed));
+
+        String nextEvent = buildNextEventLine(elapsed);
+        if (nextEvent != null) {
+            lines.add(nextEvent);
+        }
         lines.add("");
 
         GamePlayer gp = game.getGamePlayer(player);
@@ -210,20 +214,57 @@ public class GameScoreboard {
 
         if (diamondTime > 0) {
             int remaining = Math.max(0, diamondTime - elapsed);
-            lines.add(ChatColor.AQUA + "Diamond II: " + ChatColor.WHITE + formatTime(remaining));
+            String status = remaining > 0 ? formatTime(remaining) : "Active";
+            lines.add(ChatColor.AQUA + "Diamond II: " + ChatColor.WHITE + status);
         }
         if (emeraldTime > 0) {
             int remaining = Math.max(0, emeraldTime - elapsed);
-            lines.add(ChatColor.GREEN + "Emerald II: " + ChatColor.WHITE + formatTime(remaining));
+            String status = remaining > 0 ? formatTime(remaining) : "Active";
+            lines.add(ChatColor.GREEN + "Emerald II: " + ChatColor.WHITE + status);
         }
 
         return lines;
+    }
+
+    private String buildNextEventLine(int elapsed) {
+        List<EventEntry> events = new ArrayList<>();
+
+        int diamondTime = game.getDiamondUpgradeTime();
+        if (diamondTime > elapsed) {
+            events.add(new EventEntry("Diamond II", diamondTime - elapsed, ChatColor.AQUA));
+        }
+
+        int emeraldTime = game.getEmeraldUpgradeTime();
+        if (emeraldTime > elapsed) {
+            events.add(new EventEntry("Emerald II", emeraldTime - elapsed, ChatColor.GREEN));
+        }
+
+        if (events.isEmpty()) {
+            return null;
+        }
+
+        events.sort(Comparator.comparingInt(e -> e.remainingSeconds));
+        EventEntry next = events.get(0);
+        return ChatColor.GOLD + "Next: " + next.color + next.name + ChatColor.GRAY + " ("
+                + ChatColor.WHITE + formatTime(next.remainingSeconds) + ChatColor.GRAY + ")";
     }
 
     private String formatTime(int seconds) {
         int m = seconds / 60;
         int s = seconds % 60;
         return String.format("%d:%02d", m, s);
+    }
+
+    private static final class EventEntry {
+        private final String name;
+        private final int remainingSeconds;
+        private final ChatColor color;
+
+        private EventEntry(String name, int remainingSeconds, ChatColor color) {
+            this.name = name;
+            this.remainingSeconds = remainingSeconds;
+            this.color = color;
+        }
     }
 
     private String color(String s) {
@@ -236,7 +277,7 @@ public class GameScoreboard {
      * Prefix max 32 chars, suffix max 32 chars on older servers.
      * We target a "total" length but still enforce safe boundaries.
      */
-    private SplitText splitLegacy(String input, int totalMax) {
+    private SplitText splitLegacy(String input) {
         String text = color(input);
         if (text.length() <= 32) {
             return new SplitText(text, "");
@@ -244,7 +285,6 @@ public class GameScoreboard {
 
         // Hard cut prefix at 32, but avoid ending with '§'
         int cut = 32;
-        if (cut > text.length()) cut = text.length();
 
         String prefix = text.substring(0, cut);
         if (prefix.endsWith("§")) {
@@ -265,6 +305,7 @@ public class GameScoreboard {
         return new SplitText(prefix, suffix);
     }
 
+    @SuppressWarnings("ClassCanBeRecord")
     private static final class SplitText {
         final String prefix;
         final String suffix;

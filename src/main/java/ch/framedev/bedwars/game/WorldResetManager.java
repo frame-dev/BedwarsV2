@@ -22,6 +22,7 @@ import java.util.Set;
  * - Safer world handling (skips if world unloaded)
  * - Uses setType(..., false) / setBlockData(..., false) to avoid physics explosions during reset
  */
+@SuppressWarnings("ALL")
 public class WorldResetManager {
 
     /** Blocks placed by players during the match -> remove (set AIR) on reset. */
@@ -41,31 +42,12 @@ public class WorldResetManager {
      * On reset, this block will be removed.
      */
     public void recordPlacedBlock(Block block) {
-        if (block == null) {
-            return;
-        } else {
-            block.getWorld();
-        }
-        placedBlocks.add(BlockPos.from(block.getLocation()));
-    }
-
-    /**
-     * Record a block that is about to be broken/changed by a player.
-     * IMPORTANT: call this BEFORE you set the block to AIR or change its data.
-     *
-     * This stores the ORIGINAL state so we can restore it at reset.
-     */
-    public void recordBrokenBlock(Block block) {
-        if (block == null) {
-            return;
-        } else {
-            block.getWorld();
-        }
+        if (block == null) return;
 
         BlockPos pos = BlockPos.from(block.getLocation());
+        if (pos == null) return;
 
-        // Only store the first/original state (don't overwrite if it gets modified multiple times)
-        brokenBlocks.putIfAbsent(pos, new SavedBlockState(block.getType(), block.getBlockData()));
+        placedBlocks.add(pos);
     }
 
     /**
@@ -76,6 +58,8 @@ public class WorldResetManager {
         if (location == null || location.getWorld() == null) return;
 
         BlockPos pos = BlockPos.from(location);
+        if (pos == null) return;
+
         originalBedLocations.add(pos);
         brokenBlocks.putIfAbsent(pos, new SavedBlockState(material, data));
     }
@@ -160,8 +144,10 @@ public class WorldResetManager {
         }
 
         static BlockPos from(Location loc) {
+            World world = loc.getWorld();
+            if(world == null) return null;
             return new BlockPos(
-                    loc.getWorld().getName(),
+                    world.getName(),
                     loc.getBlockX(),
                     loc.getBlockY(),
                     loc.getBlockZ()

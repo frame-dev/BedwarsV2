@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
 /**
@@ -43,7 +44,10 @@ public class ShopManager {
 
         // Create shop.yml if it doesn't exist
         if (!shopFile.exists()) {
-            plugin.getDataFolder().mkdirs();
+            File dataFolder = plugin.getDataFolder();
+            if (!dataFolder.exists() && !dataFolder.mkdirs()) {
+                plugin.getLogger().warning("Could not create plugin data folder: " + dataFolder.getAbsolutePath());
+            }
             try (InputStream in = plugin.getResource("shop.yml")) {
                 if (in != null) {
                     Files.copy(in, shopFile.toPath());
@@ -88,12 +92,9 @@ public class ShopManager {
             List<?> itemsList = categorySection.getList("items");
             if (itemsList != null) {
                 for (Object itemObj : itemsList) {
-                    if (itemObj instanceof ConfigurationSection) {
-                        ConfigurationSection itemSection = (ConfigurationSection) itemObj;
+                    if (itemObj instanceof ConfigurationSection itemSection) {
                         loadShopItem(category, itemSection);
-                    } else if (itemObj instanceof java.util.Map) {
-                        @SuppressWarnings("unchecked")
-                        java.util.Map<String, Object> itemMap = (java.util.Map<String, Object>) itemObj;
+                    } else if (itemObj instanceof Map<?, ?> itemMap) {
                         loadShopItem(category, itemMap);
                     }
                 }
@@ -106,57 +107,39 @@ public class ShopManager {
     }
 
     private void loadShopItem(ShopCategory category, ConfigurationSection itemSection) {
-        try {
-            String itemName = itemSection.getString("item");
-            int itemAmount = itemSection.getInt("amount", 1);
-            String costItemName = itemSection.getString("cost-item");
-            int costAmount = itemSection.getInt("cost-amount", 1);
-            String displayName = itemSection.getString("display-name", null);
+        String itemName = itemSection.getString("item");
+        int itemAmount = itemSection.getInt("amount", 1);
+        String costItemName = itemSection.getString("cost-item");
+        int costAmount = itemSection.getInt("cost-amount", 1);
+        String displayName = itemSection.getString("display-name", null);
 
-            Material itemMaterial = Material.valueOf(itemName.toUpperCase());
-            Material costMaterial = Material.valueOf(costItemName.toUpperCase());
-
-            ItemStack item = new ItemStack(itemMaterial, itemAmount);
-            ItemStack cost = new ItemStack(costMaterial, costAmount);
-
-            applyItemMeta(item, displayName);
-
-            ShopItem shopItem;
-            if (displayName != null && !displayName.isEmpty()) {
-                shopItem = new ShopItem(item, cost, displayName);
-            } else {
-                shopItem = new ShopItem(item, cost);
-            }
-
-            category.addItem(shopItem);
-        } catch (Exception e) {
-            plugin.getLogger()
-                    .warning("Failed to load shop item in category " + category.getName() + ": " + e.getMessage());
-        }
+        loadShopItem(category, itemName, itemAmount, costItemName, costAmount, displayName);
     }
 
-    private void loadShopItem(ShopCategory category, java.util.Map<String, Object> itemMap) {
-        try {
-            String itemName = (String) itemMap.get("item");
-            int itemAmount = itemMap.containsKey("amount") ? ((Number) itemMap.get("amount")).intValue() : 1;
-            String costItemName = (String) itemMap.get("cost-item");
-            int costAmount = itemMap.containsKey("cost-amount") ? ((Number) itemMap.get("cost-amount")).intValue() : 1;
-            String displayName = (String) itemMap.get("display-name");
+    private void loadShopItem(ShopCategory category, Map<?, ?> itemMap) {
+        String itemName = asString(itemMap.get("item"));
+        int itemAmount = asInt(itemMap.get("amount"), 1);
+        String costItemName = asString(itemMap.get("cost-item"));
+        int costAmount = asInt(itemMap.get("cost-amount"), 1);
+        String displayName = asString(itemMap.get("display-name"));
 
-            Material itemMaterial = Material.valueOf(itemName.toUpperCase());
-            Material costMaterial = Material.valueOf(costItemName.toUpperCase());
+        loadShopItem(category, itemName, itemAmount, costItemName, costAmount, displayName);
+    }
+
+    private void loadShopItem(ShopCategory category, String itemName, int itemAmount,
+                              String costItemName, int costAmount, String displayName) {
+        try {
+            Material itemMaterial = Material.valueOf(itemName != null ? itemName.toUpperCase() : null);
+            Material costMaterial = Material.valueOf(costItemName != null ? costItemName.toUpperCase() : null);
 
             ItemStack item = new ItemStack(itemMaterial, itemAmount);
             ItemStack cost = new ItemStack(costMaterial, costAmount);
 
             applyItemMeta(item, displayName);
 
-            ShopItem shopItem;
-            if (displayName != null && !displayName.isEmpty()) {
-                shopItem = new ShopItem(item, cost, displayName);
-            } else {
-                shopItem = new ShopItem(item, cost);
-            }
+            ShopItem shopItem = (displayName != null && !displayName.isEmpty())
+                    ? new ShopItem(item, cost, displayName)
+                    : new ShopItem(item, cost);
 
             category.addItem(shopItem);
         } catch (Exception e) {
@@ -275,14 +258,16 @@ public class ShopManager {
         categories.add(special);
     }
 
-    @SuppressWarnings("deprecation")
     private void applyBasePotionType(PotionMeta potionMeta, PotionType potionType) {
-        try {
-            potionMeta.setBasePotionType(potionType);
-        } catch (NoSuchMethodError e) {
-            // 1.18 uses PotionData instead of setBasePotionType.
-            potionMeta.setBasePotionData(new PotionData(potionType));
-        }
+        potionMeta.setBasePotionData(new PotionData(potionType));
+    }
+
+    private String asString(Object value) {
+        return value instanceof String ? (String) value : null;
+    }
+
+    private int asInt(Object value, int defaultValue) {
+        return value instanceof Number ? ((Number) value).intValue() : defaultValue;
     }
 
     public List<ShopCategory> getCategories() {

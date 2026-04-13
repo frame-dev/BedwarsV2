@@ -17,6 +17,7 @@ import java.util.UUID;
 /**
  * Manages party creation, invites, and persistence.
  */
+@SuppressWarnings({"BooleanMethodIsAlwaysInverted", "DuplicatedCode"})
 public class PartyManager {
 
     private final BedWarsPlugin plugin;

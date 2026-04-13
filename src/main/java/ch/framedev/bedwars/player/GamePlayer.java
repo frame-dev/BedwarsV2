@@ -15,7 +15,7 @@ import org.bukkit.potion.PotionEffect;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BiConsumer;
+import java.util.function.ObjIntConsumer;
 
 /**
  * Represents a player in a BedWars game.
@@ -25,7 +25,6 @@ import java.util.function.BiConsumer;
  * - One helper for iterating upgrades and resolving levels
  * - Potion upgrade loop stays separate (different effect type)
  */
-@SuppressWarnings("unused")
 public class GamePlayer {
 
     private final UUID uuid;
@@ -130,7 +129,7 @@ public class GamePlayer {
      * Generic iterator over ENCHANTMENT upgrades for a target.
      * De-duplicates the upgrade loops for armor/weapon.
      */
-    private void applyEnchantmentUpgrades(String target, BiConsumer<Enchantment, Integer> applier) {
+    private void applyEnchantmentUpgrades(String target, ObjIntConsumer<Enchantment> applier) {
         if (upgradeManager == null || team == null || team.getUpgrades() == null) return;
         if (target == null || applier == null) return;
 

@@ -326,12 +326,13 @@ upgrades:
 
 ---
 
-## arenas.yml
+## Arena Setup Commands
 
 Auto-generated file that stores arena configurations created with `/bw setup` commands.
 
 **Do not edit manually** - Use in-game commands instead:
-```
+
+```text
 /bw setup create <name>
 /bw setup setlobby
 /bw setup setspawn <team>
@@ -346,29 +347,29 @@ Auto-generated file that stores arena configurations created with `/bw setup` co
 
 Use `&` for colors in messages:
 
-| Code | Color |
-|------|-------|
-| `&0` | Black |
-| `&1` | Dark Blue |
-| `&2` | Dark Green |
-| `&3` | Dark Aqua |
-| `&4` | Dark Red |
-| `&5` | Dark Purple |
-| `&6` | Gold |
-| `&7` | Gray |
-| `&8` | Dark Gray |
-| `&9` | Blue |
-| `&a` | Green |
-| `&b` | Aqua |
-| `&c` | Red |
-| `&d` | Light Purple |
-| `&e` | Yellow |
-| `&f` | White |
-| `&l` | Bold |
-| `&m` | Strikethrough |
-| `&n` | Underline |
-| `&o` | Italic |
-| `&r` | Reset |
+| Code  | Color         |
+| ----- | ------------- |
+| `&0`  | Black         |
+| `&1`  | Dark Blue     |
+| `&2`  | Dark Green    |
+| `&3`  | Dark Aqua     |
+| `&4`  | Dark Red      |
+| `&5`  | Dark Purple   |
+| `&6`  | Gold          |
+| `&7`  | Gray          |
+| `&8`  | Dark Gray     |
+| `&9`  | Blue          |
+| `&a`  | Green         |
+| `&b`  | Aqua          |
+| `&c`  | Red           |
+| `&d`  | Light Purple  |
+| `&e`  | Yellow        |
+| `&f`  | White         |
+| `&l`  | Bold          |
+| `&m`  | Strikethrough |
+| `&n`  | Underline     |
+| `&o`  | Italic        |
+| `&r`  | Reset         |
 
 ---
 
@@ -377,5 +378,5 @@ Use `&` for colors in messages:
 1. **Reload Configuration**: Use `/bw reload` to reload configs without restart
 2. **Comments**: Use `#` for comments in YAML files
 3. **Indentation**: YAML requires 2-space indentation (not tabs)
-4. **Validation**: Check for YAML syntax errors at www.yamllint.com
+4. **Validation**: Check for YAML syntax errors at [yamllint.com](https://www.yamllint.com)
 5. **Backup**: Always backup your configs before editing

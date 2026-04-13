@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 /**
  * CloudNet v4 integration helper.
  */
+@SuppressWarnings("UnusedReturnValue")
 public class CloudNetManager {
 
     private final BedWarsPlugin plugin;
@@ -37,7 +38,7 @@ public class CloudNetManager {
 
     public boolean connectToLobby(Player player) {
         String lobbyService = plugin.getConfig().getString("cloudnet.lobby-service", "Lobby-1");
-        if (lobbyService == null || lobbyService.isBlank()) {
+        if (lobbyService.isBlank()) {
             return false;
         }
         return connectToService(player, lobbyService);
@@ -86,7 +87,7 @@ public class CloudNetManager {
 
     public List<String> getGameServices() {
         List<String> configured = plugin.getConfig().getStringList("cloudnet.game-services");
-        if (configured != null && !configured.isEmpty()) {
+        if (!configured.isEmpty()) {
             return new ArrayList<>(configured);
         }
 
@@ -104,7 +105,7 @@ public class CloudNetManager {
 
     private boolean isModeEnabled() {
         String mode = plugin.getConfig().getString("network.mode", "");
-        if (mode != null && !mode.isBlank()) {
+        if (!mode.isBlank()) {
             return "cloudnet".equalsIgnoreCase(mode);
         }
         return plugin.getConfig().getBoolean("cloudnet.enabled", false);

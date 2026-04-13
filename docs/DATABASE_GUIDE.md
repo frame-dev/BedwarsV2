@@ -7,7 +7,8 @@ The BedWars plugin now uses an SQLite database to store player statistics persis
 ## Database Location
 
 The database file is automatically created at:
-```
+
+```text
 plugins/BedWars/bedwars.db
 ```
 
@@ -16,7 +17,7 @@ plugins/BedWars/bedwars.db
 ### Table: `player_stats`
 
 | Column | Type | Description |
-|--------|------|-------------|
+| --- | --- | --- |
 | `uuid` | TEXT (PRIMARY KEY) | Player's unique identifier |
 | `player_name` | TEXT | Player's last known name |
 | `wins` | INTEGER | Total games won |
@@ -47,6 +48,7 @@ plugins/BedWars/bedwars.db
 ### Statistics Tracking
 
 The plugin tracks the following statistics:
+
 - **Wins/Losses**: Updated at the end of each game
 - **Games Played**: Automatically incremented with wins/losses
 - **Kills/Deaths**: Tracked during gameplay
@@ -65,6 +67,7 @@ The plugin tracks the following statistics:
 ### Async Operations
 
 All database operations are performed asynchronously to prevent server lag:
+
 - Loading stats doesn't block player joins
 - Saving stats doesn't block player quits
 - Queries run on separate threads
@@ -117,6 +120,7 @@ If you were using the old YAML-based stats system:
 ### Backup
 
 To backup your statistics:
+
 ```bash
 cp plugins/BedWars/bedwars.db plugins/BedWars/bedwars.db.backup
 ```
@@ -124,14 +128,17 @@ cp plugins/BedWars/bedwars.db plugins/BedWars/bedwars.db.backup
 ### Reset Stats
 
 To reset all statistics:
+
 ```bash
 rm plugins/BedWars/bedwars.db
 ```
+
 The database will be recreated on next server start.
 
 ### Query Database
 
 You can query the database using any SQLite client:
+
 ```bash
 sqlite3 plugins/BedWars/bedwars.db "SELECT * FROM player_stats ORDER BY wins DESC LIMIT 10;"
 ```
@@ -141,6 +148,7 @@ sqlite3 plugins/BedWars/bedwars.db "SELECT * FROM player_stats ORDER BY wins DES
 ### Database Connection Issues
 
 If you see connection errors in console:
+
 1. Check that the plugin folder exists and is writable
 2. Ensure SQLite JDBC driver is included in the plugin JAR
 3. Check for file permission issues
@@ -148,6 +156,7 @@ If you see connection errors in console:
 ### Stats Not Saving
 
 If stats aren't being saved:
+
 1. Check console for SQL errors
 2. Verify the database file is not corrupted
 3. Ensure proper plugin shutdown (use `/stop` command)
@@ -155,6 +164,7 @@ If stats aren't being saved:
 ### Performance Issues
 
 If you experience lag:
+
 1. Stats operations are async - check if other plugins are causing issues
 2. Database file size should not be an issue (very small)
 3. Indexes are optimized for common queries
@@ -164,6 +174,7 @@ If you experience lag:
 ### Connection Pooling
 
 The plugin uses a single persistent connection that:
+
 - Reconnects automatically if closed
 - Is properly closed on plugin disable
 - Uses transactions for batch operations
@@ -183,6 +194,7 @@ The plugin uses a single persistent connection that:
 ## Future Enhancements
 
 Potential future additions:
+
 - Leaderboard GUIs
 - Stat reset commands
 - Player comparison features

@@ -5,6 +5,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 ## Features
 
 ### Core Gameplay
+
 - **Multiple Game States**: Waiting, Starting, Running, Ending
 - **Team System**: Support for up to 8 teams (Red, Blue, Green, Yellow, Aqua, White, Pink, Gray)
 - **Bed Mechanics**: Teams can respawn while their bed is alive
@@ -12,6 +13,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 - **Respawn System**: 5-second respawn timer when bed is alive
 
 ### Shop System
+
 - **Item Shop**: Buy blocks, weapons, armor, tools, food, potions, and special items
 - **Multiple Categories**:
   - Blocks (wool, terracotta, end stone, obsidian)
@@ -23,6 +25,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
   - Special items (TNT, ender pearls, fire charges, ladders)
 
 ### Upgrade System
+
 - **Team Upgrades**:
   - Sharpened Swords (Sharpness I)
   - Reinforced Armor (Protection I-IV)
@@ -31,6 +34,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
   - Dragon Buff (Protective dragons at base)
 
 ### Player Features
+
 - **Statistics Tracking**:
   - Kills and deaths
   - Final kills
@@ -44,6 +48,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 - **Starting Items**: Configurable starting item (default wooden sword)
 
 ### Game Management
+
 - **Arena System**: Multiple arena support with configuration
 - **Countdown System**: 30-second countdown before game start
 - **Win Conditions**: Last team standing wins
@@ -52,7 +57,7 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 ## Commands
 
 | Command | Description | Permission |
-|---------|-------------|------------|
+| ------- | ----------- | ---------- |
 | `/bedwars join <arena>` | Join a BedWars game | bedwars.join |
 | `/bedwars leave` | Leave your current game | bedwars.leave |
 | `/bedwars spectate <arena>` | Spectate a game | bedwars.spectate |
@@ -62,14 +67,14 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 | `/bedwars party` | Party commands | bedwars.party |
 | `/bedwars queue` | Join map voting queue | bedwars.queue |
 | `/bedwars vote` | Open map voting GUI | bedwars.vote |
-| `/bedwars vote start|end|force <arena>` | Admin map voting controls | bedwars.vote.admin |
+| `/bedwars vote <start\|end\|force> [arena]` | Admin map voting controls | bedwars.vote.admin |
 | `/bedwars cosmetics` | Cosmetics menu | bedwars.cosmetics |
 | `/bedwars achievements` | Achievements menu | bedwars.achievements |
 
 ## Setup Commands
 
 | Command | Description |
-|---------|-------------|
+| ------- | ----------- |
 | `/bedwars setup create <name>` | Create a new arena |
 | `/bedwars setup setlobby <arena>` | Set lobby spawn point |
 | `/bedwars setup setspectator <arena>` | Set spectator spawn point |
@@ -80,23 +85,23 @@ A comprehensive BedWars plugin for Minecraft (Spigot/Paper 1.20.4+) with all ess
 ## Installation
 
 1. Build the plugin using Maven:
-   ```bash
-   mvn clean package
-   ```
 
-2. Copy the generated JAR file from `target/bedwars-1.0-SNAPSHOT.jar` to your server's `plugins` folder
+```bash
+mvn clean package
+```
 
-3. Start or restart your server
+1. Copy the generated JAR file from `target/bedwars-1.2-SNAPSHOT.jar` (or your current snapshot version) to your server's `plugins` folder.
+1. Start or restart your server.
+1. Configure arenas in `plugins/BedWars/arenas.yml`.
 
-4. Configure arenas in `plugins/BedWars/arenas.yml`
-
-📚 **[Full documentation available in /docs folder](docs/)**
+See full documentation in [docs](docs/).
 
 ## Configuration Files
 
-The plugin uses multiple YAML configuration files for easy customization:
+The plugin uses multiple YAML configuration files for customization.
 
 ### config.yml
+
 - Game settings (countdown time, respawn time, generator upgrades)
 - Starting item and block/combat toggles
 - BungeeCord integration settings
@@ -108,29 +113,43 @@ The plugin uses multiple YAML configuration files for easy customization:
 - CloudNet settings (service mapping, lobby service, map voting)
 
 ### arenas.yml
+
 - Arena definitions (lobby spawn, team spawns, beds, generators)
 
 ### messages.yml
-- **100+ configurable messages** organized by category
+
+- 100+ configurable messages organized by category
 - Support for color codes (`&a`, `&c`, `&6`, etc.)
 - Placeholders for dynamic values (`{0}`, `{1}`, etc.)
 - Categories: game, death, shop, commands, stats, leaderboard, and more
 
 ### shop.yml
-- **7 shop categories** with 30+ items
+
+- 7 shop categories with 30+ items
 - Fully customizable items (material, cost, amount, display name)
 - Potions and knockback stick are applied by display name
-- Add/remove items without touching code
+- Add or remove items without touching code
 - Categories: Blocks, Weapons, Armor, Tools, Food, Potions, Special
 
 ### upgrades.yml
-- **Fully dynamic upgrade system**
+
+- Fully dynamic upgrade system
 - Add new upgrades without code changes
 - Three effect types: ENCHANTMENT, POTION_EFFECT, SPECIAL
 - Configurable costs, levels, and effects
 - See [docs/UPGRADE_EXAMPLES.md](docs/UPGRADE_EXAMPLES.md) for examples
 
-Optional runtime settings in config.yml:
+### cosmetics.yml
+
+- Cosmetic effect definitions for kill and bed destroy effects
+- GUI layout and cosmetics access permissions
+
+### achievements.yml
+
+- Achievement definitions and GUI layout
+
+Optional runtime settings in `config.yml`:
+
 ```yaml
 network:
   mode: "local"
@@ -181,12 +200,7 @@ upgrades:
 ```
 
 Example arena configuration in `arenas.yml`:
-### cosmetics.yml
-- Cosmetic effect definitions for kill and bed destroy effects
-- GUI layout and cosmetics access permissions
 
-### achievements.yml
-- Achievement definitions and GUI layout
 ```yaml
 arenas:
   example:
@@ -210,7 +224,7 @@ arenas:
 
 ## Project Structure
 
-```
+```text
 src/main/java/ch/framedev/
 ├── BedWarsPlugin.java          # Main plugin class
 ├── bedwars/
@@ -227,60 +241,46 @@ src/main/java/ch/framedev/
 ## Features in Detail
 
 ### Resource Generators
+
 - **Iron**: Spawns every 1 second at team base
 - **Gold**: Spawns every 8 seconds at team base
 - **Diamond**: Spawns every 30s (Tier 1) or 20s (Tier 2) at map points
 - **Emerald**: Spawns every 60s (Tier 1) or 40s (Tier 2) at map points
 
 ### Game Flow
-1. Players join lobby
-2. Minimum players reached → countdown starts
-3. Game starts → players teleported to team spawns
-4. Resource generators activated
-5. Players gather resources, buy items, destroy beds
-6. Last team standing wins
-7. Players teleported back to lobby
-8. Game resets for next round
+
+1. Players join lobby.
+2. Minimum players reached and countdown starts.
+3. Game starts and players are teleported to team spawns.
+4. Resource generators activate.
+5. Players gather resources, buy items, and destroy beds.
+6. Last team standing wins.
+7. Players are teleported back to lobby.
+8. Game resets for next round.
 
 ## Development
 
-To extend or modify the plugin:
+1. Clone the repository.
+2. Open in your IDE (IntelliJ IDEA recommended).
+3. Make changes.
+4. Build with `mvn clean package`.
+5. Test on your development server.
 
-1. Clone the repository
-2. Open in your favorite IDE (IntelliJ IDEA recommended)
-3. Make changes
-4. Build with `mvn clean package`
-5. Test on your development server
+Documentation:
 
-📚 **Documentation**: See [docs/](docs/) folder for:
 - [Quick Start Guide](docs/QUICK_START.md)
 - [Configuration Examples](docs/UPGRADE_EXAMPLES.md)
 - [Database Setup](docs/DATABASE_GUIDE.md)
 - [BungeeCord Integration](docs/BUNGEECORD_SETUP.md)
-- And more...
+- More in [docs](docs/)
 
 ## Recent Updates
 
-The following files were updated to align gameplay, upgrades, and shop behavior with the docs:
-
-- [src/main/java/ch/framedev/BedWarsPlugin.java](src/main/java/ch/framedev/BedWarsPlugin.java)
-- [src/main/java/ch/framedev/bedwars/commands/ImprovedBedWarsCommand.java](src/main/java/ch/framedev/bedwars/commands/ImprovedBedWarsCommand.java)
-- [src/main/java/ch/framedev/bedwars/game/Game.java](src/main/java/ch/framedev/bedwars/game/Game.java)
-- [src/main/java/ch/framedev/bedwars/generators/ResourceGenerator.java](src/main/java/ch/framedev/bedwars/generators/ResourceGenerator.java)
-- [src/main/java/ch/framedev/bedwars/listeners/BlockBreakListener.java](src/main/java/ch/framedev/bedwars/listeners/BlockBreakListener.java)
-- [src/main/java/ch/framedev/bedwars/listeners/BlockPlaceListener.java](src/main/java/ch/framedev/bedwars/listeners/BlockPlaceListener.java)
-- [src/main/java/ch/framedev/bedwars/listeners/EntityDamageListener.java](src/main/java/ch/framedev/bedwars/listeners/EntityDamageListener.java)
-- [src/main/java/ch/framedev/bedwars/listeners/InventoryClickListener.java](src/main/java/ch/framedev/bedwars/listeners/InventoryClickListener.java)
-- [src/main/java/ch/framedev/bedwars/listeners/ItemPickupListener.java](src/main/java/ch/framedev/bedwars/listeners/ItemPickupListener.java)
-- [src/main/java/ch/framedev/bedwars/listeners/PlayerInteractListener.java](src/main/java/ch/framedev/bedwars/listeners/PlayerInteractListener.java)
-- [src/main/java/ch/framedev/bedwars/listeners/PlayerQuitListener.java](src/main/java/ch/framedev/bedwars/listeners/PlayerQuitListener.java)
-- [src/main/java/ch/framedev/bedwars/manager/UpgradeManager.java](src/main/java/ch/framedev/bedwars/manager/UpgradeManager.java)
-- [src/main/java/ch/framedev/bedwars/shop/ShopGUI.java](src/main/java/ch/framedev/bedwars/shop/ShopGUI.java)
-- [src/main/java/ch/framedev/bedwars/shop/ShopManager.java](src/main/java/ch/framedev/bedwars/shop/ShopManager.java)
-- [src/main/java/ch/framedev/bedwars/stats/PlayerStats.java](src/main/java/ch/framedev/bedwars/stats/PlayerStats.java)
-- [src/main/java/ch/framedev/bedwars/upgrades/UpgradeShopGUI.java](src/main/java/ch/framedev/bedwars/upgrades/UpgradeShopGUI.java)
-- [src/main/resources/messages.yml](src/main/resources/messages.yml)
-- [src/main/resources/plugin.yml](src/main/resources/plugin.yml)
+- Improved world reset behavior for destroyed beds by recording and restoring both bed halves.
+- Hardened TNT behavior so BedWars TNT does not modify map blocks or create incendiary side effects.
+- Fixed shop reliability by making category and upgrade slot mapping deterministic.
+- Strengthened listener safety (notably chat routing) to avoid async access to mutable game state.
+- Improved end-game stat consistency for disconnecting and offline participants.
 
 ## License
 
@@ -288,8 +288,8 @@ This project is provided as-is for educational purposes.
 
 ## Support
 
-For issues or feature requests, please create an issue on the project repository.
+For issues or feature requests, create an issue in the project repository.
 
 ## Credits
 
-Developed by FrameDev
+Developed by FrameDev.

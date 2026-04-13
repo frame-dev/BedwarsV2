@@ -148,7 +148,7 @@ public class CosmeticsManager {
         if (definition == null) {
             return;
         }
-        applyEffect(definition.getEffectKey(), location, killer);
+        applyEffect(definition.getEffectKey(), location);
     }
 
     public void applyBedDestroyEffect(Player breaker, Location location) {
@@ -160,7 +160,7 @@ public class CosmeticsManager {
         if (definition == null) {
             return;
         }
-        applyEffect(definition.getEffectKey(), location, breaker);
+        applyEffect(definition.getEffectKey(), location);
     }
 
     public void shutdown() {
@@ -333,7 +333,7 @@ public class CosmeticsManager {
         }
     }
 
-    private void applyEffect(String effectKey, Location location, Player player) {
+    private void applyEffect(String effectKey, Location location) {
         if (effectKey == null) {
             return;
         }

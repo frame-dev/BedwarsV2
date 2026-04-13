@@ -33,7 +33,6 @@ public class InventoryCloseListener implements Listener {
                 && TeamSelectionGUI.isTeamSelectionTitle(title)) {
 
             plugin.getTeamSelectionGUI().clearMenuSlots(uuid);
-            return;
         }
 
         // --- Optional future GUI cleanups ---

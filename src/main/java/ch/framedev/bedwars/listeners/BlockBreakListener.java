@@ -9,6 +9,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Bed;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -130,13 +133,6 @@ public class BlockBreakListener implements Listener {
             return;
         }
 
-        // Record bed block for reset BEFORE changing it
-        game.getWorldResetManager().recordBedLocation(
-                block.getLocation(),
-                block.getType(),
-                block.getBlockData()
-        );
-
         // Destroy bed
         bedTeam.destroyBed();
 
@@ -151,8 +147,8 @@ public class BlockBreakListener implements Listener {
             plugin.getAchievementsManager().recordBedBroken(player.getUniqueId());
         }
 
-        // Remove bed block (you may also want to remove the other half; depends on how you store bedLocation)
-        block.setType(Material.AIR, false);
+        // Record and remove both halves for correct world reset restoration.
+        recordAndRemoveBedBlocks(game, block);
 
         breaker.addBedBroken();
 
@@ -168,8 +164,42 @@ public class BlockBreakListener implements Listener {
 
     private String formatLocation(Block block) {
         if (block == null) return "null";
-        String worldName = block.getWorld().getName();
+        String worldName = block.getWorld() == null ? "null" : block.getWorld().getName();
         return worldName + ":" + block.getX() + "," + block.getY() + "," + block.getZ();
+    }
+
+    private void recordAndRemoveBedBlocks(Game game, Block primaryBlock) {
+        if (primaryBlock == null) return;
+
+        BlockData blockData = primaryBlock.getBlockData();
+        if (!(blockData instanceof Bed bedData)) {
+            game.getWorldResetManager().recordBedLocation(
+                    primaryBlock.getLocation(),
+                    primaryBlock.getType(),
+                    primaryBlock.getBlockData()
+            );
+            primaryBlock.setType(Material.AIR, false);
+            return;
+        }
+
+        BlockFace facing = bedData.getFacing();
+        Block otherHalf = bedData.getPart() == Bed.Part.FOOT
+                ? primaryBlock.getRelative(facing)
+                : primaryBlock.getRelative(facing.getOppositeFace());
+
+        recordAndSetAir(game, primaryBlock);
+        if (otherHalf != null && isBedBlock(otherHalf.getType())) {
+            recordAndSetAir(game, otherHalf);
+        }
+    }
+
+    private void recordAndSetAir(Game game, Block block) {
+        game.getWorldResetManager().recordBedLocation(
+                block.getLocation(),
+                block.getType(),
+                block.getBlockData()
+        );
+        block.setType(Material.AIR, false);
     }
 
     private void playBedDestroyedSound(Game game) {

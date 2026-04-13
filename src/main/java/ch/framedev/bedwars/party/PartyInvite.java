@@ -5,6 +5,7 @@ import java.util.UUID;
 /**
  * Represents a pending party invite.
  */
+@SuppressWarnings("ClassCanBeRecord")
 public class PartyInvite {
 
     private final UUID partyId;

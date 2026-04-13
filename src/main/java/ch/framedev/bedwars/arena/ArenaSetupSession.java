@@ -19,10 +19,10 @@ public class ArenaSetupSession {
     private Location spectatorSpawn;
     private int minPlayers = 2;
     private int maxPlayers = 8;
-    private Map<TeamColor, Location> teamSpawns;
-    private Map<TeamColor, Location> bedLocations;
-    private Map<TeamColor, Map<ShopType, Location>> shopLocations;
-    private Map<String, Location> generatorLocations;
+    private final Map<TeamColor, Location> teamSpawns;
+    private final Map<TeamColor, Location> bedLocations;
+    private final Map<TeamColor, Map<ShopType, Location>> shopLocations;
+    private final Map<String, Location> generatorLocations;
 
     public ArenaSetupSession(UUID playerUUID) {
         this.playerUUID = playerUUID;

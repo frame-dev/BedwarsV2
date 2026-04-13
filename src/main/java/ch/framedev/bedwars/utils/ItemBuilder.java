@@ -12,7 +12,6 @@ import java.util.List;
 /**
  * Utility class for common item operations
  */
-@SuppressWarnings("unused")
 public class ItemBuilder {
 
     private final ItemStack item;

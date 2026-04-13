@@ -6,6 +6,7 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -14,11 +15,12 @@ import java.io.IOException;
 /**
  * Handles BungeeCord messaging for cross-server communication
  */
+@SuppressWarnings("UnstableApiUsage")
 public class BungeeManager implements PluginMessageListener {
 
     private final BedWarsPlugin plugin;
-    private boolean bungeeCordEnabled;
-    private String lobbyServer;
+    private final boolean bungeeCordEnabled;
+    private final String lobbyServer;
 
     public BungeeManager(BedWarsPlugin plugin) {
         this.plugin = plugin;
@@ -45,7 +47,7 @@ public class BungeeManager implements PluginMessageListener {
 
     private boolean isModeEnabled() {
         String mode = plugin.getConfig().getString("network.mode", "");
-        if (mode != null && !mode.isBlank()) {
+        if (!mode.isBlank()) {
             return "bungee".equalsIgnoreCase(mode);
         }
         return plugin.getConfig().getBoolean("bungeecord.enabled", false);
@@ -215,18 +217,15 @@ public class BungeeManager implements PluginMessageListener {
     }
 
     @Override
-    public void onPluginMessageReceived(String channel, Player player, byte[] message) {
+    public void onPluginMessageReceived(String channel, @NonNull Player player, byte @NonNull [] message) {
         if (!channel.equals("BungeeCord")) {
             return;
         }
 
-        // Guard against potential null messages to satisfy non-null contract
-        if (message == null) {
-            plugin.getLogger().warning("Received null plugin message on channel " + channel);
-            return;
-        }
+        // Keep an explicit non-null local for static analysis tools.
+        byte[] payload = java.util.Objects.requireNonNull(message, "message");
 
-        ByteArrayDataInput in = ByteStreams.newDataInput(message);
+        ByteArrayDataInput in = ByteStreams.newDataInput(payload);
         String subchannel = in.readUTF();
         plugin.getDebugLogger().debug("Bungee message received: subchannel=" + subchannel);
 
@@ -265,22 +264,17 @@ public class BungeeManager implements PluginMessageListener {
 
     private void handleBedWarsMessage(ByteArrayDataInput in) {
         String action = in.readUTF();
-        switch (action) {
-            case "party-invite": {
-                String targetUuid = in.readUTF();
-                String inviterName = in.readUTF();
-                for (Player online : plugin.getServer().getOnlinePlayers()) {
-                    if (online.getUniqueId().toString().equalsIgnoreCase(targetUuid)) {
-                        plugin.getMessageManager().sendMessage(online, "party.invite-received", inviterName);
-                        break;
-                    }
+        if (action.equals("party-invite")) {
+            String targetUuid = in.readUTF();
+            String inviterName = in.readUTF();
+            for (Player online : plugin.getServer().getOnlinePlayers()) {
+                if (online.getUniqueId().toString().equalsIgnoreCase(targetUuid)) {
+                    plugin.getMessageManager().sendMessage(online, "party.invite-received", inviterName);
+                    break;
                 }
-                break;
             }
-
-            default:
-                plugin.getDebugLogger().debug("Unknown BedWars action: " + action);
-                break;
+        } else {
+            plugin.getDebugLogger().debug("Unknown BedWars action: " + action);
         }
     }
 

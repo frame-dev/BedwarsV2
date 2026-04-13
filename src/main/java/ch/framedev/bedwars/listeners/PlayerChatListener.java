@@ -42,54 +42,45 @@ public class PlayerChatListener implements Listener {
         final Player sender = event.getPlayer();
         final String raw = event.getMessage();
 
-        final Game game = plugin.getGameManager().getPlayerGame(sender);
-        if (game == null) return;
-
-        // In lobby states, you may want normal chat; here we only route during RUNNING/ENDING
-        if (game.getState() != GameState.RUNNING && game.getState() != GameState.ENDING) return;
-
-        // Stop Bukkit from broadcasting to whole server
+        // Handle BedWars routing on the main thread to avoid async access to mutable game/team state.
         event.setCancelled(true);
-
-        // Resolve game player info (keep minimal logic async)
-        final GamePlayer gp = game.getGamePlayer(sender);
-        final boolean isSpectator = game.isSpectator(sender) || (gp != null && gp.isEliminated());
 
         boolean global = raw.startsWith(GLOBAL_PREFIX);
         final String msg = global ? raw.substring(GLOBAL_PREFIX.length()).trim() : raw.trim();
 
         if (msg.isEmpty()) return;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Game game = plugin.getGameManager().getPlayerGame(sender);
+            if (game == null) return;
 
-        // Build recipients
-        final Set<UUID> recipients = new HashSet<>();
+            // In lobby states, keep vanilla behavior untouched.
+            if (game.getState() != GameState.RUNNING && game.getState() != GameState.ENDING) return;
 
-        if (global) {
-            // Global: everyone in that game (players + spectators)
-            recipients.addAll(game.getPlayers().keySet());
-            recipients.addAll(game.getSpectators());
-        } else if (isSpectator) {
-            // Spectator chat: only spectators
-            recipients.addAll(game.getSpectators());
-        } else {
-            // Team chat: only same team members (alive or not depending on your Team structure)
-            Team team = (gp != null ? gp.getTeam() : null);
-            if (team != null) {
-                for (GamePlayer teammate : team.getPlayers()) {
-                    recipients.add(teammate.getUuid());
-                }
-            } else {
-                // Fallback: if no team, treat as global within the game
+            GamePlayer gp = game.getGamePlayer(sender);
+            boolean isSpectator = game.isSpectator(sender) || (gp != null && gp.isEliminated());
+
+            boolean effectiveGlobal = global;
+            Set<UUID> recipients = new HashSet<>();
+
+            if (effectiveGlobal) {
                 recipients.addAll(game.getPlayers().keySet());
                 recipients.addAll(game.getSpectators());
-                global = true;
+            } else if (isSpectator) {
+                recipients.addAll(game.getSpectators());
+            } else {
+                Team team = (gp != null ? gp.getTeam() : null);
+                if (team != null) {
+                    for (GamePlayer teammate : team.getPlayers()) {
+                        recipients.add(teammate.getUuid());
+                    }
+                } else {
+                    recipients.addAll(game.getPlayers().keySet());
+                    recipients.addAll(game.getSpectators());
+                    effectiveGlobal = true;
+                }
             }
-        }
 
-        // Format message
-        final String formatted = format(game, sender, gp, msg, global, isSpectator);
-
-        // Send on main thread to be safe with other plugins / player state
-        Bukkit.getScheduler().runTask(plugin, () -> {
+            String formatted = format(sender, gp, msg, effectiveGlobal, isSpectator);
             for (UUID id : recipients) {
                 Player p = Bukkit.getPlayer(id);
                 if (p != null && p.isOnline()) {
@@ -99,7 +90,7 @@ public class PlayerChatListener implements Listener {
         });
     }
 
-    private String format(Game game, Player sender, GamePlayer gp, String msg, boolean global, boolean spectator) {
+    private String format(Player sender, GamePlayer gp, String msg, boolean global, boolean spectator) {
         // Example formats:
         // [TEAM] <Red> Name: message
         // [ALL] Name: message

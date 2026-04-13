@@ -6,6 +6,7 @@ import org.bukkit.Material;
 /**
  * Defines a single achievement.
  */
+@SuppressWarnings("ClassCanBeRecord")
 public class AchievementDefinition {
 
     private final String id;

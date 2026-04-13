@@ -17,6 +17,7 @@ import java.util.List;
 /**
  * Handles the shop GUI
  */
+@SuppressWarnings({"ClassCanBeRecord"})
 public class ShopGUI {
 
     private final ShopManager shopManager;
@@ -25,7 +26,7 @@ public class ShopGUI {
         this.shopManager = new ShopManager(plugin);
     }
 
-    public void openMainShop(Player player, Game game) {
+    public void openMainShop(Player player) {
         Inventory inventory = Bukkit.createInventory(null, 54, ChatColor.BOLD + "Item Shop");
 
         List<ShopCategory> categories = shopManager.getCategories();
@@ -34,7 +35,9 @@ public class ShopGUI {
             ItemStack icon = new ItemStack(category.getIcon());
             ItemMeta meta = icon.getItemMeta();
             String categoryName = ChatColor.translateAlternateColorCodes('&', category.getName());
-            meta.setDisplayName(ChatColor.GREEN + "" + ChatColor.BOLD + categoryName);
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.GREEN + "" + ChatColor.BOLD + categoryName);
+            }
             icon.setItemMeta(meta);
             inventory.setItem(i + 19, icon);
         }
@@ -83,11 +86,15 @@ public class ShopGUI {
                     formatMaterialName(shopItem.getCost().getType()));
             lore.add("");
             lore.add(ChatColor.YELLOW + "Click to purchase!");
-            meta.setLore(lore);
+            if (meta != null) {
+                meta.setLore(lore);
+            }
 
             if (shopItem.getDisplayName() != null) {
                 String displayName = ChatColor.translateAlternateColorCodes('&', shopItem.getDisplayName());
-                meta.setDisplayName(ChatColor.GREEN + displayName);
+                if (meta != null) {
+                    meta.setDisplayName(ChatColor.GREEN + displayName);
+                }
             }
 
             displayItem.setItemMeta(meta);
@@ -97,7 +104,9 @@ public class ShopGUI {
         // Back button
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta backMeta = back.getItemMeta();
-        backMeta.setDisplayName(ChatColor.RED + "Back");
+        if (backMeta != null) {
+            backMeta.setDisplayName(ChatColor.RED + "Back");
+        }
         back.setItemMeta(backMeta);
         inventory.setItem(49, back);
 

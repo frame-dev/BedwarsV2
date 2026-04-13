@@ -5,6 +5,7 @@ import org.bukkit.inventory.ItemStack;
 /**
  * Represents an item that can be purchased in the shop
  */
+@SuppressWarnings("ClassCanBeRecord")
 public class ShopItem {
 
     private final ItemStack item;

@@ -8,6 +8,7 @@ import java.sql.*;
 /**
  * Manages SQLite database connections and operations
  */
+@SuppressWarnings({"SqlNoDataSourceInspection", "UnusedReturnValue", "SqlSourceToSinkFlow"})
 public class DatabaseManager {
 
     private final BedWarsPlugin plugin;
@@ -33,7 +34,6 @@ public class DatabaseManager {
             createTables();
         } catch (ClassNotFoundException | SQLException e) {
             plugin.getLogger().severe("Failed to connect to database: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -128,7 +128,6 @@ public class DatabaseManager {
             plugin.getDebugLogger().debug("Database schema ensured");
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to create database tables: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -144,7 +143,6 @@ public class DatabaseManager {
             }
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to close database connection: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 

@@ -102,11 +102,10 @@ public class TeamSelectionGUI {
         boolean changed = game.changeTeam(player, selected);
 
         // Refresh only if it actually changed
-        if (changed) {
+        if(changed) {
             openTeamSelection(player, game);
         } else {
-            // Still refresh so lore updates (e.g., team became full)
-            openTeamSelection(player, game);
+            player.sendMessage("");
         }
     }
 
@@ -138,7 +137,6 @@ public class TeamSelectionGUI {
         // Color leather boots if we used them as fallback
         if (meta instanceof LeatherArmorMeta lam) {
             lam.setColor(org.bukkit.Color.fromRGB(getTeamRGB(color)));
-            meta = lam;
         }
 
         String displayName = color.getChatColor() + "" + ChatColor.BOLD + color.name() + " Team";
@@ -180,7 +178,7 @@ public class TeamSelectionGUI {
     }
 
     private ItemStack createFiller() {
-        Material mat = materialOr(Material.GRAY_STAINED_GLASS_PANE, Material.GLASS_PANE);
+        Material mat = materialOr();
         ItemStack item = new ItemStack(mat, 1);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
@@ -211,7 +209,6 @@ public class TeamSelectionGUI {
             case WHITE -> Material.matchMaterial("WHITE_WOOL");
             case PINK -> Material.matchMaterial("PINK_WOOL");
             case GRAY -> Material.matchMaterial("GRAY_WOOL");
-            default -> null;
         };
         if (modern != null) return modern;
 
@@ -220,8 +217,8 @@ public class TeamSelectionGUI {
         return Material.LEATHER_BOOTS;
     }
 
-    private Material materialOr(Material preferred, Material fallback) {
-        return preferred != null ? preferred : fallback;
+    private Material materialOr() {
+        return Material.GRAY_STAINED_GLASS_PANE;
     }
 
     private int getTeamRGB(TeamColor color) {
@@ -234,7 +231,6 @@ public class TeamSelectionGUI {
             case WHITE -> 0xFFFFFF;
             case PINK -> 0xFF55FF;
             case GRAY -> 0xAAAAAA;
-            default -> 0xFFFFFF;
         };
     }
 }

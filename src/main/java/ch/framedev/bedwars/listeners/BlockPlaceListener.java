@@ -13,10 +13,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.metadata.FixedMetadataValue;
-
-import java.util.Objects;
 
 /**
  * Handles block place events in BedWars.
@@ -80,6 +79,8 @@ public class BlockPlaceListener implements Listener {
 
         TNTPrimed tnt = world.spawn(loc.add(0.5, 0.0, 0.5), TNTPrimed.class);
         tnt.setSource(event.getPlayer());
+        tnt.setYield(0.0f);
+        tnt.setIsIncendiary(false);
         // Optional: customize fuse
         // tnt.setFuseTicks(40);
 
@@ -100,8 +101,24 @@ public class BlockPlaceListener implements Listener {
 
         // BedWars-style: TNT does no block damage
         event.blockList().clear();
+        event.setYield(0.0f);
+
+        if (entity instanceof TNTPrimed tnt) {
+            tnt.setIsIncendiary(false);
+        }
 
         // Optional: also control entity damage via EntityDamageEvent elsewhere if needed
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onTntEntityDamage(EntityDamageByEntityEvent event) {
+        Entity damager = event.getDamager();
+
+        if (!(damager instanceof TNTPrimed)) return;
+        if (!damager.hasMetadata(META_BW_TNT)) return;
+
+        // Keep TNT purely as a visual/knockback event and prevent destruction of entities/objects.
+        event.setCancelled(true);
     }
 
     private String formatLocation(Location loc) {

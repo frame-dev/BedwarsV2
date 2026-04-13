@@ -36,6 +36,7 @@ block:
   cannot-break-placed: "&cYou can only break blocks placed by players!"
   cannot-break-yet: "&cYou can't break blocks yet!"
   cannot-break-own-bed: "&cYou can't break your own bed!"
+  bed-already-destroyed: "&cThis bed is already destroyed!"
   break-disabled: "&cBlock breaking is disabled in this arena!"
   cannot-place-yet: "&cYou can't place blocks yet!"
   place-disabled: "&cBlock placing is disabled in this arena!"

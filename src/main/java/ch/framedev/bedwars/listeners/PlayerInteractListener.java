@@ -4,7 +4,6 @@ import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.game.Game;
 import ch.framedev.bedwars.game.GameState;
 import ch.framedev.bedwars.shop.ShopGUI;
-import ch.framedev.bedwars.team.TeamSelectionGUI;
 import ch.framedev.bedwars.upgrades.UpgradeShopGUI;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -70,13 +69,13 @@ public class PlayerInteractListener implements Listener {
         if (item == null || item.getType() != Material.NETHER_STAR) return;
 
         ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
-            return;
-        } else {
-            meta.getDisplayName();
-        }
+        if (meta == null) return;
 
-        String display = ChatColor.stripColor(meta.getDisplayName());
+        String rawName = meta.getDisplayName();
+        if (rawName == null || rawName.isBlank()) return;
+
+        String display = ChatColor.stripColor(rawName);
+        if (display == null || display.isBlank()) return;
         if (!display.equalsIgnoreCase(TEAM_SELECTOR_NAME)) return;
 
         if (plugin.getTeamSelectionGUI() != null) {
@@ -96,6 +95,9 @@ public class PlayerInteractListener implements Listener {
         Entity clicked = event.getRightClicked();
         if (!(clicked instanceof Villager villager)) return;
 
+        // Prevent vanilla villager trading UI in BedWars matches.
+        event.setCancelled(true);
+
         // Optional: if your spectators should not use shop
         if (game.isSpectator(player)) {
             event.setCancelled(true);
@@ -107,8 +109,7 @@ public class PlayerInteractListener implements Listener {
 
         // Determine shop type by villager profession (as you do)
         if (villager.getProfession() == Villager.Profession.FARMER) {
-            shopGUI.openMainShop(player, game);
-            event.setCancelled(true);
+            shopGUI.openMainShop(player);
             return;
         }
 
@@ -117,7 +118,6 @@ public class PlayerInteractListener implements Listener {
             if (gp != null && gp.getTeam() != null) {
                 upgradeShopGUI.openUpgradeShop(player, gp.getTeam());
             }
-            event.setCancelled(true);
         }
     }
 }

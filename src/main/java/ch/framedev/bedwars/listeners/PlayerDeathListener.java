@@ -4,7 +4,6 @@ import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.game.Game;
 import ch.framedev.bedwars.game.GameState;
 import ch.framedev.bedwars.player.GamePlayer;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -13,7 +12,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 
 /**
  * Handles player death events (BedWars).
- *
+ * <p>
  * Fixes / improvements:
  * - HIGHEST priority + ignoreCancelled for stability with other plugins
  * - Always suppress vanilla death message in-game

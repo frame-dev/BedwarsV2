@@ -11,6 +11,7 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
@@ -69,8 +70,6 @@ public class Game {
     /** Scoreboard (optional) */
     private GameScoreboard gameScoreboard;
 
-    // Cached config values (set at countdown/game start)
-    private int cfgCountdownSeconds;
     private int cfgRespawnSeconds;
     private int cfgDiamondUpgradeSeconds;
     private int cfgEmeraldUpgradeSeconds;
@@ -226,7 +225,7 @@ public class Game {
         players.put(player.getUniqueId(), gamePlayer);
         participants.put(player.getUniqueId(), gamePlayer);
 
-        // Assign to team with least players
+        // Assign to team with the least players
         Team team = getSmallestTeam();
         if (team != null) {
             team.addPlayer(gamePlayer);
@@ -268,8 +267,17 @@ public class Game {
             gamePlayer.getTeam().removePlayer(gamePlayer);
         }
 
+        // In active games, leaving counts as elimination and should still be included in end-game stats.
+        if (gamePlayer != null && state == GameState.RUNNING) {
+            gamePlayer.setEliminated(true);
+        }
+
         spectators.remove(player.getUniqueId());
-        participants.remove(player.getUniqueId());
+
+        // Keep participants during/after running games so wins/losses and totals are still applied on end.
+        if (state == GameState.WAITING || state == GameState.STARTING) {
+            participants.remove(player.getUniqueId());
+        }
 
         plugin.getGameManager().removePlayerFromGame(player);
 
@@ -306,8 +314,8 @@ public class Game {
         if (countdownTask != null) return;
 
         state = GameState.STARTING;
-        cfgCountdownSeconds = plugin.getConfig().getInt("game.countdown-time", 30);
-        countdown = cfgCountdownSeconds;
+        // Cached config values (set at countdown/game start)
+        countdown = plugin.getConfig().getInt("game.countdown-time", 30);
 
         List<Integer> broadcastIntervals = plugin.getConfig().getIntegerList("game.countdown-broadcast-intervals");
 
@@ -485,6 +493,11 @@ public class Game {
         if (existing != null) existing.cancel();
 
         if (bedAlive) {
+            final Team respawnTeam = team;
+            if (respawnTeam == null) {
+                return;
+            }
+
             BukkitRunnable task = new BukkitRunnable() {
                 int remaining = cfgRespawnSeconds;
 
@@ -503,7 +516,7 @@ public class Game {
 
                     if (remaining <= 0) {
                         player.spigot().respawn();
-                        player.teleport(team.getSpawnLocation());
+                        player.teleport(respawnTeam.getSpawnLocation());
                         gp.giveTeamArmor();
                         giveStartingItem(player);
                         setToMaxHealth(player);
@@ -591,22 +604,22 @@ public class Game {
 
         // Update player stats
         for (GamePlayer gp : participants.values()) {
-            Player p = Bukkit.getPlayer(gp.getUuid());
-            if (p == null) continue;
+            UUID uuid = gp.getUuid();
+            Player p = Bukkit.getPlayer(uuid);
 
-            PlayerStats stats = plugin.getStatsManager().getPlayerStats(p.getUniqueId());
+            PlayerStats stats = plugin.getStatsManager().getPlayerStats(uuid);
 
             if (winningTeam != null && gp.getTeam() == winningTeam) {
                 stats.addWin();
                 if (plugin.getAchievementsManager() != null) {
-                    plugin.getAchievementsManager().recordWin(p.getUniqueId());
+                    plugin.getAchievementsManager().recordWin(uuid);
                 }
             } else {
                 stats.addLoss();
             }
 
             if (plugin.getAchievementsManager() != null) {
-                plugin.getAchievementsManager().recordGamePlayed(p.getUniqueId());
+                plugin.getAchievementsManager().recordGamePlayed(uuid);
             }
 
             stats.setKills(stats.getKills() + gp.getKills());
@@ -614,7 +627,11 @@ public class Game {
             stats.setFinalKills(stats.getFinalKills() + gp.getFinalKills());
             stats.setBedsBroken(stats.getBedsBroken() + gp.getBedsBroken());
 
-            plugin.getStatsManager().savePlayerStats(p.getUniqueId(), p.getName());
+            String playerName = p != null ? p.getName() : Bukkit.getOfflinePlayer(uuid).getName();
+            if (playerName == null || playerName.isBlank()) {
+                playerName = uuid.toString();
+            }
+            plugin.getStatsManager().savePlayerStats(uuid, playerName);
         }
 
         if (winningTeam != null) {
@@ -1074,18 +1091,18 @@ public class Game {
 
     private void setToMaxHealth(Player p) {
         if (p == null) return;
-        if (p.getAttribute(Attribute.GENERIC_MAX_HEALTH) == null) return;
-        double max = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+        AttributeInstance attribute = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        if(attribute == null) return;
+        double max = attribute.getValue();
         if (max <= 0) return;
         p.setHealth(max);
     }
 
     private void giveStartingItem(Player player) {
         String itemName = plugin.getConfig().getString("game.starting-item", "WOODEN_SWORD");
-        String normalized = (itemName == null ? "WOODEN_SWORD" : itemName);
 
-        Material material = Material.matchMaterial(normalized);
-        if (material == null && "WOOD_SWORD".equalsIgnoreCase(normalized)) {
+        Material material = Material.matchMaterial(itemName);
+        if (material == null && "WOOD_SWORD".equalsIgnoreCase(itemName)) {
             material = Material.WOODEN_SWORD;
         }
         if (material == null || material == Material.AIR) return;

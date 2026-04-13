@@ -123,17 +123,13 @@ public class MapVoteManager {
             return;
         }
 
-        if (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()
-                && plugin.getCloudNetManager().useForMapVoting()) {
+        if (isCloudVotingEnabled()) {
             if (!getEligibleArenaNames().contains(arenaName)) {
                 mm.sendMessage(admin, "map-vote.admin-invalid-arena", arenaName);
                 return;
             }
 
-            if (voteTask != null) {
-                voteTask.cancel();
-                voteTask = null;
-            }
+            stopVoteTask();
             votingActive = false;
             votes.clear();
 
@@ -148,7 +144,7 @@ public class MapVoteManager {
             return;
         }
 
-        if (game.getState() != GameState.WAITING || game.getPlayers().size() > 0) {
+        if (game.getState() != GameState.WAITING || !game.getPlayers().isEmpty()) {
             mm.sendMessage(admin, "map-vote.admin-arena-not-ready", arenaName);
             return;
         }
@@ -159,10 +155,7 @@ public class MapVoteManager {
             return;
         }
 
-        if (voteTask != null) {
-            voteTask.cancel();
-            voteTask = null;
-        }
+        stopVoteTask();
         votingActive = false;
         votes.clear();
 
@@ -212,13 +205,9 @@ public class MapVoteManager {
     }
 
     private boolean shouldStartVoting() {
-        if (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()
-                && plugin.getCloudNetManager().useForMapVoting()) {
-            return !votingActive && queue.size() >= getMinQueueSize()
-                    && !getEligibleArenaNames().isEmpty();
-        }
-
-        return !votingActive && queue.size() >= getMinQueueSize() && !getEligibleGames().isEmpty();
+        return !votingActive
+                && queue.size() >= getMinQueueSize()
+                && !getEligibleArenaNames().isEmpty();
     }
 
     private int getMinQueueSize() {
@@ -230,18 +219,9 @@ public class MapVoteManager {
     }
 
     private void startVoting() {
-        if (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()
-                && plugin.getCloudNetManager().useForMapVoting()) {
-            if (getEligibleArenaNames().isEmpty()) {
-                broadcastQueue("map-vote.no-available-arenas");
-                return;
-            }
-        } else {
-            List<Game> eligibleGames = getEligibleGames();
-            if (eligibleGames.isEmpty()) {
-                broadcastQueue("map-vote.no-available-arenas");
-                return;
-            }
+        if (getEligibleArenaNames().isEmpty()) {
+            broadcastQueue("map-vote.no-available-arenas");
+            return;
         }
 
         votingActive = true;
@@ -265,10 +245,7 @@ public class MapVoteManager {
     }
 
     private void cancelVoting() {
-        if (voteTask != null) {
-            voteTask.cancel();
-            voteTask = null;
-        }
+        stopVoteTask();
         votingActive = false;
         votes.clear();
         broadcastQueue("map-vote.cancelled");
@@ -283,8 +260,7 @@ public class MapVoteManager {
             return;
         }
 
-        if (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()
-                && plugin.getCloudNetManager().useForMapVoting()) {
+        if (isCloudVotingEnabled()) {
             finishCloudNetJoin(winner);
             return;
         }
@@ -307,20 +283,11 @@ public class MapVoteManager {
     private String pickWinner() {
         Map<String, Integer> counts = countVotes();
         if (counts.isEmpty()) {
-            if (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()
-                    && plugin.getCloudNetManager().useForMapVoting()) {
-                List<String> eligible = getEligibleArenaNames();
-                if (eligible.isEmpty()) {
-                    return null;
-                }
-                return eligible.get((int) (Math.random() * eligible.size()));
-            } else {
-                List<Game> eligible = getEligibleGames();
-                if (eligible.isEmpty()) {
-                    return null;
-                }
-                return eligible.get((int) (Math.random() * eligible.size())).getArena().getName();
+            List<String> eligible = getEligibleArenaNames();
+            if (eligible.isEmpty()) {
+                return null;
             }
+            return eligible.get((int) (Math.random() * eligible.size()));
         }
 
         int top = 0;
@@ -389,7 +356,7 @@ public class MapVoteManager {
 
         Material icon = getGuiItemMaterial();
         List<String> baseLore = plugin.getConfig().getStringList("map-voting.gui-lore");
-        if (baseLore == null || baseLore.isEmpty()) {
+        if (baseLore.isEmpty()) {
             baseLore = List.of("&7Votes: &e{votes}", "&7Click to vote");
         }
 
@@ -421,8 +388,7 @@ public class MapVoteManager {
     }
 
     private List<String> getEligibleArenaNames() {
-        if (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()
-                && plugin.getCloudNetManager().useForMapVoting()) {
+        if (isCloudVotingEnabled()) {
             return plugin.getCloudNetManager().getGameServices();
         }
 
@@ -434,13 +400,7 @@ public class MapVoteManager {
     }
 
     private void finishCloudNetJoin(String service) {
-        List<Player> joiners = new ArrayList<>();
-        for (UUID uuid : queue) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null && plugin.getGameManager().getPlayerGame(player) == null) {
-                joiners.add(player);
-            }
-        }
+        List<Player> joiners = collectQueuedJoiners();
 
         broadcastQueue("map-vote.winner", service, joiners.size());
         for (Player player : joiners) {
@@ -455,7 +415,7 @@ public class MapVoteManager {
         Inventory inventory = buildVoteInventory();
         for (UUID uuid : queue) {
             Player player = Bukkit.getPlayer(uuid);
-            if (player != null && player.getOpenInventory() != null) {
+            if (player != null) {
                 player.openInventory(inventory);
             }
         }
@@ -472,13 +432,7 @@ public class MapVoteManager {
     }
 
     private void finishQueueJoin(Game game, String arenaName, boolean forced) {
-        List<Player> joiners = new ArrayList<>();
-        for (UUID uuid : queue) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null && plugin.getGameManager().getPlayerGame(player) == null) {
-                joiners.add(player);
-            }
-        }
+        List<Player> joiners = collectQueuedJoiners();
 
         if (forced) {
             broadcastQueue("map-vote.admin-winner", arenaName, joiners.size());
@@ -496,10 +450,31 @@ public class MapVoteManager {
 
     private Material getGuiItemMaterial() {
         String name = plugin.getConfig().getString("map-voting.gui-item", "MAP");
-        if (name == null) {
-            return Material.MAP;
-        }
         Material material = Material.matchMaterial(name.toUpperCase());
         return material == null ? Material.MAP : material;
+    }
+
+    private boolean isCloudVotingEnabled() {
+        return plugin.getCloudNetManager() != null
+                && plugin.getCloudNetManager().isEnabled()
+                && plugin.getCloudNetManager().useForMapVoting();
+    }
+
+    private void stopVoteTask() {
+        if (voteTask != null) {
+            voteTask.cancel();
+            voteTask = null;
+        }
+    }
+
+    private List<Player> collectQueuedJoiners() {
+        List<Player> joiners = new ArrayList<>();
+        for (UUID uuid : queue) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null && plugin.getGameManager().getPlayerGame(player) == null) {
+                joiners.add(player);
+            }
+        }
+        return joiners;
     }
 }

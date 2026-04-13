@@ -1,15 +1,14 @@
-# 🎮 BedWars Plugin - Quick Reference Card
+# BedWars Quick Reference
 
-## 📦 Installation
+## Installation
+
 ```bash
-# Build
 mvn clean package
-
-# Install
-cp target/bedwars-1.0-SNAPSHOT.jar server/plugins/
+cp target/bedwars-1.2-SNAPSHOT.jar server/plugins/
 ```
 
-## ⚙️ Basic Configuration
+## Basic Arena Config Example
+
 ```yaml
 arenas:
   myarena:
@@ -22,104 +21,109 @@ arenas:
         bed: world,55.0,64.0,0.0,0.0,0.0
 ```
 
-## 🎮 Player Commands
+## Player Commands
+
 | Command | Description |
-|---------|-------------|
-| `/bw join <arena>` | Join game |
-| `/bw leave` | Leave game |
-| `/bw spectate <arena>` | Spectate game |
-| `/bw stats` | View stats |
+| --- | --- |
+| `/bw join <arena>` | Join a game |
+| `/bw leave` | Leave current game |
+| `/bw spectate <arena>` | Spectate a game |
+| `/bw stats [player]` | View statistics |
 | `/bw list` | List arenas |
 
-## 🛠️ Admin Commands
+## Setup and Admin Commands
+
 | Command | Description |
-|---------|-------------|
+| --- | --- |
 | `/bw setup create <name>` | Create arena |
-| `/bw setup setlobby <arena>` | Set lobby |
-| `/bw setup setspectator <arena>` | Set spectator |
-| `/bw setup setspawn <arena> <team>` | Set spawn |
-| `/bw setup setbed <arena> <team>` | Set bed |
-| `/bw setup addgenerator <name>` | Add generator |
+| `/bw setup setlobby` | Set lobby spawn |
+| `/bw setup setspectator` | Set spectator spawn |
+| `/bw setup setspawn <team>` | Set team spawn |
+| `/bw setup setbed <team>` | Set team bed |
+| `/bw setup addgenerator <id>` | Add generator |
+| `/bw setup save` | Save arena |
+| `/bw setup info` | Show setup progress |
+| `/bw start` | Force start match |
+| `/bw stop` | Force stop match |
+| `/bw reload` | Reload plugin configuration |
 
-## 🏪 Shop Categories
-1. **Blocks** - Building materials
-2. **Weapons** - Swords
-3. **Armor** - Protection
-4. **Tools** - Pickaxes, axes
-5. **Food** - Health items
-6. **Potions** - Effects
-7. **Special** - TNT, pearls
+## Shop Categories
 
-## ⬆️ Team Upgrades
-1. **Sharpness** - Better swords (8 💎)
-2. **Protection** - Better armor (2/4/8/16 💎)
-3. **Haste** - Faster mining (2/4 💎)
-4. **Heal Pool** - Regeneration (3 💎)
-5. **Dragon** - Base defense (5 💚)
+1. Blocks
+2. Weapons
+3. Armor
+4. Tools
+5. Food
+6. Potions
+7. Special
 
-## ⚡ Resources
-- **Iron** ⚔️ - Every 1s
-- **Gold** 🏅 - Every 8s
-- **Diamond** 💎 - Every 30s → 20s
-- **Emerald** 💚 - Every 60s → 40s
+## Team Upgrades
 
-## 🎯 Game Flow
+1. Sharpened Swords
+2. Reinforced Armor
+3. Maniac Miner
+4. Heal Pool
+5. Dragon Buff
+
+## Resource Timing
+
+- Iron: about every 1 second.
+- Gold: about every 8 seconds.
+- Diamond: base interval around 30 seconds.
+- Emerald: base interval around 60 seconds.
+
+## Game Flow
+
+```text
+WAITING -> STARTING -> RUNNING -> ENDING -> WAITING
 ```
-WAITING → STARTING → RUNNING → ENDING → WAITING
-  (2+)     (30s)    (gameplay)   (5s)
-```
 
-## 🏆 Win Conditions
-- Last team with players alive
-- All enemy beds destroyed + players eliminated
+## Win Condition
 
-## 📊 Statistics
-- Wins/Losses
-- Kills/Deaths
-- Final Kills
-- Beds Broken
+- Destroy enemy beds and eliminate all enemy players.
+- Last surviving team wins.
 
-## 🎨 Team Colors
-Red • Blue • Green • Yellow • Aqua • White • Pink • Gray
+## Statistics Tracked
 
-## 🔧 Requirements
-- Spigot/Paper 1.20.4+
+- Wins and losses
+- Kills and deaths
+- Final kills
+- Beds broken
+- Games played
+
+## Team Colors
+
+- Red
+- Blue
+- Green
+- Yellow
+- Aqua
+- White
+- Pink
+- Gray
+
+## Requirements
+
+- Spigot or Paper 1.20.4+
 - Java 17+
-- Maven 3.6+ (build only)
+- Maven 3.6+ (for build only)
 
-## 📁 Project Files
+## Key Paths
+
+```text
+src/main/java/
+src/main/resources/
+docs/
+pom.xml
 ```
-bedwars/
-├── src/main/java/          (31 Java files)
-├── src/main/resources/     (config.yml, arenas.yml, plugin.yml)
-├── pom.xml                 (Maven config)
-└── README.md               (Full docs - in root)
-```
 
-## 🚀 Quick Setup
-1. Build with `mvn clean package`
-2. Copy JAR to plugins/
-3. Start server
-4. Edit config.yml
-5. Restart server
-6. Place shop NPCs
-7. `/bw join arena`
+## Documentation
 
-## 🐛 Troubleshooting
-- Check Java 17+
-- Verify Spigot 1.20.4+
-- Check config syntax
-- Review console errors
-- Ensure world names match
+- [README.md](../README.md)
+- [QUICK_START.md](QUICK_START.md)
+- [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
+- [API.md](API.md)
 
-## 📞 Documentation
-- [README.md](../README.md) - Full docs
-- [QUICK_START.md](QUICK_START.md) - Setup guide
-- [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) - Technical
-- [COMPLETE_OVERVIEW.md](COMPLETE_OVERVIEW.md) - Overview
+## Version
 
-## ✅ Status
-**COMPLETE & PRODUCTION READY**
-
----
-**v1.0-SNAPSHOT** | Built with ❤️ by FrameDev
+- Plugin: 1.2-SNAPSHOT

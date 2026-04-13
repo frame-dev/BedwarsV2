@@ -1,269 +1,108 @@
-# BedWars Plugin - Complete Project Structure
+# BedWars Project Structure
 
-```
+## Repository Layout
+
+```text
 bedwars/
-│
-├── 📄 pom.xml                          # Maven build configuration
-├── 📄 .gitignore                       # Git ignore rules
-├── 📖 README.md                        # Main documentation (in root)
-├── 📁 docs/                            # Documentation folder
-│   ├── QUICK_START.md                  # Quick start guide
-│   ├── PROJECT_SUMMARY.md              # Implementation summary
-│   └── ... (other .md files)
-│
+├── pom.xml
+├── README.md
+├── docs/
 ├── src/
 │   ├── main/
-│   │   ├── java/ch/framedev/
-│   │   │   │
-│   │   │   ├── 🔌 BedWarsPlugin.java              # Main plugin class
-│   │   │   │
-│   │   │   └── bedwars/
-│   │   │       │
-│   │   │       ├── commands/
-│   │   │       │   └── 💻 BedWarsCommand.java     # Command handler
-│   │   │       │
-│   │   │       ├── game/
-│   │   │       │   ├── 🎮 Game.java               # Core game logic
-│   │   │       │   ├── 🎮 GameManager.java        # Game instance manager
-│   │   │       │   ├── 🎮 GameState.java          # Game state enum
-│   │   │       │   └── 🗺️  Arena.java              # Arena configuration
-│   │   │       │
-│   │   │       ├── team/
-│   │   │       │   ├── 👥 Team.java               # Team management
-│   │   │       │   └── 🎨 TeamColor.java          # Team colors
-│   │   │       │
-│   │   │       ├── player/
-│   │   │       │   └── 🧑 GamePlayer.java          # Player wrapper
-│   │   │       │
-│   │   │       ├── generators/
-│   │   │       │   └── ⚡ ResourceGenerator.java   # Resource spawning
-│   │   │       │
-│   │   │       ├── shop/
-│   │   │       │   ├── 🛒 ShopManager.java        # Shop items
-│   │   │       │   ├── 🛒 ShopGUI.java            # Shop interface
-│   │   │       │   ├── 🛒 ShopCategory.java       # Shop categories
-│   │   │       │   └── 🛒 ShopItem.java           # Shop item definition
-│   │   │       │
-│   │   │       ├── upgrades/
-│   │   │       │   ├── ⬆️  TeamUpgrades.java       # Upgrade state
-│   │   │       │   └── ⬆️  UpgradeShopGUI.java     # Upgrade interface
-│   │   │       │
-│   │   │       ├── stats/
-│   │   │       │   ├── 📊 PlayerStats.java        # Player statistics
-│   │   │       │   └── 📊 StatsManager.java       # Stats persistence
-│   │   │       │
-│   │   │       ├── listeners/
-│   │   │       │   ├── 👂 PlayerJoinListener.java
-│   │   │       │   ├── 👂 PlayerQuitListener.java
-│   │   │       │   ├── 👂 PlayerDeathListener.java
-│   │   │       │   ├── 👂 PlayerInteractListener.java
-│   │   │       │   ├── 👂 BlockBreakListener.java
-│   │   │       │   ├── 👂 BlockPlaceListener.java
-│   │   │       │   ├── 👂 EntityDamageListener.java
-│   │   │       │   └── 👂 InventoryClickListener.java
-│   │   │       │
-│   │   │       └── utils/
-│   │   │           ├── 🛠️  ItemBuilder.java        # Item creation utility
-│   │   │           ├── 🛠️  MessageUtils.java       # Message formatting
-│   │   │           └── 🛠️  LocationUtils.java      # Location serialization
-│   │   │
+│   │   ├── java/
 │   │   └── resources/
-│   │       ├── ⚙️  plugin.yml                     # Plugin metadata
-│   │       └── ⚙️  config.yml                     # Configuration
-│   │
 │   └── test/
-│       └── java/ch/framedev/
-│           └── 🧪 AppTest.java                    # Unit tests
-│
 └── target/
-    └── 📦 bedwars-1.0-SNAPSHOT.jar               # Compiled plugin
 ```
 
-## 📊 Project Statistics
+## Java Package Structure
 
-| Metric | Count |
-|--------|-------|
-| **Total Java Files** | 31 |
-| **Total Lines of Code** | ~3,500+ |
-| **Packages** | 10 |
-| **Commands** | 5 main + 4 setup |
-| **Event Listeners** | 8 |
-| **Game States** | 4 |
-| **Team Colors** | 8 |
-| **Shop Categories** | 7 |
-| **Purchasable Items** | 30+ |
-| **Team Upgrades** | 5 |
-| **Resource Types** | 4 |
-
-## 🎯 Feature Completion
-
-### ✅ Core Systems (100%)
-- [x] Game Management
-- [x] Team System  
-- [x] Player Management
-- [x] Arena Configuration
-- [x] State Management
-
-### ✅ Gameplay Features (100%)
-- [x] Bed Mechanics
-- [x] Respawn System
-- [x] Resource Generators
-- [x] Win Conditions
-- [x] Death/Kill Tracking
-- [x] Final Kills
-
-### ✅ Economy & Shops (100%)
-- [x] Item Shop (7 categories)
-- [x] Upgrade Shop
-- [x] Purchase System
-- [x] Resource Currency
-
-### ✅ Player Features (100%)
-- [x] Statistics Tracking
-- [x] Team Armor
-- [x] Kill/Death/Bed Tracking
-- [x] Elimination System
-
-### ✅ Commands & Config (100%)
-- [x] Join/Leave Commands
-- [x] Stats Command
-- [x] Setup Commands
-- [x] Configuration File
-- [x] Permissions
-
-### ✅ Event Handling (100%)
-- [x] Join/Quit Handling
-- [x] Death Handling
-- [x] Block Break/Place
-- [x] Entity Interaction
-- [x] Inventory Clicks
-- [x] Damage Control
-
-### ✅ Utilities (100%)
-- [x] Item Builder
-- [x] Message Formatting
-- [x] Location Serialization
-
-## 🏗️ Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   BedWarsPlugin                         │
-│                  (Main Entry Point)                      │
-└───────────────┬────────────────────────────┬────────────┘
-                │                            │
-        ┌───────▼────────┐          ┌────────▼──────────┐
-        │  GameManager   │          │  StatsManager     │
-        │   (Games)      │          │  (Persistence)    │
-        └───────┬────────┘          └───────────────────┘
-                │
-        ┌───────▼────────┐
-        │     Game       │
-        │  (Instance)    │
-        └───┬────────┬───┘
-            │        │
-    ┌───────▼───┐ ┌─▼──────────┐
-    │   Team    │ │ GamePlayer │
-    │ (Players) │ │  (Stats)   │
-    └───────────┘ └────────────┘
+```text
+src/main/java/ch/framedev/
+├── BedWarsPlugin.java
+└── bedwars/
+    ├── achievements/
+    ├── arena/
+    ├── bungee/
+    ├── cloudnet/
+    ├── commands/
+    ├── cosmetics/
+    ├── database/
+    ├── game/
+    ├── generators/
+    ├── listeners/
+    ├── manager/
+    ├── party/
+    ├── player/
+    ├── shop/
+    ├── stats/
+    ├── team/
+    ├── upgrades/
+    ├── utils/
+    └── voting/
 ```
 
-## 🔄 Data Flow
+## Core Modules
 
-```
-Player Action
-     │
-     ▼
-Event Listener
-     │
-     ▼
-Game Logic
-     │
-     ├─► Team Update
-     ├─► Player Update
-     ├─► Stats Update
-     └─► Broadcast Message
-```
+| Module | Purpose |
+| --- | --- |
+| `BedWarsPlugin` | Main plugin entry point and lifecycle wiring |
+| `game` | Match lifecycle, state transitions, and win logic |
+| `arena` | Arena registration and setup support |
+| `team` | Team metadata and team-level state |
+| `player` | Player game wrapper and runtime state |
+| `listeners` | Bukkit event handling and gameplay rules |
+| `shop` | Item shop UI and purchase flow |
+| `upgrades` | Team upgrade definitions and application |
+| `stats` | Statistics tracking and persistence integration |
+| `database` | Database-related access and storage helpers |
+| `commands` | Command routing and tab completion |
+| `utils` | Shared helper utilities |
 
-## 💾 File Persistence
+## Runtime Resources
 
-```
-plugins/BedWars/
-├── config.yml         # Game configuration
-└── stats.yml          # Player statistics
-```
-
-## 🎮 Gameplay Loop
-
-```
-1. WAITING
-   ↓ (min players reached)
-2. STARTING (30s countdown)
-   ↓
-3. RUNNING
-   ├─ Resources generate
-   ├─ Players fight
-   ├─ Beds destroyed
-   └─ Teams eliminated
-   ↓ (one team left)
-4. ENDING
-   ├─ Winner announced
-   ├─ Stats saved
-   └─ Game reset
-   ↓
-Back to WAITING
+```text
+src/main/resources/
+├── plugin.yml
+├── config.yml
+├── arenas.yml
+├── messages.yml
+├── shop.yml
+├── upgrades.yml
+├── achievements.yml
+└── cosmetics.yml
 ```
 
-## 🛠️ Build & Deploy
+## Architecture Snapshot
+
+```text
+BedWarsPlugin
+├── managers (arena/game/stats/other services)
+├── commands and completers
+└── listeners
+
+Game instance
+├── teams
+├── players
+├── generators
+└── world reset and end flow
+```
+
+## Build and Output
 
 ```bash
-# Clean and build
 mvn clean package
-
-# Output location
-target/bedwars-1.0-SNAPSHOT.jar
-
-# Deploy to server
-cp target/bedwars-1.0-SNAPSHOT.jar /path/to/server/plugins/
 ```
 
-## 📝 Key Technologies
+Primary artifact:
 
-- **Framework**: Spigot API 1.20.4
-- **Language**: Java 17
-- **Build Tool**: Maven 3.6+
-- **Dependencies**: Spigot API (provided)
-- **Configuration**: YAML
+```text
+target/bedwars-1.2-SNAPSHOT.jar
+```
 
-## 🎯 Design Patterns Used
+## Quality Notes
 
-1. **Singleton** - Plugin instance
-2. **Manager** - GameManager, StatsManager
-3. **Observer** - Event listeners
-4. **State** - GameState enum
-5. **Builder** - ItemBuilder
-6. **Factory** - Arena creation
-
-## ✨ Highlights
-
-- **Clean Architecture** - Separated concerns
-- **Extensible Design** - Easy to add features
-- **Event-Driven** - Bukkit event system
-- **Configuration** - YAML-based setup
-- **Statistics** - Persistent player data
-- **Documentation** - Comprehensive guides
-
-## 🚀 Ready for Production
-
-✅ All features implemented
-✅ Complete documentation
-✅ Configuration system
-✅ Statistics tracking
-✅ Error handling
-✅ Extensible architecture
-
----
-
-**Status**: ✅ **PRODUCTION READY**
-**Version**: 1.0-SNAPSHOT
-**Last Updated**: January 2026
+- Event listeners enforce most gameplay constraints.
+- Configuration files drive behavior and messages.
+- Match logic is isolated under the `game` package.
+- Shops, upgrades, and stats are modular for easier extension.

@@ -10,21 +10,29 @@ import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.stats.PlayerStats;
 import ch.framedev.bedwars.team.TeamColor;
 import ch.framedev.bedwars.utils.MessageManager;
-
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Consumer;
 
 /**
- * Improved BedWars command handler with arena setup and spectator support
+ * BedWars command handler with arena setup, spectator, stats, leaderboard, party, cosmetics, achievements.
+ * <p>
+ * De-duplication / fixes:
+ * - Central permission gate helper (permOrMsg)
+ * - Central "must be player" gate
+ * - Central "message send" helper (mm())
+ * - Central help rendering via list of keys (sendHelpKeys)
+ * - Central setup session fetch helper (requireSetupSession)
+ * - Central TeamColor parsing helper
+ * - Central integer parsing helper
+ * - Leaderboard handling via one method (handleLeaderboardCategory)
  */
 public class ImprovedBedWarsCommand implements CommandExecutor {
 
@@ -37,375 +45,319 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            plugin.getMessageManager().sendMessage(sender, "command.only-players");
-            return true;
-        }
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String @NonNull [] args) {
+        Player player = asPlayer(sender);
+        if (player == null) return true;
 
-        Player player = (Player) sender;
-
-        plugin.getDebugLogger().debug("Command: /" + label + " " + Arrays.toString(args)
-                + " by " + player.getName());
+        plugin.getDebugLogger().debug("Command: /" + label + " " + Arrays.toString(args) + " by " + player.getName());
 
         if (args.length == 0) {
             sendHelp(player);
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
-            case "join":
-                if (!player.hasPermission("bedwars.join")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+        String sub = args[0].toLowerCase(Locale.ROOT);
+
+        switch (sub) {
+            case "join" -> {
+                if (noPermOrMsg(player, "bedwars.join")) return true;
+
                 if (args.length < 2) {
                     if (plugin.getMapVoteManager() != null) {
                         plugin.getMapVoteManager().joinQueue(player);
                         return true;
                     }
-                    plugin.getMessageManager().sendMessage(player, "command.join-usage");
+                    mm().sendMessage(player, "command.join-usage");
                     return true;
                 }
                 handleJoin(player, args[1]);
-                break;
+            }
 
-            case "leave":
-                if (!player.hasPermission("bedwars.leave")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "leave" -> {
+                if (noPermOrMsg(player, "bedwars.leave")) return true;
                 handleLeave(player);
-                break;
+            }
 
-            case "spectate":
-                if (!player.hasPermission("bedwars.spectate")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "spectate" -> {
+                if (noPermOrMsg(player, "bedwars.spectate")) return true;
                 if (args.length < 2) {
-                    plugin.getMessageManager().sendMessage(player, "command.spectate-usage");
+                    mm().sendMessage(player, "command.spectate-usage");
                     return true;
                 }
                 handleSpectate(player, args[1]);
-                break;
+            }
 
-            case "stats":
-                if (!player.hasPermission("bedwars.stats")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
-                if (args.length >= 2) {
-                    handleStatsOther(player, args[1]);
-                } else {
-                    handleStats(player);
-                }
-                break;
+            case "stats" -> {
+                if (noPermOrMsg(player, "bedwars.stats")) return true;
+                if (args.length >= 2) handleStatsOther(player, args[1]);
+                else handleStats(player);
+            }
 
-            case "leaderboard":
-            case "top":
-                handleLeaderboard(player, args);
-                break;
+            case "leaderboard", "top" -> handleLeaderboard(player, args);
 
-            case "setup":
-                if (!player.hasPermission("bedwars.setup")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "setup" -> {
+                if (noPermOrMsg(player, "bedwars.setup")) return true;
                 handleSetup(player, args);
-                break;
+            }
 
-            case "list":
-                if (!player.hasPermission("bedwars.list")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "list" -> {
+                if (noPermOrMsg(player, "bedwars.list")) return true;
                 handleList(player);
-                break;
+            }
 
-            case "start":
-                if (!player.hasPermission("bedwars.admin")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "start" -> {
+                if (noPermOrMsg(player, "bedwars.admin")) return true;
                 handleForceStart(player);
-                break;
+            }
 
-            case "stop":
-                if (!player.hasPermission("bedwars.admin")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "stop" -> {
+                if (noPermOrMsg(player, "bedwars.admin")) return true;
                 handleForceStop(player);
-                break;
+            }
 
-            case "resetworld":
-                if (!player.hasPermission("bedwars.admin")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "resetworld" -> {
+                if (noPermOrMsg(player, "bedwars.admin")) return true;
                 handleResetWorld(player);
-                break;
+            }
 
-            case "reload":
-                if (!player.hasPermission("bedwars.admin")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "reload" -> {
+                if (noPermOrMsg(player, "bedwars.admin")) return true;
                 handleReload(player);
-                break;
+            }
 
-            case "lobby":
-                if (!player.hasPermission("bedwars.bungee")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "lobby" -> {
+                if (noPermOrMsg(player, "bedwars.bungee")) return true;
                 handleLobby(player);
-                break;
+            }
 
-            case "queue":
-                if (!player.hasPermission("bedwars.queue")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
-                if (plugin.getMapVoteManager() != null) {
-                    plugin.getMapVoteManager().joinQueue(player);
-                }
-                break;
+            case "queue" -> {
+                if (noPermOrMsg(player, "bedwars.queue")) return true;
+                if (plugin.getMapVoteManager() != null) plugin.getMapVoteManager().joinQueue(player);
+            }
 
-            case "vote":
-                if (!player.hasPermission("bedwars.vote")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
-                if (plugin.getMapVoteManager() == null) {
-                    return true;
-                }
-                if (args.length > 1) {
-                    String sub = args[1].toLowerCase();
-                    switch (sub) {
-                        case "open":
-                            if (!plugin.getMapVoteManager().isQueued(player.getUniqueId())) {
-                                plugin.getMessageManager().sendMessage(player, "map-vote.not-queued");
-                                return true;
-                            }
-                            plugin.getMapVoteManager().openVoteGui(player);
-                            break;
+            case "vote" -> {
+                if (noPermOrMsg(player, "bedwars.vote")) return true;
+                handleVote(player, args);
+            }
 
-                        case "start":
-                            if (!player.hasPermission("bedwars.vote.admin")) {
-                                plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                                return true;
-                            }
-                            plugin.getMapVoteManager().forceStartVoting(player);
-                            break;
-
-                        case "end":
-                            if (!player.hasPermission("bedwars.vote.admin")) {
-                                plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                                return true;
-                            }
-                            plugin.getMapVoteManager().forceEndVoting(player);
-                            break;
-
-                        case "force":
-                            if (!player.hasPermission("bedwars.vote.admin")) {
-                                plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                                return true;
-                            }
-                            if (args.length < 3) {
-                                plugin.getMessageManager().sendMessage(player, "map-vote.force-usage");
-                                return true;
-                            }
-                            plugin.getMapVoteManager().forceSelectArena(player, args[2]);
-                            break;
-
-                        default:
-                            plugin.getMessageManager().sendMessage(player, "map-vote.vote-usage");
-                            break;
-                    }
-                    return true;
-                }
-
-                if (!plugin.getMapVoteManager().isQueued(player.getUniqueId())) {
-                    plugin.getMessageManager().sendMessage(player, "map-vote.not-queued");
-                    return true;
-                }
-                plugin.getMapVoteManager().openVoteGui(player);
-                break;
-
-            case "party":
-                if (!player.hasPermission("bedwars.party")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "party" -> {
+                if (noPermOrMsg(player, "bedwars.party")) return true;
                 handleParty(player, args);
-                break;
+            }
 
-            case "cosmetics":
-                if (!player.hasPermission("bedwars.cosmetics")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
-                if (plugin.getCosmeticsManager() != null) {
-                    plugin.getCosmeticsManager().openCosmeticsMenu(player);
-                }
-                break;
+            case "cosmetics" -> {
+                if (noPermOrMsg(player, "bedwars.cosmetics")) return true;
+                if (plugin.getCosmeticsManager() != null) plugin.getCosmeticsManager().openCosmeticsMenu(player);
+            }
 
-            case "achievements":
-                if (!player.hasPermission("bedwars.achievements")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
-                if (plugin.getAchievementsManager() != null) {
-                    plugin.getAchievementsManager().openMenu(player);
-                }
-                break;
+            case "achievements" -> {
+                if (noPermOrMsg(player, "bedwars.achievements")) return true;
+                if (plugin.getAchievementsManager() != null) plugin.getAchievementsManager().openMenu(player);
+            }
 
-            case "team":
-                if (!player.hasPermission("bedwars.team")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return true;
-                }
+            case "team" -> {
+                if (noPermOrMsg(player, "bedwars.team")) return true;
                 handleTeam(player, args);
-                break;
+            }
 
-            default:
-                sendHelp(player);
-                break;
+            default -> sendHelp(player);
         }
 
         return true;
     }
 
+    /* --------------------------------------------------------------------- */
+    /* Common helpers                                                         */
+    /* --------------------------------------------------------------------- */
+
+    private MessageManager mm() {
+        return plugin.getMessageManager();
+    }
+
+    private Player asPlayer(CommandSender sender) {
+        if (sender instanceof Player p) return p;
+        mm().sendMessage(sender, "command.only-players");
+        return null;
+    }
+
+    private boolean noPermOrMsg(Player player, String perm) {
+        if (player.hasPermission(perm)) return false;
+        mm().sendMessage(player, "command.no-permission");
+        return true;
+    }
+
+    private void sendHelpKeys(Player player, List<String> keys) {
+        for (String key : keys) {
+            player.sendMessage(mm().getMessage(key));
+        }
+    }
+
+    private TeamColor parseTeamColor(Player player, String raw) {
+        try {
+            return TeamColor.valueOf(raw.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            mm().sendMessage(player, "command.invalid-team-color");
+            return null;
+        }
+    }
+
+    private Integer parseIntOrMsg(Player player, String raw) {
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            mm().sendMessage(player, "command.invalid-number");
+            return null;
+        }
+    }
+
+    private ArenaSetupSession requireSetupSession(Player player) {
+        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
+        if (session == null) mm().sendMessage(player, "command.no-setup-session");
+        return session;
+    }
+
+    /* --------------------------------------------------------------------- */
+    /* Help                                                                    */
+    /* --------------------------------------------------------------------- */
+
     private void sendHelp(Player player) {
-        player.sendMessage(plugin.getMessageManager().getMessage("help.header"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.title"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.separator"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.join"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.leave"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.spectate"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.stats"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.leaderboard"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.list"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.queue"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.vote"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.party"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.cosmetics"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.achievements"));
-        player.sendMessage(plugin.getMessageManager().getMessage("help.team"));
+        List<String> keys = new ArrayList<>(List.of(
+                "help.header",
+                "help.title",
+                "help.separator",
+                "help.join",
+                "help.leave",
+                "help.spectate",
+                "help.stats",
+                "help.leaderboard",
+                "help.list",
+                "help.queue",
+                "help.vote",
+                "help.party",
+                "help.cosmetics",
+                "help.achievements",
+                "help.team"
+        ));
 
         if (player.hasPermission("bedwars.setup")) {
-            player.sendMessage(plugin.getMessageManager().getMessage("help.separator"));
-            player.sendMessage(plugin.getMessageManager().getMessage("help.setup"));
+            keys.addAll(List.of("help.separator", "help.setup"));
         }
-
         if (plugin.getBungeeManager().isEnabled() && player.hasPermission("bedwars.bungee")) {
-            player.sendMessage(plugin.getMessageManager().getMessage("help.separator"));
-            player.sendMessage(plugin.getMessageManager().getMessage("help.lobby"));
+            keys.addAll(List.of("help.separator", "help.lobby"));
         }
-
         if (player.hasPermission("bedwars.admin")) {
-            player.sendMessage(plugin.getMessageManager().getMessage("help.separator"));
-            player.sendMessage(plugin.getMessageManager().getMessage("help.start"));
-            player.sendMessage(plugin.getMessageManager().getMessage("help.stop"));
-            player.sendMessage(plugin.getMessageManager().getMessage("help.resetworld"));
-            player.sendMessage(plugin.getMessageManager().getMessage("help.reload"));
+            keys.addAll(List.of(
+                    "help.separator",
+                    "help.start",
+                    "help.stop",
+                    "help.resetworld",
+                    "help.reload"
+            ));
         }
-
         if (player.hasPermission("bedwars.vote.admin")) {
-            player.sendMessage(plugin.getMessageManager().getMessage("help.separator"));
-            player.sendMessage(plugin.getMessageManager().getMessage("help.vote-admin"));
+            keys.addAll(List.of("help.separator", "help.vote-admin"));
         }
 
-        player.sendMessage(plugin.getMessageManager().getMessage("help.footer"));
+        keys.add("help.footer");
+        sendHelpKeys(player, keys);
     }
+
+    /* --------------------------------------------------------------------- */
+    /* Join / Leave / Spectate                                                 */
+    /* --------------------------------------------------------------------- */
 
     private void handleJoin(Player player, String arenaName) {
         Game currentGame = plugin.getGameManager().getPlayerGame(player);
         if (currentGame != null) {
-            if (currentGame.isSpectator(player)) {
-                currentGame.removeSpectator(player);
-            } else {
-                plugin.getMessageManager().sendMessage(player, "command.already-in-game");
+            if (currentGame.isSpectator(player)) currentGame.removeSpectator(player);
+            else {
+                mm().sendMessage(player, "command.already-in-game");
                 return;
             }
         }
 
         plugin.getDebugLogger().debug("Join requested: player=" + player.getName() + " arena=" + arenaName);
 
+        // CloudNet one-arena-per-server shortcut (party support)
         if (plugin.getCloudNetManager() != null
                 && plugin.getCloudNetManager().isEnabled()
                 && plugin.getCloudNetManager().isOneArenaPerServer()) {
+
             var partyManager = plugin.getPartyManager();
             var party = partyManager.getParty(player.getUniqueId());
+
             if (party != null && !partyManager.isLeader(player.getUniqueId())) {
-                plugin.getMessageManager().sendMessage(player, "party.only-leader");
+                mm().sendMessage(player, "party.only-leader");
                 return;
             }
 
-            if (party != null && partyManager.isLeader(player.getUniqueId())) {
+            if (party != null) {
                 for (var memberId : party.getMemberUuids()) {
                     Player member = plugin.getServer().getPlayer(memberId);
-                    if (member != null) {
-                        plugin.getCloudNetManager().connectToArena(member, arenaName);
-                    }
+                    if (member != null) plugin.getCloudNetManager().connectToArena(member, arenaName);
                 }
-                return;
+            } else {
+                plugin.getCloudNetManager().connectToArena(player, arenaName);
             }
-
-            plugin.getCloudNetManager().connectToArena(player, arenaName);
             return;
         }
 
         Game game = plugin.getGameManager().getGame(arenaName);
         if (game == null) {
-            plugin.getMessageManager().sendMessage(player, "command.arena-not-found", arenaName);
+            mm().sendMessage(player, "command.arena-not-found", arenaName);
             return;
         }
 
         var partyManager = plugin.getPartyManager();
         var party = partyManager.getParty(player.getUniqueId());
+
         if (party != null && !partyManager.isLeader(player.getUniqueId())) {
-            plugin.getMessageManager().sendMessage(player, "party.only-leader");
+            mm().sendMessage(player, "party.only-leader");
             return;
         }
 
-        if (party != null && partyManager.isLeader(player.getUniqueId())) {
-            List<Player> joiners = new ArrayList<>();
-            for (var memberId : party.getMemberUuids()) {
-                Player member = plugin.getServer().getPlayer(memberId);
-                if (member == null) {
-                    String name = plugin.getServer().getOfflinePlayer(memberId).getName();
-                    plugin.getMessageManager().sendMessage(player, "party.member-offline",
-                            name == null ? "Unknown" : name);
-                    return;
-                }
-
-                Game memberGame = plugin.getGameManager().getPlayerGame(member);
-                if (memberGame != null && !memberGame.equals(game)) {
-                    plugin.getMessageManager().sendMessage(player, "party.member-in-game", member.getName());
-                    return;
-                }
-
-                if (memberGame == null) {
-                    joiners.add(member);
-                }
-            }
-
-            int totalAfterJoin = game.getPlayers().size() + joiners.size();
-            if (totalAfterJoin > game.getArena().getMaxPlayers()) {
-                plugin.getMessageManager().sendMessage(player, "party.party-game-full");
-                return;
-            }
-
-            for (Player member : joiners) {
-                game.addPlayer(member);
-            }
+        if (party != null) {
+            joinPartyToGame(player, game);
             return;
         }
 
         game.addPlayer(player);
+    }
+
+    private void joinPartyToGame(Player leader, Game game) {
+        // party type is unknown here (your Party class), so use var everywhere in calls above.
+        // We keep this method signature broad so the file compiles only if Party type is visible.
+        var partyManager = plugin.getPartyManager();
+        var party = partyManager.getParty(leader.getUniqueId());
+        if (party == null) {
+            game.addPlayer(leader);
+            return;
+        }
+
+        List<Player> joiners = new ArrayList<>();
+        for (var memberId : party.getMemberUuids()) {
+            Player member = plugin.getServer().getPlayer(memberId);
+            if (member == null) {
+                String name = plugin.getServer().getOfflinePlayer(memberId).getName();
+                mm().sendMessage(leader, "party.member-offline", name == null ? "Unknown" : name);
+                return;
+            }
+
+            Game memberGame = plugin.getGameManager().getPlayerGame(member);
+            if (memberGame != null && !memberGame.equals(game)) {
+                mm().sendMessage(leader, "party.member-in-game", member.getName());
+                return;
+            }
+
+            if (memberGame == null) joiners.add(member);
+        }
+
+        if (game.getPlayers().size() + joiners.size() > game.getArena().getMaxPlayers()) {
+            mm().sendMessage(leader, "party.party-game-full");
+            return;
+        }
+
+        for (Player p : joiners) game.addPlayer(p);
     }
 
     private void handleLeave(Player player) {
@@ -415,65 +367,58 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
                 plugin.getMapVoteManager().leaveQueue(player);
                 return;
             }
-            plugin.getMessageManager().sendMessage(player, "command.not-in-game");
+            mm().sendMessage(player, "command.not-in-game");
             return;
         }
 
-        plugin.getDebugLogger().debug("Leave requested: player=" + player.getName()
-                + " arena=" + game.getArena().getName());
+        plugin.getDebugLogger().debug("Leave requested: player=" + player.getName() + " arena=" + game.getArena().getName());
 
         var partyManager = plugin.getPartyManager();
         var party = partyManager != null ? partyManager.getParty(player.getUniqueId()) : null;
+
         if (party != null) {
             for (var memberId : party.getMemberUuids()) {
                 Player member = plugin.getServer().getPlayer(memberId);
-                if (member == null) {
-                    continue;
-                }
-                Game memberGame = plugin.getGameManager().getPlayerGame(member);
-                if (memberGame == null || !memberGame.equals(game)) {
-                    continue;
-                }
+                if (member == null) continue;
 
-                if (memberGame.isSpectator(member)) {
-                    memberGame.removeSpectator(member);
-                } else {
-                    memberGame.removePlayer(member);
-                }
+                Game memberGame = plugin.getGameManager().getPlayerGame(member);
+                if (memberGame == null || !memberGame.equals(game)) continue;
+
+                if (memberGame.isSpectator(member)) memberGame.removeSpectator(member);
+                else memberGame.removePlayer(member);
 
                 if (!member.getUniqueId().equals(player.getUniqueId())) {
-                    plugin.getMessageManager().sendMessage(member, "command.left-game");
+                    mm().sendMessage(member, "command.left-game");
                 }
             }
         } else {
-            if (game.isSpectator(player)) {
-                game.removeSpectator(player);
-            } else {
-                game.removePlayer(player);
-            }
+            if (game.isSpectator(player)) game.removeSpectator(player);
+            else game.removePlayer(player);
         }
 
-        plugin.getMessageManager().sendMessage(player, "command.left-game");
+        mm().sendMessage(player, "command.left-game");
     }
 
     private void handleSpectate(Player player, String arenaName) {
-        Game currentGame = plugin.getGameManager().getPlayerGame(player);
-        if (currentGame != null) {
-            plugin.getMessageManager().sendMessage(player, "command.leave-game-first");
+        if (plugin.getGameManager().getPlayerGame(player) != null) {
+            mm().sendMessage(player, "command.leave-game-first");
             return;
         }
 
-        plugin.getDebugLogger().debug("Spectate requested: player=" + player.getName()
-                + " arena=" + arenaName);
+        plugin.getDebugLogger().debug("Spectate requested: player=" + player.getName() + " arena=" + arenaName);
 
         Game game = plugin.getGameManager().getGame(arenaName);
         if (game == null) {
-            plugin.getMessageManager().sendMessage(player, "command.arena-not-found", arenaName);
+            mm().sendMessage(player, "command.arena-not-found", arenaName);
             return;
         }
 
         game.addSpectator(player);
     }
+
+    /* --------------------------------------------------------------------- */
+    /* Stats                                                                   */
+    /* --------------------------------------------------------------------- */
 
     private void handleStats(Player player) {
         plugin.getDebugLogger().debug("Stats requested: player=" + player.getName());
@@ -482,147 +427,145 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
     }
 
     private void handleStatsOther(Player player, String targetName) {
-        // Lookup player by name (async to avoid blocking)
-        plugin.getDebugLogger().debug("Stats requested: player=" + player.getName()
-                + " target=" + targetName);
+        plugin.getDebugLogger().debug("Stats requested: player=" + player.getName() + " target=" + targetName);
+
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             @SuppressWarnings("deprecation")
             org.bukkit.OfflinePlayer target = plugin.getServer().getOfflinePlayer(targetName);
 
-            if (target == null || !target.hasPlayedBefore()) {
-                plugin.getMessageManager().sendMessage(player, "command.player-not-found", targetName);
+            if (!target.hasPlayedBefore()) {
+                mm().sendMessage(player, "command.player-not-found", targetName);
                 return;
             }
 
             PlayerStats stats = plugin.getStatsManager().getPlayerStats(target.getUniqueId());
-            plugin.getServer().getScheduler().runTask(plugin, () -> {
-                displayStats(player, target.getName(), stats);
-            });
+            plugin.getServer().getScheduler().runTask(plugin, () -> displayStats(player, target.getName(), stats));
         });
     }
 
     private void displayStats(Player viewer, String playerName, PlayerStats stats) {
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.header"));
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.title", playerName));
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.separator"));
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.games-played", stats.getGamesPlayed()));
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.wins", stats.getWins(), stats.getLosses()));
-        viewer.sendMessage(
-                plugin.getMessageManager().getMessage("stats.win-rate", String.format("%.1f", stats.getWinRate())));
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.kills", stats.getKills(), stats.getDeaths()));
-        viewer.sendMessage(
-                plugin.getMessageManager().getMessage("stats.kd-ratio", String.format("%.2f", stats.getKDRatio())));
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.final-kills", stats.getFinalKills()));
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.beds-broken", stats.getBedsBroken()));
-        viewer.sendMessage(plugin.getMessageManager().getMessage("stats.footer"));
+        sendHelpKeys(viewer, List.of("stats.header"));
+        viewer.sendMessage(mm().getMessage("stats.title", playerName));
+        sendHelpKeys(viewer, List.of("stats.separator"));
+        viewer.sendMessage(mm().getMessage("stats.games-played", stats.getGamesPlayed()));
+        viewer.sendMessage(mm().getMessage("stats.wins", stats.getWins(), stats.getLosses()));
+        viewer.sendMessage(mm().getMessage("stats.win-rate", String.format(Locale.ROOT, "%.1f", stats.getWinRate())));
+        viewer.sendMessage(mm().getMessage("stats.kills", stats.getKills(), stats.getDeaths()));
+        viewer.sendMessage(mm().getMessage("stats.kd-ratio", String.format(Locale.ROOT, "%.2f", stats.getKDRatio())));
+        viewer.sendMessage(mm().getMessage("stats.final-kills", stats.getFinalKills()));
+        viewer.sendMessage(mm().getMessage("stats.beds-broken", stats.getBedsBroken()));
+        sendHelpKeys(viewer, List.of("stats.footer"));
     }
+
+    /* --------------------------------------------------------------------- */
+    /* Arena list                                                             */
+    /* --------------------------------------------------------------------- */
 
     private void handleList(Player player) {
         plugin.getDebugLogger().debug("List arenas requested by " + player.getName());
-        player.sendMessage(plugin.getMessageManager().getMessage("arena-list.header"));
-        player.sendMessage(plugin.getMessageManager().getMessage("arena-list.title"));
-        player.sendMessage(plugin.getMessageManager().getMessage("arena-list.separator"));
+
+        sendHelpKeys(player, List.of("arena-list.header", "arena-list.title", "arena-list.separator"));
 
         for (Game game : plugin.getGameManager().getGames()) {
             String status = getStatusColor(game) + game.getState().toString();
             int playerCount = game.getPlayers().size();
             int spectatorCount = game.getSpectators().size();
 
-            player.sendMessage(
-                    plugin.getMessageManager().getMessage("arena-list.arena-line", game.getArena().getName()));
-            player.sendMessage(plugin.getMessageManager().getMessage("arena-list.arena-info",
+            player.sendMessage(mm().getMessage("arena-list.arena-line", game.getArena().getName()));
+            player.sendMessage(mm().getMessage("arena-list.arena-info",
                     playerCount, game.getArena().getMaxPlayers(), spectatorCount, status));
         }
 
-        player.sendMessage(plugin.getMessageManager().getMessage("arena-list.footer"));
+        player.sendMessage(mm().getMessage("arena-list.footer"));
     }
 
     private ChatColor getStatusColor(Game game) {
-        switch (game.getState()) {
-            case WAITING:
-                return ChatColor.GRAY;
-            case STARTING:
-                return ChatColor.YELLOW;
-            case RUNNING:
-                return ChatColor.GREEN;
-            case ENDING:
-                return ChatColor.RED;
-            default:
-                return ChatColor.WHITE;
-        }
+        return switch (game.getState()) {
+            case WAITING -> ChatColor.GRAY;
+            case STARTING -> ChatColor.YELLOW;
+            case RUNNING -> ChatColor.GREEN;
+            case ENDING -> ChatColor.RED;
+        };
     }
+
+    /* --------------------------------------------------------------------- */
+    /* Leaderboard                                                            */
+    /* --------------------------------------------------------------------- */
 
     private void handleLeaderboard(Player player, String[] args) {
-        String category = "wins";
-        if (args.length > 1) {
-            category = args[1].toLowerCase();
-        }
+        String category = (args.length > 1) ? args[1].toLowerCase(Locale.ROOT) : "wins";
 
-        plugin.getDebugLogger().debug("Leaderboard requested: player=" + player.getName()
-                + " category=" + category);
-
-        plugin.getMessageManager().sendMessage(player, "command.loading-leaderboard");
+        plugin.getDebugLogger().debug("Leaderboard requested: player=" + player.getName() + " category=" + category);
+        mm().sendMessage(player, "command.loading-leaderboard");
 
         switch (category) {
-            case "wins":
-            case "win":
-                plugin.getStatsManager().getTopWins(10).thenAccept(leaders -> {
-                    displayLeaderboard(player, plugin.getMessageManager().getMessage("leaderboard.top-wins"),
-                            leaders, "wins", ChatColor.GREEN);
-                });
-                break;
+            case "wins", "win" -> handleLeaderboardCategory(
+                    player,
+                    mm().getMessage("leaderboard.top-wins"),
+                    "wins",
+                    ChatColor.GREEN,
+                    () -> plugin.getStatsManager().getTopWins(10)
+            );
 
-            case "kills":
-            case "kill":
-                plugin.getStatsManager().getTopKills(10).thenAccept(leaders -> {
-                    displayLeaderboard(player, plugin.getMessageManager().getMessage("leaderboard.top-kills"),
-                            leaders, "kills", ChatColor.RED);
-                });
-                break;
+            case "kills", "kill" -> handleLeaderboardCategory(
+                    player,
+                    mm().getMessage("leaderboard.top-kills"),
+                    "kills",
+                    ChatColor.RED,
+                    () -> plugin.getStatsManager().getTopKills(10)
+            );
 
-            case "beds":
-            case "bed":
-                plugin.getStatsManager().getTopBedsBroken(10).thenAccept(leaders -> {
-                    displayLeaderboard(player, plugin.getMessageManager().getMessage("leaderboard.top-beds"),
-                            leaders, "beds", ChatColor.AQUA);
-                });
-                break;
+            case "beds", "bed" -> handleLeaderboardCategory(
+                    player,
+                    mm().getMessage("leaderboard.top-beds"),
+                    "beds",
+                    ChatColor.AQUA,
+                    () -> plugin.getStatsManager().getTopBedsBroken(10)
+            );
 
-            default:
-                plugin.getMessageManager().sendMessage(player, "command.leaderboard-usage");
-                break;
+            default -> mm().sendMessage(player, "command.leaderboard-usage");
         }
     }
 
-    private void displayLeaderboard(Player player, String title, Map<String, Integer> leaders, String stat,
-            ChatColor color) {
-        player.sendMessage(plugin.getMessageManager().getMessage("leaderboard.header"));
-        player.sendMessage(plugin.getMessageManager().getMessage("leaderboard.title", title));
-        player.sendMessage(plugin.getMessageManager().getMessage("leaderboard.separator"));
+    private interface LeaderSupplier {
+        java.util.concurrent.CompletableFuture<Map<String, Integer>> get();
+    }
+
+    private void handleLeaderboardCategory(Player player,
+                                           String title,
+                                           String statKey,
+                                           ChatColor color,
+                                           LeaderSupplier supplier) {
+        supplier.get().thenAccept(leaders -> displayLeaderboard(player, title, leaders, statKey, color));
+    }
+
+    private void displayLeaderboard(Player player, String title, Map<String, Integer> leaders, String stat, ChatColor color) {
+        player.sendMessage(mm().getMessage("leaderboard.header"));
+        player.sendMessage(mm().getMessage("leaderboard.title", title));
+        player.sendMessage(mm().getMessage("leaderboard.separator"));
 
         int rank = 1;
         for (Map.Entry<String, Integer> entry : leaders.entrySet()) {
-            String medal = getMedal(rank);
-            player.sendMessage(plugin.getMessageManager().getMessage("leaderboard.entry",
-                    medal, rank, entry.getKey(), color, entry.getValue(), stat));
+            player.sendMessage(mm().getMessage("leaderboard.entry",
+                    medal(rank), rank, entry.getKey(), color, entry.getValue(), stat));
             rank++;
         }
 
-        player.sendMessage(plugin.getMessageManager().getMessage("leaderboard.footer"));
+        player.sendMessage(mm().getMessage("leaderboard.footer"));
     }
 
-    private String getMedal(int rank) {
-        switch (rank) {
-            case 1:
-                return "🥇";
-            case 2:
-                return "🥈";
-            case 3:
-                return "🥉";
-            default:
-                return " ";
-        }
+    private String medal(int rank) {
+        return switch (rank) {
+            case 1 -> "🥇";
+            case 2 -> "🥈";
+            case 3 -> "🥉";
+            default -> " ";
+        };
     }
+
+    /* --------------------------------------------------------------------- */
+    /* Setup                                                                  */
+    /* --------------------------------------------------------------------- */
 
     private void handleSetup(Player player, String[] args) {
         if (args.length < 2) {
@@ -630,479 +573,397 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
             return;
         }
 
-        plugin.getDebugLogger().debug("Setup command: player=" + player.getName()
-                + " action=" + args[1]);
+        String sub = args[1].toLowerCase(Locale.ROOT);
 
-        switch (args[1].toLowerCase()) {
-            case "create":
-                handleSetupCreate(player, args);
-                break;
-            case "delete":
-                handleSetupDelete(player, args);
-                break;
-            case "setlobby":
-                handleSetupSetLobby(player);
-                break;
-            case "setspectator":
-                handleSetupSetSpectator(player);
-                break;
-            case "setspawn":
-                handleSetupSetSpawn(player, args);
-                break;
-            case "setbed":
-                handleSetupSetBed(player, args);
-                break;
-            case "setshop":
-                handleSetupSetShop(player, args);
-                break;
-            case "addgenerator":
-                handleSetupAddGenerator(player, args);
-                break;
-            case "setminplayers":
-                handleSetupSetMinPlayers(player, args);
-                break;
-            case "setmaxplayers":
-                handleSetupSetMaxPlayers(player, args);
-                break;
-            case "info":
-                handleSetupInfo(player);
-                break;
-            case "save":
-                handleSetupSave(player);
-                break;
-            case "cancel":
-                handleSetupCancel(player);
-                break;
-            case "list":
-                handleSetupList(player);
-                break;
-            default:
-                sendSetupHelp(player);
-                break;
+        plugin.getDebugLogger().debug("Setup command: player=" + player.getName() + " action=" + sub);
+
+        switch (sub) {
+            case "create" -> handleSetupCreate(player, args);
+            case "delete" -> handleSetupDelete(player, args);
+            case "setlobby" -> withSession(player, s -> {
+                s.setLobbySpawn(player.getLocation());
+                mm().sendMessage(player, "command.lobby-spawn-set");
+            });
+            case "setspectator" -> withSession(player, s -> {
+                s.setSpectatorSpawn(player.getLocation());
+                mm().sendMessage(player, "command.spectator-spawn-set");
+            });
+            case "setspawn" -> handleSetupSetSpawn(player, args);
+            case "setbed" -> handleSetupSetBed(player, args);
+            case "setshop" -> handleSetupSetShop(player, args);
+            case "addgenerator" -> handleSetupAddGenerator(player, args);
+            case "setminplayers" -> handleSetupSetMinPlayers(player, args);
+            case "setmaxplayers" -> handleSetupSetMaxPlayers(player, args);
+            case "info" -> handleSetupInfo(player);
+            case "save" -> handleSetupSave(player);
+            case "cancel" -> handleSetupCancel(player);
+            case "list" -> handleSetupList(player);
+            default -> sendSetupHelp(player);
         }
     }
 
+    private void withSession(Player player, Consumer<ArenaSetupSession> action) {
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
+        action.accept(session);
+        plugin.getDebugLogger().debug("Setup session updated: player=" + player.getName() + " arena=" + session.getArenaName());
+    }
+
     private void sendSetupHelp(Player player) {
-        MessageManager mm = plugin.getMessageManager();
+        MessageManager mm = mm();
         mm.sendMessage(player, "setup-help.header");
         mm.sendMessage(player, "setup-help.title");
         mm.sendMessage(player, "setup-help.separator");
-        mm.sendMessage(player, "setup-help.create");
-        mm.sendMessage(player, "setup-help.delete");
-        mm.sendMessage(player, "setup-help.setlobby");
-        mm.sendMessage(player, "setup-help.setspectator");
-        mm.sendMessage(player, "setup-help.setspawn");
-        mm.sendMessage(player, "setup-help.setbed");
-        mm.sendMessage(player, "setup-help.setshop");
-        mm.sendMessage(player, "setup-help.addgenerator");
-        mm.sendMessage(player, "setup-help.setminplayers");
-        mm.sendMessage(player, "setup-help.setmaxplayers");
-        mm.sendMessage(player, "setup-help.info");
-        mm.sendMessage(player, "setup-help.save");
-        mm.sendMessage(player, "setup-help.cancel");
-        mm.sendMessage(player, "setup-help.list");
+
+        for (String key : List.of(
+                "setup-help.create",
+                "setup-help.delete",
+                "setup-help.setlobby",
+                "setup-help.setspectator",
+                "setup-help.setspawn",
+                "setup-help.setbed",
+                "setup-help.setshop",
+                "setup-help.addgenerator",
+                "setup-help.setminplayers",
+                "setup-help.setmaxplayers",
+                "setup-help.info",
+                "setup-help.save",
+                "setup-help.cancel",
+                "setup-help.list"
+        )) {
+            mm.sendMessage(player, key);
+        }
+
         mm.sendMessage(player, "setup-help.footer");
     }
 
     private void handleSetupCreate(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
         if (args.length < 3) {
-            mm.sendMessage(player, "command.setup-create-usage");
+            mm().sendMessage(player, "command.setup-create-usage");
             return;
         }
 
         String arenaName = args[2];
         if (arenaManager.arenaExists(arenaName)) {
-            mm.sendMessage(player, "command.arena-already-exists", arenaName);
+            mm().sendMessage(player, "command.arena-already-exists", arenaName);
             return;
         }
 
         ArenaSetupSession session = arenaManager.getOrCreateSession(player.getUniqueId());
         session.setArenaName(arenaName);
-        plugin.getDebugLogger().debug("Setup create: player=" + player.getName()
-                + " arena=" + arenaName);
-        mm.sendMessage(player, "command.setup-started", arenaName);
-        mm.sendMessage(player, "command.setup-use-commands");
+
+        plugin.getDebugLogger().debug("Setup create: player=" + player.getName() + " arena=" + arenaName);
+        mm().sendMessage(player, "command.setup-started", arenaName);
+        mm().sendMessage(player, "command.setup-use-commands");
     }
 
     private void handleSetupDelete(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
         if (args.length < 3) {
-            mm.sendMessage(player, "command.setup-delete-usage");
+            mm().sendMessage(player, "command.setup-delete-usage");
             return;
         }
 
         String arenaName = args[2];
-        plugin.getDebugLogger().debug("Setup delete: player=" + player.getName()
-                + " arena=" + arenaName);
-        if (arenaManager.deleteArena(arenaName)) {
-            mm.sendMessage(player, "command.arena-deleted", arenaName);
-        } else {
-            mm.sendMessage(player, "command.arena-delete-failed");
-        }
-    }
+        plugin.getDebugLogger().debug("Setup delete: player=" + player.getName() + " arena=" + arenaName);
 
-    private void handleSetupSetLobby(Player player) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
-
-        session.setLobbySpawn(player.getLocation());
-        plugin.getDebugLogger().debug("Setup lobby spawn set: player=" + player.getName()
-                + " arena=" + session.getArenaName());
-        mm.sendMessage(player, "command.lobby-spawn-set");
-    }
-
-    private void handleSetupSetSpectator(Player player) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
-
-        session.setSpectatorSpawn(player.getLocation());
-        plugin.getDebugLogger().debug("Setup spectator spawn set: player=" + player.getName()
-                + " arena=" + session.getArenaName());
-        mm.sendMessage(player, "command.spectator-spawn-set");
+        if (arenaManager.deleteArena(arenaName)) mm().sendMessage(player, "command.arena-deleted", arenaName);
+        else mm().sendMessage(player, "command.arena-delete-failed");
     }
 
     private void handleSetupSetSpawn(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
 
         if (args.length < 3) {
-            mm.sendMessage(player, "command.setup-setspawn-usage");
-            String teams = String.join(", ",
-                    java.util.Arrays.stream(TeamColor.values()).map(Enum::name).toArray(String[]::new));
-            mm.sendMessage(player, "command.available-teams", teams);
+            mm().sendMessage(player, "command.setup-setspawn-usage");
+            String teams = String.join(", ", Arrays.stream(TeamColor.values()).map(Enum::name).toArray(String[]::new));
+            mm().sendMessage(player, "command.available-teams", teams);
             return;
         }
 
-        try {
-            TeamColor color = TeamColor.valueOf(args[2].toUpperCase());
-            session.setTeamSpawn(color, player.getLocation());
-            plugin.getDebugLogger().debug("Setup team spawn set: player=" + player.getName()
-                    + " arena=" + session.getArenaName() + " team=" + color.name());
-            mm.sendMessage(player, "command.team-spawn-set", color.getChatColor() + color.name());
-        } catch (IllegalArgumentException e) {
-            mm.sendMessage(player, "command.invalid-team-color");
-        }
+        TeamColor color = parseTeamColor(player, args[2]);
+        if (color == null) return;
+
+        session.setTeamSpawn(color, player.getLocation());
+        mm().sendMessage(player, "command.team-spawn-set", color.getChatColor() + color.name());
     }
 
     private void handleSetupSetBed(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
 
         if (args.length < 3) {
-            mm.sendMessage(player, "command.setup-setbed-usage");
+            mm().sendMessage(player, "command.setup-setbed-usage");
             return;
         }
 
-        try {
-            TeamColor color = TeamColor.valueOf(args[2].toUpperCase());
-            session.setBedLocation(color, player.getLocation());
-            plugin.getDebugLogger().debug("Setup team bed set: player=" + player.getName()
-                    + " arena=" + session.getArenaName() + " team=" + color.name());
-            mm.sendMessage(player, "command.team-bed-set", color.getChatColor() + color.name());
-        } catch (IllegalArgumentException e) {
-            mm.sendMessage(player, "command.invalid-team-color");
-        }
+        TeamColor color = parseTeamColor(player, args[2]);
+        if (color == null) return;
+
+        session.setBedLocation(color, player.getLocation());
+        mm().sendMessage(player, "command.team-bed-set", color.getChatColor() + color.name());
     }
 
     private void handleSetupSetShop(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
 
         if (args.length < 4) {
-            mm.sendMessage(player, "command.setup-setshop-usage");
-            mm.sendMessage(player, "command.available-shop-types", "item, upgrade");
+            mm().sendMessage(player, "command.setup-setshop-usage");
+            mm().sendMessage(player, "command.available-shop-types", "item, upgrade");
             return;
         }
 
-        try {
-            TeamColor color = TeamColor.valueOf(args[2].toUpperCase());
-            ShopType type = ShopType.fromString(args[3]);
-            if (type == null) {
-                mm.sendMessage(player, "command.invalid-shop-type");
-                mm.sendMessage(player, "command.available-shop-types", "item, upgrade");
-                return;
-            }
-            session.setShopLocation(color, type, player.getLocation());
-            plugin.getDebugLogger().debug("Setup team shop set: player=" + player.getName()
-                    + " arena=" + session.getArenaName() + " team=" + color.name()
-                    + " type=" + type.name().toLowerCase());
-            mm.sendMessage(player, "command.team-shop-set",
-                    color.getChatColor() + color.name(), type.getDisplayName());
-        } catch (IllegalArgumentException e) {
-            mm.sendMessage(player, "command.invalid-team-color");
+        TeamColor color = parseTeamColor(player, args[2]);
+        if (color == null) return;
+
+        ShopType type = ShopType.fromString(args[3]);
+        if (type == null) {
+            mm().sendMessage(player, "command.invalid-shop-type");
+            mm().sendMessage(player, "command.available-shop-types", "item, upgrade");
+            return;
         }
+
+        session.setShopLocation(color, type, player.getLocation());
+        mm().sendMessage(player, "command.team-shop-set", color.getChatColor() + color.name(), type.getDisplayName());
     }
 
     private void handleSetupAddGenerator(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
 
         if (args.length < 3) {
-            mm.sendMessage(player, "command.setup-addgenerator-usage");
+            mm().sendMessage(player, "command.setup-addgenerator-usage");
             return;
         }
 
         String genName = args[2];
         session.addGenerator(genName, player.getLocation());
-        plugin.getDebugLogger().debug("Setup generator added: player=" + player.getName()
-                + " arena=" + session.getArenaName() + " generator=" + genName);
-        mm.sendMessage(player, "command.generator-added", genName);
+        mm().sendMessage(player, "command.generator-added", genName);
     }
 
     private void handleSetupSetMinPlayers(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
 
         if (args.length < 3) {
-            mm.sendMessage(player, "command.setup-setminplayers-usage");
+            mm().sendMessage(player, "command.setup-setminplayers-usage");
             return;
         }
 
-        try {
-            int count = Integer.parseInt(args[2]);
-            session.setMinPlayers(count);
-            plugin.getDebugLogger().debug("Setup min players: player=" + player.getName()
-                    + " arena=" + session.getArenaName() + " min=" + count);
-            mm.sendMessage(player, "command.min-players-set", String.valueOf(count));
-        } catch (NumberFormatException e) {
-            mm.sendMessage(player, "command.invalid-number");
-        }
+        Integer count = parseIntOrMsg(player, args[2]);
+        if (count == null) return;
+
+        session.setMinPlayers(count);
+        mm().sendMessage(player, "command.min-players-set", String.valueOf(count));
     }
 
     private void handleSetupSetMaxPlayers(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
 
         if (args.length < 3) {
-            mm.sendMessage(player, "command.setup-setmaxplayers-usage");
+            mm().sendMessage(player, "command.setup-setmaxplayers-usage");
             return;
         }
 
-        try {
-            int count = Integer.parseInt(args[2]);
-            session.setMaxPlayers(count);
-            plugin.getDebugLogger().debug("Setup max players: player=" + player.getName()
-                    + " arena=" + session.getArenaName() + " max=" + count);
-            mm.sendMessage(player, "command.max-players-set", String.valueOf(count));
-        } catch (NumberFormatException e) {
-            mm.sendMessage(player, "command.invalid-number");
-        }
+        Integer count = parseIntOrMsg(player, args[2]);
+        if (count == null) return;
+
+        session.setMaxPlayers(count);
+        mm().sendMessage(player, "command.max-players-set", String.valueOf(count));
     }
 
     private void handleSetupInfo(Player player) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
 
-        mm.sendMessage(player, "command.setup-info-header");
-        mm.sendMessage(player, "command.setup-info-title");
-        mm.sendMessage(player, "command.setup-info-separator");
+        mm().sendMessage(player, "command.setup-info-header");
+        mm().sendMessage(player, "command.setup-info-title");
+        mm().sendMessage(player, "command.setup-info-separator");
         player.sendMessage(ChatColor.YELLOW + session.getProgress());
-        mm.sendMessage(player, "command.setup-info-footer");
-        plugin.getDebugLogger().debug("Setup info shown: player=" + player.getName()
-                + " arena=" + session.getArenaName());
+        mm().sendMessage(player, "command.setup-info-footer");
     }
 
     private void handleSetupSave(Player player) {
-        MessageManager mm = plugin.getMessageManager();
-        ArenaSetupSession session = arenaManager.getSession(player.getUniqueId());
-        if (session == null) {
-            mm.sendMessage(player, "command.no-setup-session");
-            return;
-        }
+        ArenaSetupSession session = requireSetupSession(player);
+        if (session == null) return;
 
         if (!session.isComplete()) {
-            mm.sendMessage(player, "command.setup-incomplete");
-            mm.sendMessage(player, "command.setup-incomplete-hint");
+            mm().sendMessage(player, "command.setup-incomplete");
+            mm().sendMessage(player, "command.setup-incomplete-hint");
             return;
         }
 
         try {
             arenaManager.saveArena(session);
-            mm.sendMessage(player, "command.arena-saved", session.getArenaName());
+            mm().sendMessage(player, "command.arena-saved", session.getArenaName());
 
-            plugin.getDebugLogger().debug("Setup saved: player=" + player.getName()
-                    + " arena=" + session.getArenaName());
-
-            // Load the arena into the game manager
             Arena arena = arenaManager.loadArena(session.getArenaName());
             if (arena != null) {
                 plugin.getGameManager().createGame(session.getArenaName(), arena);
-                mm.sendMessage(player, "command.arena-loaded");
+                mm().sendMessage(player, "command.arena-loaded");
             }
 
             arenaManager.removeSession(player.getUniqueId());
         } catch (IOException e) {
-            mm.sendMessage(player, "command.arena-save-failed", e.getMessage());
-            plugin.getDebugLogger().debug("Setup save failed: player=" + player.getName()
-                    + " arena=" + session.getArenaName());
+            mm().sendMessage(player, "command.arena-save-failed", e.getMessage());
         }
     }
 
     private void handleSetupCancel(Player player) {
-        MessageManager mm = plugin.getMessageManager();
         arenaManager.removeSession(player.getUniqueId());
-        plugin.getDebugLogger().debug("Setup cancelled: player=" + player.getName());
-        mm.sendMessage(player, "command.setup-cancelled");
+        mm().sendMessage(player, "command.setup-cancelled");
     }
 
     private void handleSetupList(Player player) {
-        MessageManager mm = plugin.getMessageManager();
-        plugin.getDebugLogger().debug("Setup list requested: player=" + player.getName());
-        mm.sendMessage(player, "configured-arenas.header");
-        mm.sendMessage(player, "configured-arenas.title");
-        mm.sendMessage(player, "configured-arenas.separator");
+        mm().sendMessage(player, "configured-arenas.header");
+        mm().sendMessage(player, "configured-arenas.title");
+        mm().sendMessage(player, "configured-arenas.separator");
 
         for (String arenaName : arenaManager.getArenaNames()) {
-            mm.sendMessage(player, "configured-arenas.arena-line", arenaName);
+            mm().sendMessage(player, "configured-arenas.arena-line", arenaName);
         }
 
-        mm.sendMessage(player, "configured-arenas.footer");
+        mm().sendMessage(player, "configured-arenas.footer");
     }
 
+    /* --------------------------------------------------------------------- */
+    /* Admin actions                                                          */
+    /* --------------------------------------------------------------------- */
+
     private void handleForceStart(Player player) {
-        MessageManager mm = plugin.getMessageManager();
         Game game = plugin.getGameManager().getPlayerGame(player);
         if (game == null) {
-            mm.sendMessage(player, "command.must-be-in-game");
+            mm().sendMessage(player, "command.must-be-in-game");
             return;
         }
 
         if (game.getState() != GameState.WAITING && game.getState() != GameState.STARTING) {
-            mm.sendMessage(player, "command.game-already-running");
+            mm().sendMessage(player, "command.game-already-running");
             return;
         }
 
-        mm.sendMessage(player, "command.force-starting");
-        plugin.getDebugLogger().debug("Force start: player=" + player.getName()
-                + " arena=" + game.getArena().getName());
+        mm().sendMessage(player, "command.force-starting");
         game.forceStart();
     }
 
     private void handleForceStop(Player player) {
-        MessageManager mm = plugin.getMessageManager();
         Game game = plugin.getGameManager().getPlayerGame(player);
         if (game == null) {
-            mm.sendMessage(player, "command.must-be-in-game");
+            mm().sendMessage(player, "command.must-be-in-game");
             return;
         }
 
         game.endGame(null);
-        plugin.getDebugLogger().debug("Force stop: player=" + player.getName()
-                + " arena=" + game.getArena().getName());
-        mm.sendMessage(player, "command.game-stopped");
+        mm().sendMessage(player, "command.game-stopped");
     }
 
     private void handleResetWorld(Player player) {
-        MessageManager mm = plugin.getMessageManager();
         Game game = plugin.getGameManager().getPlayerGame(player);
         if (game == null) {
-            mm.sendMessage(player, "command.must-be-in-game");
+            mm().sendMessage(player, "command.must-be-in-game");
             return;
         }
 
         int blockCount = game.getWorldResetManager().getBlockChangeCount();
         game.getWorldResetManager().resetWorld();
-        plugin.getDebugLogger().debug("World reset: player=" + player.getName()
-                + " arena=" + game.getArena().getName() + " blocks=" + blockCount);
-        mm.sendMessage(player, "command.world-reset", String.valueOf(blockCount));
+        mm().sendMessage(player, "command.world-reset", String.valueOf(blockCount));
     }
 
     private void handleReload(Player player) {
-        MessageManager mm = plugin.getMessageManager();
         plugin.reloadConfig();
-        mm.reload();
-        plugin.getDebugLogger().debug("Config reloaded by " + player.getName());
-        mm.sendMessage(player, "command.config-reloaded");
+        mm().reload();
+        mm().sendMessage(player, "command.config-reloaded");
     }
 
-    /**
-     * Send player to lobby server
-     */
     private void handleLobby(Player player) {
-        MessageManager mm = plugin.getMessageManager();
         if (!plugin.getBungeeManager().isEnabled()) {
-            mm.sendMessage(player, "command.bungee-not-enabled");
+            mm().sendMessage(player, "command.bungee-not-enabled");
             return;
         }
 
-        // Leave game if in one
         Game game = plugin.getGameManager().getPlayerGame(player);
-        if (game != null) {
-            game.removePlayer(player);
-        }
+        if (game != null) game.removePlayer(player);
 
-        mm.sendMessage(player, "command.sending-to-lobby");
-        plugin.getDebugLogger().debug("Lobby command: player=" + player.getName());
+        mm().sendMessage(player, "command.sending-to-lobby");
         plugin.getBungeeManager().sendPlayerToLobby(player);
     }
 
-    /**
-     * Handle team selection command
-     */
-    private void handleTeam(Player player, String[] args) {
-        MessageManager mm = plugin.getMessageManager();
-        Game game = plugin.getGameManager().getPlayerGame(player);
-        
-        if (game == null) {
-            mm.sendMessage(player, "command.not-in-game");
-            return;
-        }
+    /* --------------------------------------------------------------------- */
+    /* Vote                                                                   */
+    /* --------------------------------------------------------------------- */
 
-        // If team color is provided, change directly
-        if (args.length >= 2) {
-            try {
-                TeamColor color = TeamColor.valueOf(args[1].toUpperCase());
-                game.changeTeam(player, color);
-            } catch (IllegalArgumentException e) {
-                mm.sendMessage(player, "command.invalid-team-color");
+    private void handleVote(Player player, String[] args) {
+        if (plugin.getMapVoteManager() == null) return;
+
+        if (args.length > 1) {
+            String sub = args[1].toLowerCase(Locale.ROOT);
+
+            switch (sub) {
+                case "open" -> {
+                    if (!plugin.getMapVoteManager().isQueued(player.getUniqueId())) {
+                        mm().sendMessage(player, "map-vote.not-queued");
+                        return;
+                    }
+                    plugin.getMapVoteManager().openVoteGui(player);
+                }
+
+                case "start" -> {
+                    if (noPermOrMsg(player, "bedwars.vote.admin")) return;
+                    plugin.getMapVoteManager().forceStartVoting(player);
+                }
+
+                case "end" -> {
+                    if (noPermOrMsg(player, "bedwars.vote.admin")) return;
+                    plugin.getMapVoteManager().forceEndVoting(player);
+                }
+
+                case "force" -> {
+                    if (noPermOrMsg(player, "bedwars.vote.admin")) return;
+                    if (args.length < 3) {
+                        mm().sendMessage(player, "map-vote.force-usage");
+                        return;
+                    }
+                    plugin.getMapVoteManager().forceSelectArena(player, args[2]);
+                }
+
+                default -> mm().sendMessage(player, "map-vote.vote-usage");
             }
             return;
         }
 
-        // Otherwise open GUI
-        if (plugin.getTeamSelectionGUI() != null) {
-            plugin.getTeamSelectionGUI().openTeamSelection(player, game);
-        } else {
-            mm.sendMessage(player, "team.gui-not-available");
+        if (!plugin.getMapVoteManager().isQueued(player.getUniqueId())) {
+            mm().sendMessage(player, "map-vote.not-queued");
+            return;
         }
+        plugin.getMapVoteManager().openVoteGui(player);
     }
+
+    /* --------------------------------------------------------------------- */
+    /* Team                                                                   */
+    /* --------------------------------------------------------------------- */
+
+    private void handleTeam(Player player, String[] args) {
+        Game game = plugin.getGameManager().getPlayerGame(player);
+        if (game == null) {
+            mm().sendMessage(player, "command.not-in-game");
+            return;
+        }
+
+        if (args.length >= 2) {
+            TeamColor color = parseTeamColor(player, args[1]);
+            if (color != null) game.changeTeam(player, color);
+            return;
+        }
+
+        if (plugin.getTeamSelectionGUI() != null) plugin.getTeamSelectionGUI().openTeamSelection(player, game);
+        else mm().sendMessage(player, "team.gui-not-available");
+    }
+
+    /* --------------------------------------------------------------------- */
+    /* Party                                                                  */
+    /* --------------------------------------------------------------------- */
 
     private void handleParty(Player player, String[] args) {
         if (args.length < 2) {
@@ -1110,129 +971,122 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
             return;
         }
 
-        String sub = args[1].toLowerCase();
+        String sub = args[1].toLowerCase(Locale.ROOT);
+
         switch (sub) {
-            case "create":
-                plugin.getPartyManager().createParty(player);
-                break;
+            case "create" -> plugin.getPartyManager().createParty(player);
 
-            case "invite":
-                if (!player.hasPermission("bedwars.party.invite")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return;
-                }
+            case "invite" -> {
+                if (noPermOrMsg(player, "bedwars.party.invite")) return;
                 if (args.length < 3) {
-                    plugin.getMessageManager().sendMessage(player, "party.invite-usage");
+                    mm().sendMessage(player, "party.invite-usage");
                     return;
                 }
-                Player target = plugin.getServer().getPlayer(args[2]);
-                if (target != null) {
-                    plugin.getPartyManager().invitePlayer(player, target);
-                    return;
-                }
+                handlePartyInvite(player, args[2]);
+            }
 
-                @SuppressWarnings("deprecation")
-                var offline = plugin.getServer().getOfflinePlayer(args[2]);
-                if (offline == null || (!offline.hasPlayedBefore() && !offline.isOnline())) {
-                    plugin.getMessageManager().sendMessage(player, "party.player-not-online");
-                    return;
-                }
-
-                plugin.getPartyManager().invitePlayer(player, offline.getUniqueId(), offline.getName());
-                break;
-
-            case "accept":
+            case "accept" -> {
                 if (args.length < 3) {
-                    plugin.getMessageManager().sendMessage(player, "party.accept-usage");
+                    mm().sendMessage(player, "party.accept-usage");
                     return;
                 }
                 plugin.getPartyManager().acceptInvite(player, args[2]);
-                break;
+            }
 
-            case "deny":
+            case "deny" -> {
                 if (args.length < 3) {
-                    plugin.getMessageManager().sendMessage(player, "party.deny-usage");
+                    mm().sendMessage(player, "party.deny-usage");
                     return;
                 }
                 plugin.getPartyManager().denyInvite(player, args[2]);
-                break;
+            }
 
-            case "leave":
-                plugin.getPartyManager().leaveParty(player);
-                break;
+            case "leave" -> plugin.getPartyManager().leaveParty(player);
 
-            case "kick":
-                if (!player.hasPermission("bedwars.party.kick")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return;
-                }
+            case "kick" -> {
+                if (noPermOrMsg(player, "bedwars.party.kick")) return;
                 if (args.length < 3) {
-                    plugin.getMessageManager().sendMessage(player, "party.kick-usage");
+                    mm().sendMessage(player, "party.kick-usage");
                     return;
                 }
-                Player kickTarget = plugin.getServer().getPlayer(args[2]);
-                if (kickTarget == null) {
-                    plugin.getMessageManager().sendMessage(player, "party.player-not-online");
+                Player target = plugin.getServer().getPlayer(args[2]);
+                if (target == null) {
+                    mm().sendMessage(player, "party.player-not-online");
                     return;
                 }
-                plugin.getPartyManager().kickMember(player, kickTarget);
-                break;
+                plugin.getPartyManager().kickMember(player, target);
+            }
 
-            case "promote":
-                if (!player.hasPermission("bedwars.party.promote")) {
-                    plugin.getMessageManager().sendMessage(player, "command.no-permission");
-                    return;
-                }
+            case "promote" -> {
+                if (noPermOrMsg(player, "bedwars.party.promote")) return;
                 if (args.length < 3) {
-                    plugin.getMessageManager().sendMessage(player, "party.promote-usage");
+                    mm().sendMessage(player, "party.promote-usage");
                     return;
                 }
-                Player promoteTarget = plugin.getServer().getPlayer(args[2]);
-                if (promoteTarget == null) {
-                    plugin.getMessageManager().sendMessage(player, "party.player-not-online");
+                Player target = plugin.getServer().getPlayer(args[2]);
+                if (target == null) {
+                    mm().sendMessage(player, "party.player-not-online");
                     return;
                 }
-                plugin.getPartyManager().promoteMember(player, promoteTarget);
-                break;
+                plugin.getPartyManager().promoteMember(player, target);
+            }
 
-            case "disband":
-                plugin.getPartyManager().disbandParty(player);
-                break;
+            case "disband" -> plugin.getPartyManager().disbandParty(player);
 
-            case "list":
-                plugin.getPartyManager().listParty(player);
-                break;
+            case "list" -> plugin.getPartyManager().listParty(player);
 
-            case "chat":
+            case "chat" -> {
                 if (args.length < 3) {
-                    plugin.getMessageManager().sendMessage(player, "party.chat-usage");
+                    mm().sendMessage(player, "party.chat-usage");
                     return;
                 }
-                String message = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
-                plugin.getPartyManager().sendPartyChat(player, message);
-                break;
+                String msg = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+                plugin.getPartyManager().sendPartyChat(player, msg);
+            }
 
-            default:
-                sendPartyHelp(player);
-                break;
+            default -> sendPartyHelp(player);
         }
     }
 
+    private void handlePartyInvite(Player player, String targetName) {
+        Player target = plugin.getServer().getPlayer(targetName);
+        if (target != null) {
+            plugin.getPartyManager().invitePlayer(player, target);
+            return;
+        }
+
+        @SuppressWarnings("deprecation")
+        var offline = plugin.getServer().getOfflinePlayer(targetName);
+
+        if (!offline.hasPlayedBefore() && !offline.isOnline()) {
+            mm().sendMessage(player, "party.player-not-online");
+            return;
+        }
+
+        plugin.getPartyManager().invitePlayer(player, offline.getUniqueId(), offline.getName());
+    }
+
     private void sendPartyHelp(Player player) {
-        MessageManager mm = plugin.getMessageManager();
+        MessageManager mm = mm();
         mm.sendMessage(player, "party-help.header");
         mm.sendMessage(player, "party-help.title");
         mm.sendMessage(player, "party-help.separator");
-        mm.sendMessage(player, "party-help.create");
-        mm.sendMessage(player, "party-help.invite");
-        mm.sendMessage(player, "party-help.accept");
-        mm.sendMessage(player, "party-help.deny");
-        mm.sendMessage(player, "party-help.leave");
-        mm.sendMessage(player, "party-help.kick");
-        mm.sendMessage(player, "party-help.promote");
-        mm.sendMessage(player, "party-help.disband");
-        mm.sendMessage(player, "party-help.list");
-        mm.sendMessage(player, "party-help.chat");
+
+        for (String key : List.of(
+                "party-help.create",
+                "party-help.invite",
+                "party-help.accept",
+                "party-help.deny",
+                "party-help.leave",
+                "party-help.kick",
+                "party-help.promote",
+                "party-help.disband",
+                "party-help.list",
+                "party-help.chat"
+        )) {
+            mm.sendMessage(player, key);
+        }
+
         mm.sendMessage(player, "party-help.footer");
     }
 }

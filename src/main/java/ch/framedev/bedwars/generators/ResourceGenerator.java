@@ -163,7 +163,9 @@ public class ResourceGenerator {
     }
 
     private String formatLocation() {
-        return location.getWorld().getName() + ":" + location.getBlockX() + ","
+        World world = location.getWorld();
+        if(world == null) return null;
+        return world.getName() + ":" + location.getBlockX() + ","
                 + location.getBlockY() + "," + location.getBlockZ();
     }
 

@@ -9,7 +9,6 @@ import java.util.UUID;
 /**
  * Represents a party of players.
  */
-@SuppressWarnings({"BooleanMethodIsAlwaysInverted"})
 public class Party {
 
     private final UUID id;

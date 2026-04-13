@@ -13,17 +13,19 @@ import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Handles the shop GUI
  */
-@SuppressWarnings({"ClassCanBeRecord"})
-public class ShopGUI {
+public record ShopGUI(ShopManager shopManager) {
 
-    private final ShopManager shopManager;
+    public ShopGUI {
+        shopManager = Objects.requireNonNull(shopManager, "shopManager");
+    }
 
     public ShopGUI(Plugin plugin) {
-        this.shopManager = new ShopManager(plugin);
+        this(new ShopManager(plugin));
     }
 
     public void openMainShop(Player player) {

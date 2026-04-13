@@ -10,7 +10,6 @@ import org.bukkit.entity.Player;
 /**
  * CloudNet v4 integration helper.
  */
-@SuppressWarnings("UnusedReturnValue")
 public class CloudNetManager {
 
     private final BedWarsPlugin plugin;

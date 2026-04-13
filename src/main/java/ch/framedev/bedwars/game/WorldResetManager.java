@@ -22,7 +22,6 @@ import java.util.Set;
  * - Safer world handling (skips if world unloaded)
  * - Uses setType(..., false) / setBlockData(..., false) to avoid physics explosions during reset
  */
-@SuppressWarnings("ALL")
 public class WorldResetManager {
 
     /** Blocks placed by players during the match -> remove (set AIR) on reset. */

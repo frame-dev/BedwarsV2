@@ -236,18 +236,21 @@ public class MyEventListener implements Listener {
 
 ### Available Events
 
-**Game Events:**
+#### Game Events
+
 - `GameStartEvent` - Game starts
 - `GameEndEvent` - Game ends
 - `GameResetEvent` - Game resets
 
-**Player Events:**
+#### Player Events
+
 - `PlayerJoinGameEvent` - Player joins game
 - `PlayerLeaveGameEvent` - Player leaves game
 - `PlayerRespawnEvent` - Player respawns
 - `PlayerEliminationEvent` - Player eliminated
 
-**Game Mechanic Events:**
+#### Game Mechanic Events
+
 - `BedDestroyEvent` - Bed destroyed
 - `TeamEliminationEvent` - Team eliminated
 - `ResourceGenerateEvent` - Resource drops
@@ -518,6 +521,7 @@ public void createCustomArena() {
 ## Best Practices
 
 ### 1. Always Check if Game Exists
+
 ```java
 Game game = gameManager.getGame(player);
 if (game == null || !game.isRunning()) {
@@ -526,7 +530,9 @@ if (game == null || !game.isRunning()) {
 ```
 
 ### 2. Use Event System
+
 Don't poll for changes, listen to events instead:
+
 ```java
 @EventHandler
 public void onGameStart(GameStartEvent event) {
@@ -535,7 +541,9 @@ public void onGameStart(GameStartEvent event) {
 ```
 
 ### 3. Handle Async Operations
+
 Some operations might be async:
+
 ```java
 Bukkit.getScheduler().runTaskAsync(plugin, () -> {
     PlayerStats stats = statsManager.getStats(uuid);
@@ -546,7 +554,9 @@ Bukkit.getScheduler().runTaskAsync(plugin, () -> {
 ```
 
 ### 4. Check Permissions
+
 Always verify player has necessary permissions:
+
 ```java
 if (!player.hasPermission("bedwars.join")) {
     player.sendMessage("No permission!");
@@ -555,7 +565,9 @@ if (!player.hasPermission("bedwars.join")) {
 ```
 
 ### 5. Handle Null Values
+
 API methods can return null:
+
 ```java
 Team team = game.getTeam(player);
 if (team != null) {
@@ -570,6 +582,7 @@ if (team != null) {
 ### Enable Debug Mode
 
 In `config.yml`:
+
 ```yaml
 debug: true
 ```
@@ -583,15 +596,18 @@ grep "BedWars" logs/latest.log
 
 ### Common Issues
 
-**ClassCastException**
+#### ClassCastException
+
 - Ensure you're casting to correct type
 - Verify plugin version compatibility
 
-**NullPointerException**
+#### NullPointerException
+
 - Always null-check return values
 - Verify player is in active game
 
-**Event Not Firing**
+#### Event Not Firing
+
 - Ensure event handler is registered
 - Check @EventHandler annotation is present
 - Verify plugin loads before BedWars
@@ -613,6 +629,7 @@ To contribute to BedWars API:
 ## Support
 
 For API questions or issues:
+
 1. Check this documentation
 2. Review example code
 3. Check plugin source

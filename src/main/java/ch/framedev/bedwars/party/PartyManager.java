@@ -17,7 +17,6 @@ import java.util.UUID;
 /**
  * Manages party creation, invites, and persistence.
  */
-@SuppressWarnings({"BooleanMethodIsAlwaysInverted", "DuplicatedCode"})
 public class PartyManager {
 
     private final BedWarsPlugin plugin;
@@ -135,7 +134,7 @@ public class PartyManager {
             if (party == null) {
                 return;
             }
-        } else if (!party.getLeader().equals(leader.getUniqueId())) {
+        } else if (!isLeader(leader.getUniqueId())) {
             mm.sendMessage(leader, "party.only-leader");
             return;
         }
@@ -179,13 +178,8 @@ public class PartyManager {
 
     public void acceptInvite(Player player, String inviterName) {
         MessageManager mm = plugin.getMessageManager();
-        PartyInvite invite = loadInvite(player.getUniqueId());
-        if (invite == null || invite.isExpired()) {
-            invites.remove(player.getUniqueId());
-            deleteInvite(player.getUniqueId());
-            mm.sendMessage(player, "party.invite-expired");
-            return;
-        }
+        PartyInvite invite = getActiveInviteOrNotify(player);
+        if (invite == null) return;
 
         if (inviterName != null && !inviterName.equalsIgnoreCase(invite.getInviterName())) {
             mm.sendMessage(player, "party.invite-not-found", inviterName);
@@ -229,13 +223,8 @@ public class PartyManager {
 
     public void denyInvite(Player player, String inviterName) {
         MessageManager mm = plugin.getMessageManager();
-        PartyInvite invite = loadInvite(player.getUniqueId());
-        if (invite == null || invite.isExpired()) {
-            invites.remove(player.getUniqueId());
-            deleteInvite(player.getUniqueId());
-            mm.sendMessage(player, "party.invite-expired");
-            return;
-        }
+        PartyInvite invite = getActiveInviteOrNotify(player);
+        if (invite == null) return;
 
         if (inviterName != null && !inviterName.equalsIgnoreCase(invite.getInviterName())) {
             mm.sendMessage(player, "party.invite-not-found", inviterName);
@@ -287,16 +276,8 @@ public class PartyManager {
     }
 
     public void disbandParty(Player leader) {
-        MessageManager mm = plugin.getMessageManager();
-        Party party = getParty(leader.getUniqueId());
-        if (party == null) {
-            mm.sendMessage(leader, "party.not-in-party");
-            return;
-        }
-        if (!party.getLeader().equals(leader.getUniqueId())) {
-            mm.sendMessage(leader, "party.only-leader");
-            return;
-        }
+        Party party = getLeaderPartyOrNotify(leader);
+        if (party == null) return;
 
         sendPartyMessage(party, "party.disbanded");
         for (UUID member : party.getMemberUuids()) {
@@ -310,15 +291,8 @@ public class PartyManager {
 
     public void kickMember(Player leader, Player target) {
         MessageManager mm = plugin.getMessageManager();
-        Party party = getParty(leader.getUniqueId());
-        if (party == null) {
-            mm.sendMessage(leader, "party.not-in-party");
-            return;
-        }
-        if (!party.getLeader().equals(leader.getUniqueId())) {
-            mm.sendMessage(leader, "party.only-leader");
-            return;
-        }
+        Party party = getLeaderPartyOrNotify(leader);
+        if (party == null) return;
         if (!party.isMember(target.getUniqueId())) {
             mm.sendMessage(leader, "party.not-in-party");
             return;
@@ -334,15 +308,8 @@ public class PartyManager {
 
     public void promoteMember(Player leader, Player target) {
         MessageManager mm = plugin.getMessageManager();
-        Party party = getParty(leader.getUniqueId());
-        if (party == null) {
-            mm.sendMessage(leader, "party.not-in-party");
-            return;
-        }
-        if (!party.getLeader().equals(leader.getUniqueId())) {
-            mm.sendMessage(leader, "party.only-leader");
-            return;
-        }
+        Party party = getLeaderPartyOrNotify(leader);
+        if (party == null) return;
         if (!party.isMember(target.getUniqueId())) {
             mm.sendMessage(leader, "party.not-in-party");
             return;
@@ -469,6 +436,32 @@ public class PartyManager {
         }
 
         return null;
+    }
+
+    private Party getLeaderPartyOrNotify(Player leader) {
+        MessageManager mm = plugin.getMessageManager();
+        Party party = getParty(leader.getUniqueId());
+        if (party == null) {
+            mm.sendMessage(leader, "party.not-in-party");
+            return null;
+        }
+        if (!isLeader(leader.getUniqueId())) {
+            mm.sendMessage(leader, "party.only-leader");
+            return null;
+        }
+        return party;
+    }
+
+    private PartyInvite getActiveInviteOrNotify(Player player) {
+        MessageManager mm = plugin.getMessageManager();
+        PartyInvite invite = loadInvite(player.getUniqueId());
+        if (invite == null || invite.isExpired()) {
+            invites.remove(player.getUniqueId());
+            deleteInvite(player.getUniqueId());
+            mm.sendMessage(player, "party.invite-expired");
+            return null;
+        }
+        return invite;
     }
 
     private void saveInvite(UUID targetUuid, PartyInvite invite) {

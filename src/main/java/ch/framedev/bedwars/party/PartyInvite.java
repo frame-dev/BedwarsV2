@@ -5,20 +5,7 @@ import java.util.UUID;
 /**
  * Represents a pending party invite.
  */
-@SuppressWarnings("ClassCanBeRecord")
-public class PartyInvite {
-
-    private final UUID partyId;
-    private final UUID inviterUuid;
-    private final String inviterName;
-    private final long expiresAt;
-
-    public PartyInvite(UUID partyId, UUID inviterUuid, String inviterName, long expiresAt) {
-        this.partyId = partyId;
-        this.inviterUuid = inviterUuid;
-        this.inviterName = inviterName;
-        this.expiresAt = expiresAt;
-    }
+public record PartyInvite(UUID partyId, UUID inviterUuid, String inviterName, long expiresAt) {
 
     public UUID getPartyId() {
         return partyId;

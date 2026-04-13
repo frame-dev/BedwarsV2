@@ -23,7 +23,6 @@ import ch.framedev.bedwars.upgrades.TeamUpgrades;
  * Manages team upgrades loaded from upgrades.yml configuration file.
  * Allows server owners to add, remove, or modify upgrades without code changes.
  */
-@SuppressWarnings({"ResultOfMethodCallIgnored", "SwitchStatementWithTooFewBranches"})
 public class UpgradeManager {
 
     private final BedWarsPlugin plugin;
@@ -45,7 +44,10 @@ public class UpgradeManager {
 
         // Create default upgrades.yml if it doesn't exist
         if (!upgradesFile.exists()) {
-            plugin.getDataFolder().mkdirs();
+            File dataFolder = plugin.getDataFolder();
+            if (!dataFolder.exists() && !dataFolder.mkdirs()) {
+                plugin.getLogger().warning("Could not create plugin data folder: " + dataFolder.getAbsolutePath());
+            }
             try (InputStream input = plugin.getResource("upgrades.yml")) {
                 if (input != null) {
                     Files.copy(input, upgradesFile.toPath());
@@ -332,10 +334,10 @@ public class UpgradeManager {
 
     private String normalizePotionEffectKey(String value) {
         String upper = value.trim().toUpperCase(Locale.ROOT);
-        return switch (upper) {
-            case "FAST_DIGGING" -> "haste";
-            default -> value.trim().toLowerCase(Locale.ROOT);
-        };
+        if ("FAST_DIGGING".equals(upper)) {
+            return "haste";
+        }
+        return value.trim().toLowerCase(Locale.ROOT);
     }
 
     /**

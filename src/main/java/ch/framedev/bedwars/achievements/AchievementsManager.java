@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Manages achievements and progress.
@@ -34,7 +35,6 @@ import java.util.function.Function;
  * - Single "safeMaterial(...)" helper for icon parsing
  * - Single "buildLore(...)" helper for GUI lore rendering
  */
-@SuppressWarnings("unchecked")
 public class AchievementsManager {
 
     private final BedWarsPlugin plugin;
@@ -243,6 +243,7 @@ public class AchievementsManager {
             AchievementType type = safeEnum(
                     entry.getString("type", "KILLS"),
                     AchievementType::valueOf,
+                    () -> AchievementType.KILLS,
                     () -> plugin.getLogger().warning("Invalid achievement type for " + key + ", defaulting to KILLS")
             );
 
@@ -339,12 +340,13 @@ public class AchievementsManager {
 
     private <T> T safeEnum(String raw,
                            Function<String, T> parser,
+                           Supplier<T> fallback,
                            Runnable onError) {
         try {
             return parser.apply(raw.toUpperCase(Locale.ROOT));
         } catch (Exception e) {
             if (onError != null) onError.run();
-            return (T) AchievementType.KILLS;
+            return fallback.get();
         }
     }
 }

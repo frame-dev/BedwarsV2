@@ -8,7 +8,6 @@ import java.sql.*;
 /**
  * Manages SQLite database connections and operations
  */
-@SuppressWarnings({"SqlNoDataSourceInspection", "UnusedReturnValue", "SqlSourceToSinkFlow"})
 public class DatabaseManager {
 
     private final BedWarsPlugin plugin;

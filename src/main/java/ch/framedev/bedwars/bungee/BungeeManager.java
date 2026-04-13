@@ -15,7 +15,6 @@ import java.io.IOException;
 /**
  * Handles BungeeCord messaging for cross-server communication
  */
-@SuppressWarnings("UnstableApiUsage")
 public class BungeeManager implements PluginMessageListener {
 
     private final BedWarsPlugin plugin;

@@ -386,6 +386,92 @@ Common player commands:
 Local voting selects eligible empty waiting arenas that can fit the queued
 players. Test direct joining first, then test `/bw queue` with enough accounts.
 
+### Party workflow
+
+The leader invites a player with `/bw party invite PlayerName`. That player
+accepts with `/bw party accept LeaderName`. The leader then uses
+`/bw join skyislands` to join all online members together, provided the arena has
+enough room and no member is in a different match. A normal party member cannot
+start this group join. Join signs and map-voting queues currently join players
+individually; use the leader's `/bw join` command for a group.
+
+`/bw party promote PlayerName` transfers leadership; `/bw party kick PlayerName`
+removes another member. `/bw party leave` leaves the party and transfers leadership
+when necessary. `/bw party disband` is for the leader. A leader cannot kick
+themselves. Invites expire and are invalidated when the party is disbanded or
+the inviting leader changes.
+
+Match leaving is separate from party membership: a member's `/bw leave` removes
+only that member from the match. A leader's `/bw leave` also removes online
+members who are in that same match. Membership is saved in this server's SQLite
+database; this is not a shared cross-server party database.
+
+### Default achievements and cosmetics
+
+The achievements menu starts at slot 10 (Bukkit slots are zero-based) in this
+configuration order:
+
+| Achievement | Requirement |
+| --- | --- |
+| First Blood | 1 kill |
+| Killer I | 10 kills |
+| Final Blow | 1 final kill |
+| Bed Breaker | 1 enemy bed broken |
+| Bed Breaker II | 10 enemy beds broken |
+| First Victory | 1 win |
+| Veteran | 25 games played |
+
+Final kills also count as kills. Progress is retained across reconnects and
+restarts, and unlocked achievements stop incrementing at their target.
+
+The default cosmetics menu places kill effects at slots 10–20: none, firework,
+heart, smoke, explosion, flame, soul, portal, enchant, music, totem. Bed effects
+occupy slots 28–37: none, lightning, firework, explosion, flame, soul, portal,
+enchant, music, totem. Each effect has a default `permission` in `cosmetics.yml`;
+selecting and playing it both require that permission. Disabled effects
+cannot play. Fireworks are tagged so their damage is cancelled; lightning uses
+the visual-only lightning effect and explosion cosmetics use particles.
+
+To let everyone test enabled effects without granting individual effect
+permissions, add or change this section in `plugins/BedWars/cosmetics.yml`:
+
+```yaml
+testing:
+  unlock-all: true
+```
+
+Restart the server, then use `/bw cosmetics`. This bypass applies to selection,
+menu lock labels, and playing effects. It defaults to `false`; set it back to
+`false` and restart to restore permission checks. Individual `enabled: false`
+effects and the global cosmetics enable switch are still respected. The menu
+command still requires `bedwars.cosmetics`, which is granted to everyone by default.
+
+Default kill permissions are `bedwars.cosmetics.kill.firework`,
+`bedwars.cosmetics.kill.heart`, `bedwars.cosmetics.kill.smoke`, and
+`bedwars.cosmetics.kill.explosion`. Bed permissions are
+`bedwars.cosmetics.bed.lightning`, `bedwars.cosmetics.bed.firework`, and
+`bedwars.cosmetics.bed.explosion`. These default to operators; grant them to
+players or groups through your permissions plugin. The `.kill.none` and
+`.bed.none` options default to everyone. Testing unlock-all bypasses all of these
+effect permissions. Set any effect's `permission` to `""` to make it public
+without testing mode. Existing server configuration files are not overwritten
+by a plugin update: copy the permission fields from the bundled `cosmetics.yml`
+into your server's file when upgrading an older installation.
+
+The flame, soul, portal, enchant, music, and totem effects each have permissions
+`bedwars.cosmetics.kill.<id>` and `bedwars.cosmetics.bed.<id>`, also defaulting to
+operators. They use particles only, so they do not ignite blocks, create portals,
+consume totems, or cause damage. Music shows note particles; it does not play audio.
+
+Missing bundled effect entries are added to existing `cosmetics.yml` files on
+startup. Existing effect settings, permissions, and the testing flag are preserved.
+To hide an effect permanently, set its `enabled` field to `false` rather than
+deleting its entry. Restart after updating the plugin, then open `/bw cosmetics`.
+
+To create your own particle-based cosmetics, see
+[CUSTOM_COSMETICS.md](CUSTOM_COSMETICS.md). It includes copyable kill and bed
+effects, colored dust, permissions, testing mode, and menu placement.
+
 ## 10. Optional network mode
 
 Finish the local setup before enabling a network integration. Choose one

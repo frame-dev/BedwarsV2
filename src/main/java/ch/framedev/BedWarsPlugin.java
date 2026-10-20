@@ -138,10 +138,6 @@ public class BedWarsPlugin extends JavaPlugin {
             bungeeManager.disable();
         }
 
-        if (databaseManager != null) {
-            databaseManager.disconnect();
-        }
-
         if (partyManager != null) {
             partyManager.shutdown();
         }
@@ -152,6 +148,10 @@ public class BedWarsPlugin extends JavaPlugin {
 
         if (achievementsManager != null) {
             achievementsManager.shutdown();
+        }
+
+        if (databaseManager != null) {
+            databaseManager.disconnect();
         }
 
         if (joinSignManager != null) {

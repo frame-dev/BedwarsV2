@@ -62,7 +62,8 @@ public class PlayerDeathListener implements Listener {
             GamePlayer killer = game.getGamePlayer(killerBukkit);
 
             // If killer isn't part of same game (shouldn't happen if your damage listener is correct), treat as no-killer
-            if (killer == null || killer.getTeam() == null) {
+            if (killer == null || killer.getTeam() == null || killerBukkit.equals(victimBukkit)
+                    || killer.getTeam() == victim.getTeam()) {
                 game.broadcast("death.died", victim.getTeam().getColor().getChatColor() + victimBukkit.getName());
                 scheduleDeathHandling(game, victimBukkit);
                 return;

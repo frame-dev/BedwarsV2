@@ -63,9 +63,72 @@ permissions:
   bedwars.cosmetics:
     description: Open cosmetics menu
     default: true
+  bedwars.cosmetics.kill.none:
+    description: Disable kill cosmetics
+    default: true
+  bedwars.cosmetics.kill.firework:
+    description: Use the firework kill cosmetic
+    default: op
+  bedwars.cosmetics.kill.heart:
+    description: Use the heart kill cosmetic
+    default: op
+  bedwars.cosmetics.kill.smoke:
+    description: Use the smoke kill cosmetic
+    default: op
+  bedwars.cosmetics.kill.explosion:
+    description: Use the explosion kill cosmetic
+    default: op
+  bedwars.cosmetics.bed.none:
+    description: Disable bed destroy cosmetics
+    default: true
+  bedwars.cosmetics.bed.lightning:
+    description: Use the lightning bed destroy cosmetic
+    default: op
+  bedwars.cosmetics.bed.firework:
+    description: Use the firework bed destroy cosmetic
+    default: op
+  bedwars.cosmetics.bed.explosion:
+    description: Use the explosion bed destroy cosmetic
+    default: op
   bedwars.achievements:
     description: Open achievements menu
     default: true
+  bedwars.cosmetics.kill.flame:
+    description: Use the flame kill cosmetic
+    default: op
+  bedwars.cosmetics.kill.soul:
+    description: Use the soul kill cosmetic
+    default: op
+  bedwars.cosmetics.kill.portal:
+    description: Use the portal kill cosmetic
+    default: op
+  bedwars.cosmetics.kill.enchant:
+    description: Use the enchanting kill cosmetic
+    default: op
+  bedwars.cosmetics.kill.music:
+    description: Use the music kill cosmetic
+    default: op
+  bedwars.cosmetics.kill.totem:
+    description: Use the totem kill cosmetic
+    default: op
+  bedwars.cosmetics.bed.flame:
+    description: Use the flame bed destroy cosmetic
+    default: op
+  bedwars.cosmetics.bed.soul:
+    description: Use the soul bed destroy cosmetic
+    default: op
+  bedwars.cosmetics.bed.portal:
+    description: Use the portal bed destroy cosmetic
+    default: op
+  bedwars.cosmetics.bed.enchant:
+    description: Use the enchanting bed destroy cosmetic
+    default: op
+  bedwars.cosmetics.bed.music:
+    description: Use the music bed destroy cosmetic
+    default: op
+  bedwars.cosmetics.bed.totem:
+    description: Use the totem bed destroy cosmetic
+    default: op
   bedwars.team:
     description: Change team in lobby
     default: true

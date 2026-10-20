@@ -18,6 +18,8 @@ For a complete installation and arena walkthrough, read [FULL_SETUP.md](FULL_SET
 
 ## Advanced Setup
 
+Custom effects without Java changes: [CUSTOM_COSMETICS.md](CUSTOM_COSMETICS.md).
+
 1. [BUNGEECORD_SETUP.md](BUNGEECORD_SETUP.md)
 2. [BUNGEECORD_INTEGRATION.md](BUNGEECORD_INTEGRATION.md)
 3. [DATABASE_GUIDE.md](DATABASE_GUIDE.md)

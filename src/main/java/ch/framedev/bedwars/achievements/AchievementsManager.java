@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -45,6 +46,7 @@ public class AchievementsManager {
     private final Map<UUID, Map<Integer, AchievementDefinition>> menuSlots = new ConcurrentHashMap<>();
 
     private FileConfiguration achievementsConfig;
+    private final Set<CompletableFuture<Void>> pendingSaves = ConcurrentHashMap.newKeySet();
 
     public AchievementsManager(BedWarsPlugin plugin, DatabaseManager database) {
         this.plugin = plugin;
@@ -85,9 +87,9 @@ public class AchievementsManager {
     /* --------------------------------------------------------------------- */
 
     public void loadPlayer(UUID uuid) {
+        if (!isEnabled()) return;
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            Map<String, AchievementProgress> loadedProgress = loadFromDatabase(uuid);
-            cache.merge(uuid, loadedProgress, this::mergeProgressMaps);
+            getOrCreateProgressMap(uuid);
         });
     }
 
@@ -299,8 +301,12 @@ public class AchievementsManager {
                 database.executeUpdate(
                         "INSERT INTO player_achievements (uuid, achievement_id, progress, unlocked_at, updated_at) " +
                                 "VALUES (?, ?, ?, ?, ?) " +
-                                "ON CONFLICT(uuid, achievement_id) DO UPDATE SET progress = excluded.progress, " +
-                                "unlocked_at = excluded.unlocked_at, updated_at = excluded.updated_at",
+                                "ON CONFLICT(uuid, achievement_id) DO UPDATE SET " +
+                                "progress = MAX(player_achievements.progress, excluded.progress), " +
+                                "unlocked_at = CASE WHEN player_achievements.unlocked_at <= 0 THEN excluded.unlocked_at " +
+                                "WHEN excluded.unlocked_at <= 0 THEN player_achievements.unlocked_at " +
+                                "ELSE MIN(player_achievements.unlocked_at, excluded.unlocked_at) END, " +
+                                "updated_at = MAX(player_achievements.updated_at, excluded.updated_at)",
                         uuid.toString(),
                         id,
                         savedProgress,
@@ -312,7 +318,9 @@ public class AchievementsManager {
             }
         };
         if (plugin.isEnabled()) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, save);
+            CompletableFuture<Void> task = CompletableFuture.runAsync(save);
+            pendingSaves.add(task);
+            task.whenComplete((ignored, error) -> pendingSaves.remove(task));
         } else {
             // Match shutdown can record progress after Bukkit has disabled the plugin.
             save.run();
@@ -324,12 +332,13 @@ public class AchievementsManager {
     /* --------------------------------------------------------------------- */
 
     public void shutdown() {
+        CompletableFuture.allOf(pendingSaves.toArray(new CompletableFuture<?>[0])).join();
         menuSlots.clear();
         cache.clear();
     }
 
     private Map<String, AchievementProgress> getOrCreateProgressMap(UUID uuid) {
-        return cache.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>());
+        return cache.computeIfAbsent(uuid, this::loadFromDatabase);
     }
 
     private int getProgressValue(UUID uuid, String id) {
@@ -352,25 +361,6 @@ public class AchievementsManager {
     private int sanitizeInventorySize(int configuredSize) {
         int clamped = Math.max(9, Math.min(54, configuredSize));
         return ((clamped + 8) / 9) * 9;
-    }
-
-    private Map<String, AchievementProgress> mergeProgressMaps(Map<String, AchievementProgress> current,
-                                                               Map<String, AchievementProgress> loaded) {
-        Map<String, AchievementProgress> merged = new ConcurrentHashMap<>(current);
-        loaded.forEach((id, loadedProgress) -> merged.merge(id, loadedProgress, this::mergeProgress));
-        return merged;
-    }
-
-    private AchievementProgress mergeProgress(AchievementProgress current, AchievementProgress loaded) {
-        int progress = Math.max(current.getProgress(), loaded.getProgress());
-        long unlockedAt = mergeUnlockedAt(current.getUnlockedAt(), loaded.getUnlockedAt());
-        return new AchievementProgress(progress, unlockedAt);
-    }
-
-    private long mergeUnlockedAt(long currentUnlockedAt, long loadedUnlockedAt) {
-        if (currentUnlockedAt <= 0) return loadedUnlockedAt;
-        if (loadedUnlockedAt <= 0) return currentUnlockedAt;
-        return Math.min(currentUnlockedAt, loadedUnlockedAt);
     }
 
     private Material safeMaterial(String name) {

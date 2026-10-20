@@ -7,7 +7,13 @@ import org.bukkit.Material;
  * Defines a cosmetic option.
  */
 public record CosmeticDefinition(String id, String displayName, Material icon, List<String> lore,
-        CosmeticType type, String effectKey, String permission, boolean enabled) {
+        CosmeticType type, String effectKey, String permission, boolean enabled,
+        CustomCosmeticEffect customEffect) {
+
+    public CosmeticDefinition(String id, String displayName, Material icon, List<String> lore,
+            CosmeticType type, String effectKey, String permission, boolean enabled) {
+        this(id, displayName, icon, lore, type, effectKey, permission, enabled, null);
+    }
 
     public String getId() {
         return id();

@@ -40,6 +40,29 @@ performing these scenarios:
 
 Live server checks have not been performed as part of this change.
 
+## Parties, achievements, and cosmetics
+
+Automated integration tests use a temporary real SQLite database for party
+membership, invitations, cosmetic selections, and achievement progress. Bukkit
+players, inventories, events, particles, and effects remain mocked.
+
+- Invite, accept, deny, expire invitations, promote a member, kick another member,
+  transfer leadership by leaving, and disband. Restart and check membership.
+- Have the leader join with `/bw join <arena>`; all eligible online members should
+  join together. Too little capacity must reject the group without partial joins.
+  A member leaving a match must not remove the leader; a leader leaving should
+  remove online members from that same match.
+- Check all seven default achievements, their configured menu order, and their
+  progress after kills, final kills, bed breaks, wins, and completed games. Restart
+  near an unlock to confirm progress and unlock status persist.
+- Select every default cosmetic. Check its menu position, visual effect, and
+  persistence. Deny its configured permission and disable a selected definition;
+  it should no longer play. Check that cosmetic fireworks cause no damage.
+- Check flame, soul, portal, enchant, music, and totem for both kill and bed
+  effects. Verify testing unlock-all permits selection and playback without
+  their permissions. On upgrading an older config, confirm missing effects are
+  added while custom permissions, disabled effects, and testing settings remain.
+
 ## Additional interaction checks
 
 - Place beds facing north, south, east and west. Register each by looking at

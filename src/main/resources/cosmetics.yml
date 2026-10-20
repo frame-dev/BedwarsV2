@@ -1,5 +1,19 @@
 enabled: true
 
+# Add your own IDs under kill-effects or bed-effects.
+# Use effect: CUSTOM and a particles list for particle effects without Java changes.
+# Example fields on each particle layer: type: FLAME, count: 30, height: 0.5,
+# spread-x: 0.5, spread-y: 0.5, spread-z: 0.5, speed: 0.02.
+# REDSTONE layers also accept color: "#FFD700" and size: 1.5.
+# Full copyable examples: docs/CUSTOM_COSMETICS.md in the project.
+
+# Testing only: bypass effect permissions for everyone. Disabled effects stay disabled.
+testing:
+  unlock-all: false
+
+# Each effect has a permission below. Set it to "" to allow everyone.
+# Kill and bed effects use separate permissions; "none" is available by default.
+# testing.unlock-all bypasses these permissions while true.
 gui:
   title: "&dCosmetics"
   size: 54
@@ -17,6 +31,7 @@ kill-effects:
     lore:
       - "&7Disable kill effects."
     effect: NONE
+    permission: "bedwars.cosmetics.kill.none"
   firework:
     enabled: true
     display-name: "&aFirework"
@@ -24,6 +39,7 @@ kill-effects:
     lore:
       - "&7Launch a firework on kill."
     effect: FIREWORK
+    permission: "bedwars.cosmetics.kill.firework"
   heart:
     enabled: true
     display-name: "&dHeart Burst"
@@ -31,6 +47,7 @@ kill-effects:
     lore:
       - "&7Hearts appear on kill."
     effect: HEART
+    permission: "bedwars.cosmetics.kill.heart"
   smoke:
     enabled: true
     display-name: "&8Smoke"
@@ -38,6 +55,7 @@ kill-effects:
     lore:
       - "&7Smoke particles on kill."
     effect: SMOKE
+    permission: "bedwars.cosmetics.kill.smoke"
   explosion:
     enabled: true
     display-name: "&cExplosion"
@@ -45,6 +63,49 @@ kill-effects:
     lore:
       - "&7Explosion particles on kill."
     effect: EXPLOSION
+    permission: "bedwars.cosmetics.kill.explosion"
+  flame:
+    enabled: true
+    display-name: "&6Flame Burst"
+    icon: BLAZE_POWDER
+    lore: ["&7A burst of harmless flames on kill."]
+    effect: FLAME
+    permission: "bedwars.cosmetics.kill.flame"
+  soul:
+    enabled: true
+    display-name: "&bSoul Flames"
+    icon: SOUL_TORCH
+    lore: ["&7Blue soul flames appear on kill."]
+    effect: SOUL
+    permission: "bedwars.cosmetics.kill.soul"
+  portal:
+    enabled: true
+    display-name: "&5Portal Burst"
+    icon: ENDER_PEARL
+    lore: ["&7Purple portal particles swirl on kill."]
+    effect: PORTAL
+    permission: "bedwars.cosmetics.kill.portal"
+  enchant:
+    enabled: true
+    display-name: "&dEnchanting Burst"
+    icon: ENCHANTING_TABLE
+    lore: ["&7Enchanting glyphs appear on kill."]
+    effect: ENCHANT
+    permission: "bedwars.cosmetics.kill.enchant"
+  music:
+    enabled: true
+    display-name: "&aMusical Notes"
+    icon: NOTE_BLOCK
+    lore: ["&7Musical note particles appear on kill."]
+    effect: MUSIC
+    permission: "bedwars.cosmetics.kill.music"
+  totem:
+    enabled: true
+    display-name: "&eTotem Burst"
+    icon: TOTEM_OF_UNDYING
+    lore: ["&7Golden and green particles burst on kill."]
+    effect: TOTEM
+    permission: "bedwars.cosmetics.kill.totem"
 
 bed-effects:
   none:
@@ -54,6 +115,7 @@ bed-effects:
     lore:
       - "&7Disable bed destroy effects."
     effect: NONE
+    permission: "bedwars.cosmetics.bed.none"
   lightning:
     enabled: true
     display-name: "&bLightning"
@@ -61,6 +123,7 @@ bed-effects:
     lore:
       - "&7Strike lightning on bed destroy."
     effect: LIGHTNING
+    permission: "bedwars.cosmetics.bed.lightning"
   firework:
     enabled: true
     display-name: "&aFirework"
@@ -68,6 +131,7 @@ bed-effects:
     lore:
       - "&7Launch a firework on bed destroy."
     effect: FIREWORK
+    permission: "bedwars.cosmetics.bed.firework"
   explosion:
     enabled: true
     display-name: "&cExplosion"
@@ -75,3 +139,46 @@ bed-effects:
     lore:
       - "&7Explosion particles on bed destroy."
     effect: EXPLOSION
+    permission: "bedwars.cosmetics.bed.explosion"
+  flame:
+    enabled: true
+    display-name: "&6Flame Burst"
+    icon: BLAZE_POWDER
+    lore: ["&7A burst of harmless flames on bed destruction."]
+    effect: FLAME
+    permission: "bedwars.cosmetics.bed.flame"
+  soul:
+    enabled: true
+    display-name: "&bSoul Flames"
+    icon: SOUL_TORCH
+    lore: ["&7Blue soul flames appear on bed destruction."]
+    effect: SOUL
+    permission: "bedwars.cosmetics.bed.soul"
+  portal:
+    enabled: true
+    display-name: "&5Portal Burst"
+    icon: ENDER_PEARL
+    lore: ["&7Purple portal particles swirl on bed destruction."]
+    effect: PORTAL
+    permission: "bedwars.cosmetics.bed.portal"
+  enchant:
+    enabled: true
+    display-name: "&dEnchanting Burst"
+    icon: ENCHANTING_TABLE
+    lore: ["&7Enchanting glyphs appear on bed destruction."]
+    effect: ENCHANT
+    permission: "bedwars.cosmetics.bed.enchant"
+  music:
+    enabled: true
+    display-name: "&aMusical Notes"
+    icon: NOTE_BLOCK
+    lore: ["&7Musical note particles appear on bed destruction."]
+    effect: MUSIC
+    permission: "bedwars.cosmetics.bed.music"
+  totem:
+    enabled: true
+    display-name: "&eTotem Burst"
+    icon: TOTEM_OF_UNDYING
+    lore: ["&7Golden and green particles burst on bed destruction."]
+    effect: TOTEM
+    permission: "bedwars.cosmetics.bed.totem"

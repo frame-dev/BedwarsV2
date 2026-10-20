@@ -4,6 +4,8 @@ import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.game.Game;
 import ch.framedev.bedwars.game.GameState;
 import ch.framedev.bedwars.player.GamePlayer;
+import ch.framedev.bedwars.cosmetics.CosmeticsManager;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -38,6 +40,13 @@ public class EntityDamageListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamage(EntityDamageEvent event) {
+        if (event instanceof EntityDamageByEntityEvent damage
+                && damage.getDamager() instanceof Firework firework
+                && firework.getMetadata(CosmeticsManager.COSMETIC_FIREWORK).stream()
+                    .anyMatch(value -> value.getOwningPlugin() == plugin && value.asBoolean())) {
+            event.setCancelled(true);
+            return;
+        }
         if (!(event.getEntity() instanceof Player victimBukkit)) return;
 
         Game game = plugin.getGameManager().getPlayerGame(victimBukkit);

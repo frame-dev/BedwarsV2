@@ -147,4 +147,20 @@ public class BedBreakTest {
         verify(bed.head, never()).setType(any(Material.class), anyBoolean());
         assertEquals(1, f.reset.getBlockChangeCount());
     }
+
+    @Test
+    public void bedBreakRecordsAchievementAndPlaysSelectedCosmeticOnce() {
+        Fixture f = new Fixture();
+        BedBlocks bed = new BedBlocks(f.world, 0, 70, 0, BlockFace.EAST, Material.RED_BED);
+        f.register(bed.foot.getLocation());
+        var achievements = mock(ch.framedev.bedwars.achievements.AchievementsManager.class);
+        var cosmetics = mock(ch.framedev.bedwars.cosmetics.CosmeticsManager.class);
+        when(f.plugin.getAchievementsManager()).thenReturn(achievements);
+        when(f.plugin.getCosmeticsManager()).thenReturn(cosmetics);
+
+        f.listener.onBlockBreak(new BlockBreakEvent(bed.head, f.player));
+
+        verify(achievements).recordBedBroken(f.player.getUniqueId());
+        verify(cosmetics).applyBedDestroyEffect(f.player, bed.head.getLocation());
+    }
 }

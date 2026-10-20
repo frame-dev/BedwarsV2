@@ -65,6 +65,7 @@ spectator:
 
 # Party Messages
 party:
+  cannot-kick-self: "&cUse /bw party leave or /bw party disband instead of kicking yourself."
   created: "&aParty created."
   disbanded: "&cParty disbanded."
   invited: "&aInvited &e{0}&a to the party."

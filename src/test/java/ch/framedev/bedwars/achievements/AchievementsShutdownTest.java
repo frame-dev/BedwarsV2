@@ -31,6 +31,8 @@ public class AchievementsShutdownTest {
                     target: 10
                 """);
         DatabaseManager database = mock(DatabaseManager.class);
+        java.sql.ResultSet empty = mock(java.sql.ResultSet.class);
+        when(database.executeQuery(anyString(), any(Object[].class))).thenReturn(empty);
         AchievementsManager achievements = new AchievementsManager(plugin, database);
         UUID uuid = UUID.randomUUID();
         try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {

@@ -8,6 +8,8 @@ import ch.framedev.bedwars.player.GamePlayer;
 import ch.framedev.bedwars.team.Team;
 import ch.framedev.bedwars.team.TeamColor;
 import ch.framedev.bedwars.utils.DebugLogger;
+import ch.framedev.bedwars.achievements.AchievementsManager;
+import ch.framedev.bedwars.cosmetics.CosmeticsManager;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -91,5 +93,51 @@ public class PlayerDeathListenerTest {
         InOrder order = inOrder(victim.spigot(), game);
         order.verify(victim.spigot()).respawn();
         order.verify(game).handlePlayerDeath(victim);
+    }
+
+    @Test
+    public void enemyFinalKillRecordsBothAchievementsAndPlaysSelectedCosmetic() {
+        checkKillHooks(false, false);
+    }
+
+    @Test
+    public void ordinaryKillDoesNotRecordFinalKill() {
+        checkKillHooks(true, false);
+    }
+
+    @Test
+    public void friendlyKillDoesNotAwardAchievementsOrCosmetics() {
+        checkKillHooks(false, true);
+    }
+
+    private void checkKillHooks(boolean bedAlive, boolean sameTeam) {
+        Player killerPlayer = mock(Player.class);
+        when(killerPlayer.getUniqueId()).thenReturn(UUID.randomUUID());
+        GamePlayer victimData = new GamePlayer(victim);
+        GamePlayer killerData = new GamePlayer(killerPlayer);
+        Team victimTeam = mock(Team.class);
+        Team killerTeam = sameTeam ? victimTeam : mock(Team.class);
+        when(victimTeam.getColor()).thenReturn(TeamColor.RED);
+        if (!sameTeam) when(killerTeam.getColor()).thenReturn(TeamColor.BLUE);
+        when(victimTeam.isBedAlive()).thenReturn(bedAlive);
+        victimData.setTeam(victimTeam);
+        killerData.setTeam(killerTeam);
+        when(game.getGamePlayer(victim)).thenReturn(victimData);
+        when(game.getGamePlayer(killerPlayer)).thenReturn(killerData);
+        when(victim.getKiller()).thenReturn(killerPlayer);
+        AchievementsManager achievements = mock(AchievementsManager.class);
+        CosmeticsManager cosmetics = mock(CosmeticsManager.class);
+        when(plugin.getAchievementsManager()).thenReturn(achievements);
+        when(plugin.getCosmeticsManager()).thenReturn(cosmetics);
+
+        new PlayerDeathListener(plugin).onPlayerDeath(event);
+
+        if (sameTeam) {
+            verifyNoInteractions(achievements, cosmetics);
+        } else {
+            verify(achievements).recordKill(killerPlayer.getUniqueId());
+            verify(cosmetics).applyKillEffect(killerPlayer, victim.getLocation());
+            verify(achievements, times(bedAlive ? 0 : 1)).recordFinalKill(killerPlayer.getUniqueId());
+        }
     }
 }

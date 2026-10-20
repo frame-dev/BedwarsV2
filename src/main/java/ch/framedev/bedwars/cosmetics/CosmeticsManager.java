@@ -19,15 +19,19 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.metadata.FixedMetadataValue;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
@@ -41,6 +45,7 @@ public class CosmeticsManager {
 
     private static final String DEFAULT_KILL = "none";
     private static final String DEFAULT_BED = "none";
+    public static final String COSMETIC_FIREWORK = "bedwars_cosmetic_firework";
 
     private final BedWarsPlugin plugin;
     private final DatabaseManager database;
@@ -53,8 +58,8 @@ public class CosmeticsManager {
     public CosmeticsManager(BedWarsPlugin plugin, DatabaseManager database) {
         this.plugin = plugin;
         this.database = database;
-        this.killEffects = new HashMap<>();
-        this.bedEffects = new HashMap<>();
+        this.killEffects = new LinkedHashMap<>();
+        this.bedEffects = new LinkedHashMap<>();
         this.cache = new ConcurrentHashMap<>();
         this.menuSlots = new ConcurrentHashMap<>();
         loadConfig();
@@ -77,7 +82,31 @@ public class CosmeticsManager {
         }
 
         cosmeticsConfig = YamlConfiguration.loadConfiguration(cosmeticsFile);
+        addMissingDefaultEffects(cosmeticsFile);
         loadDefinitions();
+    }
+
+    private void addMissingDefaultEffects(File file) {
+        try (InputStream input = plugin.getResource("cosmetics.yml")) {
+            if (input == null) return;
+            var defaults = YamlConfiguration.loadConfiguration(new InputStreamReader(input, StandardCharsets.UTF_8));
+            boolean changed = false;
+            for (String section : List.of("kill-effects", "bed-effects")) {
+                ConfigurationSection definitions = defaults.getConfigurationSection(section);
+                if (definitions == null) continue;
+                for (String id : definitions.getKeys(false)) {
+                    String path = section + "." + id;
+                    if (cosmeticsConfig.contains(path)) continue;
+                    ConfigurationSection entry = definitions.getConfigurationSection(id);
+                    if (entry == null) continue;
+                    cosmeticsConfig.createSection(path, entry.getValues(false));
+                    changed = true;
+                }
+            }
+            if (changed) cosmeticsConfig.save(file);
+        } catch (IOException error) {
+            plugin.getLogger().warning("Could not add new default cosmetics: " + error.getMessage());
+        }
     }
 
     public boolean isEnabled() {
@@ -86,8 +115,7 @@ public class CosmeticsManager {
 
     public void loadPlayerCosmetics(UUID uuid) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            PlayerCosmetics cosmetics = loadFromDatabase(uuid);
-            cache.put(uuid, cosmetics);
+            getPlayerCosmetics(uuid);
         });
     }
 
@@ -105,7 +133,7 @@ public class CosmeticsManager {
     public boolean isCosmeticsTitle(String title) {
         String expected = ChatColor.translateAlternateColorCodes('&',
                 cosmeticsConfig.getString("gui.title", "Cosmetics"));
-        return ChatColor.stripColor(title).equalsIgnoreCase(ChatColor.stripColor(expected));
+        return title != null && ChatColor.stripColor(title).equalsIgnoreCase(ChatColor.stripColor(expected));
     }
 
     public void handleMenuClick(Player player, int slot) {
@@ -119,8 +147,7 @@ public class CosmeticsManager {
             return;
         }
 
-        String permission = definition.getPermission();
-        if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
+        if (!hasAccess(player, definition)) {
             plugin.getMessageManager().sendMessage(player, "cosmetics.locked");
             return;
         }
@@ -147,10 +174,10 @@ public class CosmeticsManager {
         }
         PlayerCosmetics cosmetics = getPlayerCosmetics(killer.getUniqueId());
         CosmeticDefinition definition = killEffects.get(cosmetics.getKillEffectId());
-        if (definition == null) {
+        if (!canUse(killer, definition)) {
             return;
         }
-        applyEffect(definition.getEffectKey(), location);
+        applyDefinition(definition, location);
     }
 
     public void applyBedDestroyEffect(Player breaker, Location location) {
@@ -159,15 +186,26 @@ public class CosmeticsManager {
         }
         PlayerCosmetics cosmetics = getPlayerCosmetics(breaker.getUniqueId());
         CosmeticDefinition definition = bedEffects.get(cosmetics.getBedEffectId());
-        if (definition == null) {
+        if (!canUse(breaker, definition)) {
             return;
         }
-        applyEffect(definition.getEffectKey(), location);
+        applyDefinition(definition, location);
     }
 
     public void shutdown() {
         menuSlots.clear();
         cache.clear();
+    }
+
+    private boolean canUse(Player player, CosmeticDefinition definition) {
+        return definition != null && definition.isEnabled()
+                && hasAccess(player, definition);
+    }
+
+    private boolean hasAccess(Player player, CosmeticDefinition definition) {
+        return cosmeticsConfig.getBoolean("testing.unlock-all", false)
+                || definition.getPermission() == null || definition.getPermission().isEmpty()
+                || player.hasPermission(definition.getPermission());
     }
 
     private void loadDefinitions() {
@@ -203,6 +241,11 @@ public class CosmeticsManager {
             List<String> lore = entry.getStringList("lore");
             String effectKey = entry.getString("effect", "NONE");
             String permission = entry.getString("permission", "");
+            CustomCosmeticEffect custom = null;
+            if ("CUSTOM".equalsIgnoreCase(effectKey)) {
+                custom = CustomCosmeticEffect.load(entry, plugin.getLogger());
+                if (custom.bursts().isEmpty()) enabled = false;
+            }
 
             CosmeticDefinition definition = new CosmeticDefinition(
                     key,
@@ -212,7 +255,8 @@ public class CosmeticsManager {
                     type,
                     effectKey,
                     permission,
-                    enabled);
+                    enabled,
+                    custom);
 
             target.put(key, definition);
         }
@@ -256,6 +300,7 @@ public class CosmeticsManager {
             if (!definition.isEnabled()) {
                 continue;
             }
+            while (slot < size && slots.containsKey(slot)) slot += step;
             ItemStack item = buildCosmeticItem(definition, cosmetics.getBedEffectId(), player,
                     selectedLore, lockedLore);
             if (slot < size) {
@@ -285,8 +330,7 @@ public class CosmeticsManager {
             lore.addAll(definition.getLore());
         }
 
-        boolean locked = definition.getPermission() != null && !definition.getPermission().isEmpty()
-                && !player.hasPermission(definition.getPermission());
+        boolean locked = !hasAccess(player, definition);
 
         if (definition.getId().equalsIgnoreCase(selectedId)) {
             lore.add(selectedLore);
@@ -301,13 +345,7 @@ public class CosmeticsManager {
     }
 
     private PlayerCosmetics getPlayerCosmetics(UUID uuid) {
-        PlayerCosmetics cosmetics = cache.get(uuid);
-        if (cosmetics != null) {
-            return cosmetics;
-        }
-        cosmetics = loadFromDatabase(uuid);
-        cache.put(uuid, cosmetics);
-        return cosmetics;
+        return cache.computeIfAbsent(uuid, this::loadFromDatabase);
     }
 
     private PlayerCosmetics loadFromDatabase(UUID uuid) {
@@ -325,7 +363,6 @@ public class CosmeticsManager {
         }
 
         PlayerCosmetics cosmetics = new PlayerCosmetics(uuid, DEFAULT_KILL, DEFAULT_BED);
-        saveToDatabase(cosmetics);
         return cosmetics;
     }
 
@@ -344,12 +381,20 @@ public class CosmeticsManager {
         }
     }
 
+    private void applyDefinition(CosmeticDefinition definition, Location location) {
+        if (definition.customEffect() != null) {
+            definition.customEffect().play(location);
+        } else {
+            applyEffect(definition.getEffectKey(), location);
+        }
+    }
+
     private void applyEffect(String effectKey, Location location) {
         if (effectKey == null) {
             return;
         }
 
-        String key = effectKey.trim().toUpperCase();
+        String key = effectKey.trim().toUpperCase(Locale.ROOT);
         if ("NONE".equals(key)) {
             return;
         }
@@ -365,12 +410,19 @@ public class CosmeticsManager {
             case "HEART" -> world.spawnParticle(Particle.HEART, location, 12, 0.5, 0.5, 0.5, 0.0);
             case "SMOKE" -> world.spawnParticle(Particle.SMOKE_NORMAL, location, 20, 0.6, 0.6, 0.6, 0.0);
             case "EXPLOSION" -> world.spawnParticle(Particle.EXPLOSION_LARGE, location, 1, 0, 0, 0, 0.0);
+            case "FLAME" -> world.spawnParticle(Particle.FLAME, location, 35, 0.6, 0.8, 0.6, 0.02);
+            case "SOUL" -> world.spawnParticle(Particle.SOUL_FIRE_FLAME, location, 30, 0.6, 0.8, 0.6, 0.02);
+            case "PORTAL" -> world.spawnParticle(Particle.PORTAL, location, 60, 0.7, 0.8, 0.7, 0.3);
+            case "ENCHANT" -> world.spawnParticle(Particle.ENCHANTMENT_TABLE, location, 50, 0.8, 0.8, 0.8, 0.5);
+            case "MUSIC" -> world.spawnParticle(Particle.NOTE, location, 16, 0.6, 0.8, 0.6, 0.0);
+            case "TOTEM" -> world.spawnParticle(Particle.TOTEM, location, 45, 0.6, 0.8, 0.6, 0.1);
             default -> plugin.getDebugLogger().debug("Unknown cosmetic effect: " + effectKey);
         }
     }
 
     private void spawnFirework(World world, Location location) {
         Firework firework = world.spawn(location, Firework.class);
+        firework.setMetadata(COSMETIC_FIREWORK, new FixedMetadataValue(plugin, true));
         FireworkMeta meta = firework.getFireworkMeta();
         meta.addEffect(org.bukkit.FireworkEffect.builder()
                 .withColor(Color.RED, Color.WHITE)

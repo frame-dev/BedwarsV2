@@ -419,6 +419,23 @@ public class GameLifecycleTest {
         assertEquals(8, materials.size()); // Four armor pieces for each loadout.
     }
 
+    @Test
+    public void matchAwardsWinAndGamePlayedToCorrectParticipantsOnce() throws Exception {
+        state(GameState.RUNNING);
+        Player winner = participant(TeamColor.RED);
+        Player loser = participant(TeamColor.BLUE);
+        var achievements = mock(ch.framedev.bedwars.achievements.AchievementsManager.class);
+        when(plugin.getAchievementsManager()).thenReturn(achievements);
+
+        game.endGame(game.getTeams().get(TeamColor.RED));
+        game.endGame(game.getTeams().get(TeamColor.RED));
+
+        verify(achievements).recordWin(winner.getUniqueId());
+        verify(achievements, never()).recordWin(loser.getUniqueId());
+        verify(achievements).recordGamePlayed(winner.getUniqueId());
+        verify(achievements).recordGamePlayed(loser.getUniqueId());
+    }
+
     @SuppressWarnings("try")
     private List<Material> startAndRespawnWith(String configuredItem) {
         plugin.getConfig().set("game.starting-item", configuredItem);

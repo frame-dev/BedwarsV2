@@ -31,6 +31,7 @@ public class Party {
     }
 
     public void setLeader(UUID leader) {
+        if (members.containsKey(this.leader)) members.put(this.leader, PartyRole.MEMBER);
         this.leader = leader;
         members.put(leader, PartyRole.LEADER);
     }
@@ -60,7 +61,7 @@ public class Party {
     }
 
     public Collection<UUID> getMemberUuids() {
-        return members.keySet();
+        return Collections.unmodifiableSet(members.keySet());
     }
 
     public enum PartyRole {

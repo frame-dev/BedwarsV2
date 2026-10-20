@@ -378,7 +378,7 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         var partyManager = plugin.getPartyManager();
         var party = partyManager != null ? partyManager.getParty(player.getUniqueId()) : null;
 
-        if (party != null) {
+        if (party != null && partyManager.isLeader(player.getUniqueId())) {
             for (var memberId : party.getMemberUuids()) {
                 Player member = plugin.getServer().getPlayer(memberId);
                 if (member == null) continue;

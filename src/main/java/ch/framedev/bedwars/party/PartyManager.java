@@ -42,6 +42,7 @@ public class PartyManager {
                 UUID partyId = UUID.fromString(rs.getString("id"));
                 UUID leader = UUID.fromString(rs.getString("leader_uuid"));
                 parties.put(partyId, new Party(partyId, leader));
+                playerToParty.put(leader, partyId);
             }
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to load parties: " + e.getMessage());
@@ -51,7 +52,6 @@ public class PartyManager {
             while (rs.next()) {
                 UUID partyId = UUID.fromString(rs.getString("party_id"));
                 UUID member = UUID.fromString(rs.getString("member_uuid"));
-                String role = rs.getString("role");
 
                 Party party = parties.get(partyId);
                 if (party == null) {
@@ -59,7 +59,7 @@ public class PartyManager {
                 }
 
                 PartyRole partyRole = PartyRole.MEMBER;
-                if ("LEADER".equalsIgnoreCase(role)) {
+                if (party.getLeader().equals(member)) {
                     partyRole = PartyRole.LEADER;
                     party.setLeader(member);
                 }
@@ -195,7 +195,7 @@ public class PartyManager {
         if (party == null) {
             party = loadParty(invite.getPartyId());
         }
-        if (party == null) {
+        if (party == null || !party.getLeader().equals(invite.getInviterUuid())) {
             mm.sendMessage(player, "party.invite-expired");
             invites.remove(player.getUniqueId());
             deleteInvite(player.getUniqueId());
@@ -298,6 +298,11 @@ public class PartyManager {
             return;
         }
 
+        if (leader.getUniqueId().equals(target.getUniqueId())) {
+            mm.sendMessage(leader, "party.cannot-kick-self");
+            return;
+        }
+
         party.removeMember(target.getUniqueId());
         playerToParty.remove(target.getUniqueId());
         deleteMember(party.getId(), target.getUniqueId());
@@ -395,17 +400,14 @@ public class PartyManager {
                     "SELECT member_uuid, role FROM party_members WHERE party_id = ?", partyId.toString())) {
                 while (members.next()) {
                     UUID member = UUID.fromString(members.getString("member_uuid"));
-                    String role = members.getString("role");
-                    PartyRole partyRole = "LEADER".equalsIgnoreCase(role) ? PartyRole.LEADER : PartyRole.MEMBER;
-                    if (partyRole == PartyRole.LEADER) {
-                        party.setLeader(member);
-                    }
+                    PartyRole partyRole = party.getLeader().equals(member) ? PartyRole.LEADER : PartyRole.MEMBER;
                     party.addMember(member, partyRole);
                     playerToParty.put(member, partyId);
                 }
             }
 
             parties.put(partyId, party);
+            playerToParty.put(leader, partyId);
             return party;
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to load party: " + e.getMessage());
@@ -562,7 +564,9 @@ public class PartyManager {
     }
 
     private void deleteParty(UUID partyId) {
+        invites.entrySet().removeIf(entry -> entry.getValue().getPartyId().equals(partyId));
         try {
+            database.executeUpdate("DELETE FROM party_invites WHERE party_id = ?", partyId.toString());
             database.executeUpdate("DELETE FROM party_members WHERE party_id = ?", partyId.toString());
             database.executeUpdate("DELETE FROM parties WHERE id = ?", partyId.toString());
         } catch (SQLException e) {

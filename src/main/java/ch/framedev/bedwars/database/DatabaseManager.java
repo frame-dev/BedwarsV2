@@ -4,6 +4,8 @@ import ch.framedev.BedWarsPlugin;
 
 import java.io.File;
 import java.sql.*;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages SQLite database connections and operations
@@ -11,11 +13,12 @@ import java.sql.*;
 public class DatabaseManager {
 
     private final BedWarsPlugin plugin;
-    private Connection connection;
+    private final Map<Long, Connection> connections;
     private final String dbPath;
 
     public DatabaseManager(BedWarsPlugin plugin) {
         this.plugin = plugin;
+        this.connections = new ConcurrentHashMap<>();
         this.dbPath = plugin.getDataFolder().getAbsolutePath() + File.separator + "bedwars.db";
         plugin.getLogger().info("DatabaseManager initialized with db path: " + dbPath);
         plugin.getDebugLogger().debug("Database path set: " + dbPath);
@@ -27,10 +30,10 @@ public class DatabaseManager {
     public void connect() {
         try {
             Class.forName("org.sqlite.JDBC");
-            connection = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
+            Connection connection = getConnection();
             plugin.getLogger().info("Successfully connected to SQLite database!");
             plugin.getDebugLogger().debug("SQLite connection established");
-            createTables();
+            createTables(connection);
         } catch (ClassNotFoundException | SQLException e) {
             plugin.getLogger().severe("Failed to connect to database: " + e.getMessage());
         }
@@ -39,7 +42,7 @@ public class DatabaseManager {
     /**
      * Create necessary database tables if they don't exist
      */
-    private void createTables() {
+    private void createTables(Connection connection) {
         String createStatsTable = """
                 CREATE TABLE IF NOT EXISTS player_stats (
                     uuid TEXT PRIMARY KEY,
@@ -130,31 +133,54 @@ public class DatabaseManager {
         }
     }
 
+    private Connection createConnection() throws SQLException {
+        File dataFolder = plugin.getDataFolder();
+        if (!dataFolder.exists() && !dataFolder.mkdirs()) {
+            plugin.getLogger().warning("Could not create plugin data folder: " + dataFolder.getAbsolutePath());
+        }
+
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
+        configureConnection(connection);
+        return connection;
+    }
+
+    private void configureConnection(Connection connection) throws SQLException {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("PRAGMA journal_mode=WAL");
+            stmt.execute("PRAGMA synchronous=NORMAL");
+            stmt.execute("PRAGMA busy_timeout=5000");
+            stmt.execute("PRAGMA foreign_keys=ON");
+        }
+    }
+
     /**
      * Disconnect from the database
      */
     public void disconnect() {
-        try {
-            if (connection != null && !connection.isClosed()) {
+        for (Connection connection : connections.values()) {
+            try {
+                if (connection == null || connection.isClosed()) {
+                    continue;
+                }
                 connection.close();
-                plugin.getLogger().info("Database connection closed.");
-                plugin.getDebugLogger().debug("SQLite connection closed");
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Failed to close database connection: " + e.getMessage());
             }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to close database connection: " + e.getMessage());
         }
+        connections.clear();
+        plugin.getLogger().info("Database connections closed.");
+        plugin.getDebugLogger().debug("SQLite connections closed");
     }
 
     /**
      * Get the database connection
      */
-    public Connection getConnection() {
-        try {
-            if (connection == null || connection.isClosed()) {
-                connect();
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to check connection status: " + e.getMessage());
+    public synchronized Connection getConnection() throws SQLException {
+        long threadId = Thread.currentThread().getId();
+        Connection connection = connections.get(threadId);
+        if (connection == null || connection.isClosed()) {
+            connection = createConnection();
+            connections.put(threadId, connection);
         }
         return connection;
     }
@@ -163,18 +189,21 @@ public class DatabaseManager {
      * Check if the database connection is valid
      */
     public boolean isConnected() {
-        try {
-            return connection != null && !connection.isClosed();
-        } catch (SQLException e) {
-            return false;
-        }
+        return connections.values().stream().anyMatch(connection -> {
+            try {
+                return connection != null && !connection.isClosed();
+            } catch (SQLException e) {
+                return false;
+            }
+        });
     }
 
     /**
      * Execute a query and return the result set
      */
     public ResultSet executeQuery(String query, Object... params) throws SQLException {
-        PreparedStatement stmt = connection.prepareStatement(query);
+        PreparedStatement stmt = getConnection().prepareStatement(query);
+        stmt.closeOnCompletion();
         for (int i = 0; i < params.length; i++) {
             stmt.setObject(i + 1, params[i]);
         }
@@ -186,7 +215,7 @@ public class DatabaseManager {
      * Execute an update query (INSERT, UPDATE, DELETE)
      */
     public int executeUpdate(String query, Object... params) throws SQLException {
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+        try (PreparedStatement stmt = getConnection().prepareStatement(query)) {
             for (int i = 0; i < params.length; i++) {
                 stmt.setObject(i + 1, params[i]);
             }

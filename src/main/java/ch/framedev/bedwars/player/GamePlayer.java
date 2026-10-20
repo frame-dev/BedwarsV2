@@ -80,9 +80,6 @@ public class GamePlayer {
         inv.setLeggings(legs);
         inv.setBoots(boots);
 
-        // Ensure starting sword & apply WEAPON upgrades
-        ensureStartingSword(inv);
-
         // Apply potion upgrades (refresh)
         applyPotionUpgrades(player);
     }
@@ -95,34 +92,6 @@ public class GamePlayer {
             item.setItemMeta(lam);
         }
         return item;
-    }
-
-    private void ensureStartingSword(PlayerInventory inv) {
-        if (inv == null) return;
-
-        if (!hasSword(inv)) {
-            Material swordMat = materialOr();
-            ItemStack sword = new ItemStack(swordMat);
-
-            applyEnchantmentUpgradesToItem(sword);
-            inv.addItem(sword);
-        }
-    }
-
-    private boolean hasSword(PlayerInventory inv) {
-        for (ItemStack it : inv.getContents()) {
-            if (it == null) continue;
-            if (it.getType().name().endsWith("_SWORD")) return true;
-        }
-        return false;
-    }
-
-    /**
-     * Apply ENCHANTMENT upgrades with matching target to an item.
-     */
-    private void applyEnchantmentUpgradesToItem(ItemStack item) {
-        if (item == null) return;
-        applyEnchantmentUpgrades("WEAPON", item::addEnchantment);
     }
 
     /**
@@ -193,14 +162,6 @@ public class GamePlayer {
     @FunctionalInterface
     private interface UpgradeConsumer {
         void accept(String id, UpgradeManager.Upgrade upgrade, int level);
-    }
-
-    private Material materialOr() {
-        Material m = Material.matchMaterial("WOODEN_SWORD");
-        if (m != null) return m;
-        m = Material.matchMaterial("WOOD_SWORD");
-        if (m != null) return m;
-        return Material.WOODEN_SWORD;
     }
 
     /* --------------------------------------------------------------------- */

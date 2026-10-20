@@ -10,7 +10,6 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,7 +33,7 @@ public class MessageManager {
     /**
      * Load messages from messages.yml
      */
-    public void loadMessages() {
+    private void loadMessages() {
         File messagesFile = new File(plugin.getDataFolder(), "messages.yml");
 
         // Create messages.yml if it doesn't exist
@@ -77,7 +76,7 @@ public class MessageManager {
         String message = messagesConfig.getString(key);
         if (message == null) {
             plugin.getLogger().warning("Missing message key: " + key);
-            return "&cMissing message: " + key;
+            return ChatColor.RED + "Missing message: " + key;
         }
 
         // Translate color codes
@@ -95,14 +94,15 @@ public class MessageManager {
     public String getMessage(String key, Object... args) {
         String message = getMessage(key);
 
-        // Replace placeholders
-        try {
-            return MessageFormat.format(message, args);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger()
-                    .warning("Failed to format message: " + key + " with args: " + java.util.Arrays.toString(args));
+        if (args == null || args.length == 0) {
             return message;
         }
+
+        for (int i = 0; i < args.length; i++) {
+            String replacement = args[i] == null ? "null" : String.valueOf(args[i]);
+            message = message.replace("{" + i + "}", replacement);
+        }
+        return message;
     }
 
     /**

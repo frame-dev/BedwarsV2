@@ -27,14 +27,20 @@ public class BungeeManager implements PluginMessageListener {
         this.lobbyServer = plugin.getConfig().getString("bungeecord.lobby-server", "lobby");
 
         if (bungeeCordEnabled) {
-            // Register BungeeCord channels
-            plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, "BungeeCord");
-            plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, "BungeeCord", this);
             plugin.getLogger().info("BungeeCord support enabled! Lobby server: " + lobbyServer);
-            plugin.getDebugLogger().debug("Bungee channels registered");
         } else {
             plugin.getLogger().info("BungeeCord support disabled in config");
         }
+    }
+
+    public void enable() {
+        if (!bungeeCordEnabled) {
+            return;
+        }
+
+        plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, "BungeeCord");
+        plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, "BungeeCord", this);
+        plugin.getDebugLogger().debug("Bungee channels registered");
     }
 
     /**
@@ -64,7 +70,7 @@ public class BungeeManager implements PluginMessageListener {
      */
     public void sendPlayerToServer(Player player, String server) {
         if (!bungeeCordEnabled) {
-            player.sendMessage("§cBungeeCord is not enabled!");
+            plugin.getMessageManager().sendMessage(player, "command.bungee-not-enabled");
             return;
         }
 

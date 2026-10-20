@@ -5,12 +5,11 @@ import ch.framedev.bedwars.game.Game;
 import ch.framedev.bedwars.game.GameState;
 import ch.framedev.bedwars.player.GamePlayer;
 import ch.framedev.bedwars.team.Team;
+import ch.framedev.bedwars.utils.BedUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Bed;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -19,16 +18,13 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 
-import java.util.Objects;
-
 /**
  * Handles block break events.
  * <p>
  * Fixes / improvements:
  * - Uses HIGHEST priority + ignoreCancelled
  * - Caches allow-block-breaking flag
- * - Proper bed detection by matching against configured bed locations (no "contains BED" false-positives)
- * - Uses distanceSquared (faster) with a tight tolerance
+ * - Matches either half of the exact configured bed
  * - Cancels and returns early for non-running states
  * - Only allows breaking blocks recorded as player-placed (as you intended)
  * - Records bed block for reset BEFORE changing to AIR
@@ -74,6 +70,8 @@ public class BlockBreakListener implements Listener {
         Team bedTeam = findBedTeam(game, block);
         if (bedTeam != null) {
             event.setCancelled(true); // handle bed destruction ourselves
+            event.setDropItems(false);
+            event.setExpToDrop(0);
             handleBedBreak(player, block, game, bedTeam);
             return;
         }
@@ -87,34 +85,19 @@ public class BlockBreakListener implements Listener {
 
     /**
      * Finds the team whose bed corresponds to this block location.
-     * Uses distanceSquared to allow minor offsets (e.g., bed foot/head, older maps).
+     * The saved location may refer to either half, but nearby beds are distinct.
      */
     private Team findBedTeam(Game game, Block broken) {
-        if (broken == null) return null;
+        if (broken == null || !(broken.getBlockData() instanceof Bed)) return null;
+        Block otherHalf = BedUtils.getOtherHalf(broken);
 
         for (Team team : game.getTeams().values()) {
-            if (team.getBedLocation() == null) continue;
-
-            // Must be same world
-            if (!Objects.equals(team.getBedLocation().getWorld(), broken.getWorld())) continue;
-
-            // Tolerance: within 2 blocks (squared 4). Adjust if your bedLocation is not exact.
-            double distSq = team.getBedLocation().distanceSquared(broken.getLocation());
-            if (distSq <= 4.0) {
-                // Optional: ensure it is actually a bed block, avoid matching random blocks near bedLocation
-                if (isBedBlock(broken.getType())) {
-                    return team;
-                }
+            if (BedUtils.isBlockAt(broken, team.getBedLocation())
+                    || BedUtils.isBlockAt(otherHalf, team.getBedLocation())) {
+                return team;
             }
         }
         return null;
-    }
-
-    private boolean isBedBlock(Material material) {
-        if (material == null) return false;
-        // Works across versions: modern beds are *_BED; legacy may be BED or BED_BLOCK
-        String n = material.name();
-        return n.endsWith("_BED") || n.equals("BED") || n.equals("BED_BLOCK");
     }
 
     private void handleBedBreak(Player player, Block block, Game game, Team bedTeam) {
@@ -170,36 +153,20 @@ public class BlockBreakListener implements Listener {
 
     private void recordAndRemoveBedBlocks(Game game, Block primaryBlock) {
         if (primaryBlock == null) return;
-
-        BlockData blockData = primaryBlock.getBlockData();
-        if (!(blockData instanceof Bed bedData)) {
-            game.getWorldResetManager().recordBedLocation(
-                    primaryBlock.getLocation(),
-                    primaryBlock.getType(),
-                    primaryBlock.getBlockData()
-            );
-            primaryBlock.setType(Material.AIR, false);
-            return;
-        }
-
-        BlockFace facing = bedData.getFacing();
-        Block otherHalf = bedData.getPart() == Bed.Part.FOOT
-                ? primaryBlock.getRelative(facing)
-                : primaryBlock.getRelative(facing.getOppositeFace());
-
-        recordAndSetAir(game, primaryBlock);
-        if (otherHalf != null && isBedBlock(otherHalf.getType())) {
-            recordAndSetAir(game, otherHalf);
-        }
+        Block otherHalf = BedUtils.getOtherHalf(primaryBlock);
+        // Snapshot both halves before removing either one. No physics or natural drops.
+        recordBedBlock(game, primaryBlock);
+        if (otherHalf != null) recordBedBlock(game, otherHalf);
+        primaryBlock.setType(Material.AIR, false);
+        if (otherHalf != null) otherHalf.setType(Material.AIR, false);
     }
 
-    private void recordAndSetAir(Game game, Block block) {
+    private void recordBedBlock(Game game, Block block) {
         game.getWorldResetManager().recordBedLocation(
                 block.getLocation(),
                 block.getType(),
                 block.getBlockData()
         );
-        block.setType(Material.AIR, false);
     }
 
     private void playBedDestroyedSound(Game game) {

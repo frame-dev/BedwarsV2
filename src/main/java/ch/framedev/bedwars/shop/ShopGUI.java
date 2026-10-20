@@ -8,11 +8,12 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -20,16 +21,14 @@ import java.util.Objects;
  */
 public record ShopGUI(ShopManager shopManager) {
 
+    public static final String MAIN_TITLE = ChatColor.BOLD + "Item Shop";
+
     public ShopGUI {
         shopManager = Objects.requireNonNull(shopManager, "shopManager");
     }
 
-    public ShopGUI(Plugin plugin) {
-        this(new ShopManager(plugin));
-    }
-
     public void openMainShop(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, 54, ChatColor.BOLD + "Item Shop");
+        Inventory inventory = Bukkit.createInventory(null, 54, MAIN_TITLE);
 
         List<ShopCategory> categories = shopManager.getCategories();
         for (int i = 0; i < categories.size(); i++) {
@@ -124,10 +123,10 @@ public record ShopGUI(ShopManager shopManager) {
             return null;
         }
 
-        ItemStack cost = shopItem.getCost();
+        ItemStack cost = shopItem.getCost().clone();
 
         if (player.getInventory().containsAtLeast(cost, cost.getAmount())) {
-            player.getInventory().removeItem(cost);
+            player.getInventory().removeItem(cost.clone());
             ItemStack purchased = shopItem.getItem().clone();
 
             // Convert white wool to team-colored wool when purchasing
@@ -141,13 +140,19 @@ public record ShopGUI(ShopManager shopManager) {
                     }
                 }
             }
-            if (purchased.getType() == Material.CHAINMAIL_CHESTPLATE || purchased.getType() == Material.IRON_CHESTPLATE ||
-                    purchased.getType() == Material.DIAMOND_CHESTPLATE) {
-                player.getInventory().setChestplate(purchased);
+            // Apply before inventory insertion/equipping, which can copy the stack.
+            if (game != null) {
+                var buyer = game.getGamePlayer(player);
+                if (buyer != null && buyer.getTeam() != null) {
+                    shopManager.applyTeamUpgrades(purchased, buyer.getTeam().getUpgrades());
+                }
+            }
+            if (isArmor(purchased.getType())) {
+                equipArmor(player, purchased);
                 return purchased;
             }
 
-            player.getInventory().addItem(purchased);
+            giveOrDrop(player, purchased);
             return purchased;
         } else {
             return null;
@@ -173,6 +178,51 @@ public record ShopGUI(ShopManager shopManager) {
     private String formatMaterialName(Material material) {
         String name = material.name().toLowerCase().replace("_", " ");
         return name.substring(0, 1).toUpperCase() + name.substring(1);
+    }
+
+    private void giveOrDrop(Player player, ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) return;
+
+        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(item);
+        for (ItemStack leftover : leftovers.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+        }
+    }
+
+    private void equipArmor(Player player, ItemStack armor) {
+        PlayerInventory inventory = player.getInventory();
+        ItemStack previous = null;
+
+        String typeName = armor.getType().name();
+        if (typeName.endsWith("_HELMET")) {
+            previous = inventory.getHelmet();
+            inventory.setHelmet(armor);
+        } else if (typeName.endsWith("_CHESTPLATE")) {
+            previous = inventory.getChestplate();
+            inventory.setChestplate(armor);
+        } else if (typeName.endsWith("_LEGGINGS")) {
+            previous = inventory.getLeggings();
+            inventory.setLeggings(armor);
+        } else if (typeName.endsWith("_BOOTS")) {
+            previous = inventory.getBoots();
+            inventory.setBoots(armor);
+        } else {
+            giveOrDrop(player, armor);
+            return;
+        }
+
+        if (previous != null && previous.getType() != Material.AIR) {
+            giveOrDrop(player, previous);
+        }
+    }
+
+    private boolean isArmor(Material material) {
+        if (material == null) return false;
+        String name = material.name();
+        return name.endsWith("_HELMET")
+                || name.endsWith("_CHESTPLATE")
+                || name.endsWith("_LEGGINGS")
+                || name.endsWith("_BOOTS");
     }
 
     public ShopManager getShopManager() {

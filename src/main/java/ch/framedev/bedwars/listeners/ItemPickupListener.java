@@ -48,6 +48,7 @@ public class ItemPickupListener implements Listener {
 
         // Apply upgrades directly to the picked-up stack before it is added to inventory
         upgradeManager.applyUpgradesToItem(stack, gp.getTeam().getUpgrades());
+        event.getItem().setItemStack(stack);
 
         plugin.getDebugLogger().debug("Item pickup upgraded: " + player.getName() + " "
                 + stack.getType() + " x" + stack.getAmount());
@@ -81,24 +82,17 @@ public class ItemPickupListener implements Listener {
         // Re-apply one tick later to the actual inventory contents.
         if (event.isShiftClick()) {
             plugin.getServer().getScheduler().runTask(plugin, () -> {
-                // Re-apply to main hand + armor as the common important targets
-                ItemStack main = player.getInventory().getItemInMainHand();
-                upgradeManager.applyUpgradesToItem(main, gp.getTeam().getUpgrades());
+                if (!player.isOnline() || plugin.getGameManager().getPlayerGame(player) != game
+                        || game.getState() != GameState.RUNNING || game.getGamePlayer(player) != gp
+                        || game.isSpectator(player)) return;
 
-                ItemStack off = player.getInventory().getItemInOffHand();
-                upgradeManager.applyUpgradesToItem(off, gp.getTeam().getUpgrades());
-
-                ItemStack helmet = player.getInventory().getHelmet();
-                if (helmet != null) upgradeManager.applyUpgradesToItem(helmet, gp.getTeam().getUpgrades());
-
-                ItemStack chest = player.getInventory().getChestplate();
-                if (chest != null) upgradeManager.applyUpgradesToItem(chest, gp.getTeam().getUpgrades());
-
-                ItemStack legs = player.getInventory().getLeggings();
-                if (legs != null) upgradeManager.applyUpgradesToItem(legs, gp.getTeam().getUpgrades());
-
-                ItemStack boots = player.getInventory().getBoots();
-                if (boots != null) upgradeManager.applyUpgradesToItem(boots, gp.getTeam().getUpgrades());
+                // Shift-clicks can move equipment into any storage slot, not just the hand.
+                var inventory = player.getInventory();
+                ItemStack[] contents = inventory.getContents();
+                for (ItemStack item : contents) {
+                    upgradeManager.applyUpgradesToItem(item, gp.getTeam().getUpgrades());
+                }
+                inventory.setContents(contents);
             });
         }
     }

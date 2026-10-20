@@ -4,6 +4,8 @@ This index lists the current, maintained documentation for the BedWars plugin.
 
 ## Start Here
 
+For a complete installation and arena walkthrough, read [FULL_SETUP.md](FULL_SETUP.md).
+
 1. [QUICK_START.md](QUICK_START.md)
 2. [GAME_MECHANICS.md](GAME_MECHANICS.md)
 3. [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md)

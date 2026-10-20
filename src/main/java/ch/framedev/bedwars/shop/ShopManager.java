@@ -1,5 +1,7 @@
 package ch.framedev.bedwars.shop;
 
+import ch.framedev.BedWarsPlugin;
+import ch.framedev.bedwars.upgrades.TeamUpgrades;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -18,8 +20,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 
 /**
@@ -29,11 +36,15 @@ public class ShopManager {
 
     private final Plugin plugin;
     private final List<ShopCategory> categories;
+    private final List<ShopCategory> categoriesView;
+    private final Map<String, ShopCategory> categoriesByName;
     private FileConfiguration shopConfig;
 
     public ShopManager(Plugin plugin) {
         this.plugin = plugin;
         this.categories = new ArrayList<>();
+        this.categoriesView = Collections.unmodifiableList(categories);
+        this.categoriesByName = new HashMap<>();
         loadShopConfig();
         loadShopFromConfig();
         plugin.getLogger().info("ShopManager initialized with " + categories.size() + " categories");
@@ -62,18 +73,28 @@ public class ShopManager {
 
     private void loadShopFromConfig() {
         categories.clear();
+        categoriesByName.clear();
 
         ConfigurationSection categoriesSection = shopConfig.getConfigurationSection("categories");
         if (categoriesSection == null) {
             plugin.getLogger().warning("No categories found in shop.yml! Using default shop configuration.");
             initializeDefaultShop();
+            rebuildCategoryIndex();
             return;
         }
+
+        Set<String> seenCategoryNames = new HashSet<>();
 
         for (String categoryName : categoriesSection.getKeys(false)) {
             ConfigurationSection categorySection = categoriesSection.getConfigurationSection(categoryName);
             if (categorySection == null)
                 continue;
+
+            String normalizedCategoryName = normalizeName(categoryName);
+            if (!seenCategoryNames.add(normalizedCategoryName)) {
+                plugin.getLogger().warning("Duplicate shop category '" + categoryName + "' skipped");
+                continue;
+            }
 
             // Get category icon
             String iconName = categorySection.getString("icon", "STONE");
@@ -103,6 +124,7 @@ public class ShopManager {
             categories.add(category);
         }
 
+        rebuildCategoryIndex();
         plugin.getLogger().info("Loaded " + categories.size() + " shop categories from shop.yml");
     }
 
@@ -270,16 +292,34 @@ public class ShopManager {
         return value instanceof Number ? ((Number) value).intValue() : defaultValue;
     }
 
+    public void applyTeamUpgrades(ItemStack item, TeamUpgrades upgrades) {
+        if (plugin instanceof BedWarsPlugin bedWarsPlugin) {
+            bedWarsPlugin.getUpgradeManager().applyUpgradesToItem(item, upgrades);
+        }
+    }
+
     public List<ShopCategory> getCategories() {
-        return categories;
+        return categoriesView;
     }
 
     public ShopCategory getCategory(String name) {
+        return categoriesByName.get(normalizeName(name));
+    }
+
+    private void rebuildCategoryIndex() {
+        categoriesByName.clear();
         for (ShopCategory category : categories) {
-            if (category.getName().equalsIgnoreCase(name)) {
-                return category;
-            }
+            categoriesByName.putIfAbsent(normalizeName(category.getName()), category);
         }
-        return null;
+    }
+
+    private String normalizeName(String name) {
+        if (name == null) return "";
+
+        String translated = ChatColor.translateAlternateColorCodes('&', name);
+        String stripped = ChatColor.stripColor(translated);
+        if (stripped == null) return "";
+
+        return stripped.trim().toLowerCase(Locale.ROOT);
     }
 }

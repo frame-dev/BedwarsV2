@@ -274,7 +274,7 @@ public class UpgradeManager {
                     shouldApply = true;
                 }
 
-                if (shouldApply && !item.getEnchantments().containsKey(enchantment)) {
+                if (shouldApply && item.getEnchantmentLevel(enchantment) < level) {
                     item.addEnchantment(enchantment, level);
                     plugin.getDebugLogger().verbose("Applied enchantment upgrade: " + upgrade.getId()
                             + " level=" + level + " to " + item.getType());

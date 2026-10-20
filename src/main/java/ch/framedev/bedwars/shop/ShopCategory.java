@@ -3,6 +3,7 @@ package ch.framedev.bedwars.shop;
 import org.bukkit.Material;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,6 +34,6 @@ public class ShopCategory {
     }
 
     public List<ShopItem> getItems() {
-        return items;
+        return Collections.unmodifiableList(items);
     }
 }

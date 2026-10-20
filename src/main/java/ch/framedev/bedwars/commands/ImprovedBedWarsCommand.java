@@ -10,6 +10,8 @@ import ch.framedev.bedwars.shop.ShopType;
 import ch.framedev.bedwars.stats.PlayerStats;
 import ch.framedev.bedwars.team.TeamColor;
 import ch.framedev.bedwars.utils.MessageManager;
+import ch.framedev.bedwars.utils.BedUtils;
+import org.bukkit.block.Block;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -700,7 +702,12 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
         TeamColor color = parseTeamColor(player, args[2]);
         if (color == null) return;
 
-        session.setBedLocation(color, player.getLocation());
+        Block foot = BedUtils.getFoot(player.getTargetBlockExact(5));
+        if (foot == null) {
+            mm().sendMessage(player, "command.setup-invalid-bed");
+            return;
+        }
+        session.setBedLocation(color, foot.getLocation());
         mm().sendMessage(player, "command.team-bed-set", color.getChatColor() + color.name());
     }
 
@@ -874,6 +881,9 @@ public class ImprovedBedWarsCommand implements CommandExecutor {
     private void handleReload(Player player) {
         plugin.reloadConfig();
         mm().reload();
+        if (plugin.getShopManager() != null) {
+            plugin.getShopManager().reload();
+        }
         mm().sendMessage(player, "command.config-reloaded");
     }
 

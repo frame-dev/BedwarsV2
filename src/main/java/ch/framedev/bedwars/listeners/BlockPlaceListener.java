@@ -12,6 +12,7 @@ import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
@@ -95,19 +96,23 @@ public class BlockPlaceListener implements Listener {
     public void onEntityExplode(EntityExplodeEvent event) {
         Entity entity = event.getEntity();
 
-        // Only modify explosions of TNT we spawned/marked
-        if (!(entity instanceof TNTPrimed)) return;
-        if (!entity.hasMetadata(META_BW_TNT)) return;
+        if (!isActiveBedWarsWorld(entity.getWorld())) return;
 
-        // BedWars-style: TNT does no block damage
+        // BedWars-style: explosions may happen, but they do not destroy arena blocks.
         event.blockList().clear();
         event.setYield(0.0f);
 
         if (entity instanceof TNTPrimed tnt) {
             tnt.setIsIncendiary(false);
         }
+    }
 
-        // Optional: also control entity damage via EntityDamageEvent elsewhere if needed
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        if (!isActiveBedWarsWorld(event.getBlock().getWorld())) return;
+
+        event.blockList().clear();
+        event.setYield(0.0f);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -125,5 +130,29 @@ public class BlockPlaceListener implements Listener {
         World w = loc.getWorld();
         String worldName = (w == null ? "null" : w.getName());
         return worldName + ":" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
+    }
+
+    private boolean isActiveBedWarsWorld(World world) {
+        if (world == null) return false;
+
+        for (Game game : plugin.getGameManager().getGames()) {
+            if (game.getState() == GameState.WAITING) continue;
+            if (isSameWorld(world, game.getArena().getLobbySpawn())) return true;
+            if (isSameWorld(world, game.getArena().getSpectatorSpawn())) return true;
+            if (game.getTeams().values().stream()
+                    .anyMatch(team -> isSameWorld(world, team.getSpawnLocation())
+                            || isSameWorld(world, team.getBedLocation()))) {
+                return true;
+            }
+            if (game.getArena().getGenerators().values().stream()
+                    .anyMatch(location -> isSameWorld(world, location))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isSameWorld(World world, Location location) {
+        return location != null && location.getWorld() != null && location.getWorld().equals(world);
     }
 }

@@ -9,6 +9,8 @@ import ch.framedev.bedwars.game.GameManager;
 import ch.framedev.bedwars.manager.UpgradeManager;
 import ch.framedev.bedwars.party.PartyManager;
 import ch.framedev.bedwars.player.GamePlayer;
+import ch.framedev.bedwars.signs.JoinSignManager;
+import ch.framedev.bedwars.shop.ShopManager;
 import ch.framedev.bedwars.stats.StatsManager;
 import ch.framedev.bedwars.utils.DebugLogger;
 import ch.framedev.bedwars.utils.MessageManager;
@@ -41,6 +43,8 @@ public class BedWarsPlugin extends JavaPlugin {
     private AchievementsManager achievementsManager;
     private CloudNetManager cloudNetManager;
     private TeamSelectionGUI teamSelectionGUI;
+    private JoinSignManager joinSignManager;
+    private ShopManager shopManager;
 
     @Override
     public void onEnable() {
@@ -72,6 +76,7 @@ public class BedWarsPlugin extends JavaPlugin {
 
         // Initialize BungeeCord support
         bungeeManager = new BungeeManager(this);
+        bungeeManager.enable();
 
         // Initialize CloudNet support
         cloudNetManager = new CloudNetManager(this);
@@ -80,6 +85,9 @@ public class BedWarsPlugin extends JavaPlugin {
         arenaManager = new ArenaManager(this);
         gameManager = new GameManager(this, arenaManager);
         statsManager = new StatsManager(this, databaseManager);
+        shopManager = new ShopManager(this);
+        joinSignManager = new JoinSignManager(this);
+        joinSignManager.loadSigns();
 
         // Initialize map voting manager
         mapVoteManager = new MapVoteManager(this);
@@ -146,6 +154,10 @@ public class BedWarsPlugin extends JavaPlugin {
             achievementsManager.shutdown();
         }
 
+        if (joinSignManager != null) {
+            joinSignManager.saveSigns();
+        }
+
         getLogger().info("BedWars plugin has been disabled!");
     }
 
@@ -162,6 +174,8 @@ public class BedWarsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ItemPickupListener(this, upgradeManager), this);
         getServer().getPluginManager().registerEvents(new PlayerChatListener(this), this);
         getServer().getPluginManager().registerEvents(new InventoryCloseListener(this), this);
+        getServer().getPluginManager().registerEvents(new JoinSignListener(this, joinSignManager), this);
+        getServer().getPluginManager().registerEvents(new VoidDeathListener(this), this);
     }
 
     public static BedWarsPlugin getInstance() {
@@ -222,5 +236,13 @@ public class BedWarsPlugin extends JavaPlugin {
 
     public TeamSelectionGUI getTeamSelectionGUI() {
         return teamSelectionGUI;
+    }
+
+    public JoinSignManager getJoinSignManager() {
+        return joinSignManager;
+    }
+
+    public ShopManager getShopManager() {
+        return shopManager;
     }
 }

@@ -49,6 +49,9 @@ public class Game {
     /** UUIDs of spectators (subset of players usually). */
     private final Set<UUID> spectators;
 
+    /** Optional return locations for players who joined through a join sign. */
+    private final Map<UUID, Location> returnLocations;
+
     private final Map<TeamColor, Team> teams;
     private final List<ResourceGenerator> generators;
     private final Map<TeamColor, Map<ShopType, UUID>> shopVillagers;
@@ -63,6 +66,7 @@ public class Game {
     private BukkitRunnable countdownTask;
     private BukkitRunnable gameTask;
     private BukkitRunnable healPoolTask;
+    private BukkitRunnable endTask;
 
     /** Per-player respawn countdown tasks (so we can cancel on end/reset). */
     private final Map<UUID, BukkitRunnable> respawnTasks = new HashMap<>();
@@ -81,6 +85,7 @@ public class Game {
         this.players = new HashMap<>();
         this.participants = new HashMap<>();
         this.spectators = new HashSet<>();
+        this.returnLocations = new HashMap<>();
 
         this.teams = new HashMap<>();
         this.generators = new ArrayList<>();
@@ -92,10 +97,6 @@ public class Game {
 
         initializeTeams();
         initializeGenerators();
-
-        if (plugin.getConfig().getBoolean("scoreboard.enabled", true)) {
-            this.gameScoreboard = new GameScoreboard(plugin, this);
-        }
 
         plugin.getDebugLogger().debug("Game initialized for arena: " + arena.getName()
                 + ", teams=" + teams.size() + ", generators=" + generators.size());
@@ -206,6 +207,10 @@ public class Game {
     /* --------------------------------------------------------------------- */
 
     public void addPlayer(Player player) {
+        addPlayer(player, null);
+    }
+
+    public void addPlayer(Player player, Location returnLocation) {
         if (player == null) return;
 
         plugin.getDebugLogger().debug("Add player requested: " + player.getName()
@@ -224,6 +229,11 @@ public class Game {
         GamePlayer gamePlayer = new GamePlayer(player);
         players.put(player.getUniqueId(), gamePlayer);
         participants.put(player.getUniqueId(), gamePlayer);
+        if (returnLocation != null && returnLocation.getWorld() != null) {
+            returnLocations.put(player.getUniqueId(), returnLocation.clone());
+        } else {
+            returnLocations.remove(player.getUniqueId());
+        }
 
         // Assign to team with the least players
         Team team = getSmallestTeam();
@@ -241,15 +251,18 @@ public class Game {
 
         broadcast("game.player-joined", player.getName(), players.size(), arena.getMaxPlayers());
 
-        if (gameScoreboard != null) {
-            gameScoreboard.show(player);
-            gameScoreboard.startUpdateTask();
+        GameScoreboard scoreboard = getGameScoreboard();
+        if (scoreboard != null) {
+            scoreboard.show(player);
+            scoreboard.startUpdateTask();
         }
 
         // Start countdown if enough players
         if (players.size() >= arena.getMinPlayers() && state == GameState.WAITING) {
             startCountdown();
         }
+
+        updateJoinSigns();
     }
 
     public void removePlayer(Player player) {
@@ -281,19 +294,25 @@ public class Game {
 
         plugin.getGameManager().removePlayerFromGame(player);
 
-        if (gameScoreboard != null) {
-            gameScoreboard.hide(player);
+        GameScoreboard scoreboard = getGameScoreboard();
+        if (scoreboard != null) {
+            scoreboard.hide(player);
         }
 
         broadcast("game.player-left", player.getName());
 
         // restore visibility (important if they were hidden as spectator/eliminated)
         restoreVisibility(player);
+        resetPlayerState(player);
 
-        boolean sendOnLeave = plugin.getConfig().getBoolean("bungeecord.send-to-lobby-on-leave", false);
+        Location returnLocation = returnLocations.remove(player.getUniqueId());
+        boolean sendOnLeave = returnLocation == null
+                && plugin.getConfig().getBoolean("bungeecord.send-to-lobby-on-leave", false);
         if (sendOnLeave && (plugin.getBungeeManager().isEnabled()
                 || (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()))) {
             sendToLobbyDelayed(player);
+        } else if (returnLocation != null && returnLocation.getWorld() != null) {
+            player.teleport(returnLocation);
         } else {
             player.teleport(arena.getLobbySpawn());
         }
@@ -303,6 +322,8 @@ public class Game {
         } else if (players.size() < arena.getMinPlayers() && state == GameState.STARTING) {
             cancelCountdown();
         }
+
+        updateJoinSigns();
     }
 
     /* --------------------------------------------------------------------- */
@@ -316,6 +337,7 @@ public class Game {
         state = GameState.STARTING;
         // Cached config values (set at countdown/game start)
         countdown = plugin.getConfig().getInt("game.countdown-time", 30);
+        updateJoinSigns();
 
         List<Integer> broadcastIntervals = plugin.getConfig().getIntegerList("game.countdown-broadcast-intervals");
 
@@ -378,6 +400,7 @@ public class Game {
             state = GameState.WAITING;
             broadcast("game.countdown-cancelled");
             plugin.getDebugLogger().debug("Countdown cancelled: arena=" + arena.getName());
+            updateJoinSigns();
         }
     }
 
@@ -396,6 +419,7 @@ public class Game {
         if (state == GameState.RUNNING) return;
 
         state = GameState.RUNNING;
+        updateJoinSigns();
 
         cfgRespawnSeconds = plugin.getConfig().getInt("game.respawn-time", 5);
         cfgDiamondUpgradeSeconds = plugin.getConfig().getInt("game.diamond-upgrade-time", 720);
@@ -432,8 +456,9 @@ public class Game {
         startGameTimer();
         startHealPoolTask();
 
-        if (gameScoreboard != null) {
-            gameScoreboard.startUpdateTask();
+        GameScoreboard scoreboard = getGameScoreboard();
+        if (scoreboard != null) {
+            scoreboard.startUpdateTask();
         }
     }
 
@@ -481,9 +506,10 @@ public class Game {
         if (state != GameState.RUNNING) return;
 
         GamePlayer gp = players.get(player.getUniqueId());
-        if (gp == null) return;
+        if (gp == null || gp.isEliminated() || spectators.contains(player.getUniqueId())) return;
 
         gp.addDeath();
+        player.closeInventory();
 
         Team team = gp.getTeam();
         boolean bedAlive = team != null && team.isBedAlive();
@@ -498,6 +524,11 @@ public class Game {
                 return;
             }
 
+            player.getInventory().clear();
+            spectators.add(player.getUniqueId());
+            player.setGameMode(GameMode.SPECTATOR);
+            player.teleport(arena.getSpectatorSpawn());
+
             BukkitRunnable task = new BukkitRunnable() {
                 int remaining = cfgRespawnSeconds;
 
@@ -508,15 +539,18 @@ public class Game {
                         respawnTasks.remove(player.getUniqueId());
                         return;
                     }
-                    if (!player.isOnline()) {
+                    if (!player.isOnline() || players.get(player.getUniqueId()) != gp
+                            || plugin.getGameManager().getPlayerGame(player) != Game.this) {
                         cancel();
                         respawnTasks.remove(player.getUniqueId());
                         return;
                     }
 
                     if (remaining <= 0) {
-                        player.spigot().respawn();
                         player.teleport(respawnTeam.getSpawnLocation());
+                        spectators.remove(player.getUniqueId());
+                        player.setGameMode(GameMode.SURVIVAL);
+                        player.getInventory().clear();
                         gp.giveTeamArmor();
                         giveStartingItem(player);
                         setToMaxHealth(player);
@@ -578,29 +612,48 @@ public class Game {
     }
 
     public void endGame(Team winningTeam) {
-        if (state == GameState.ENDING) return;
+        endGame(winningTeam, false);
+    }
+
+    /** Stop synchronously: Bukkit cannot run delayed cleanup after plugin disable. */
+    public void shutdown() {
+        if (state == GameState.RUNNING) {
+            endGame(null, true);
+        } else {
+            cancelGameTasks();
+            finishGame(false);
+        }
+    }
+
+    private void cancelGameTasks() {
+        if (gameScoreboard != null) gameScoreboard.stopUpdateTask();
+        if (countdownTask != null) { countdownTask.cancel(); countdownTask = null; }
+        if (gameTask != null) { gameTask.cancel(); gameTask = null; }
+        if (endTask != null) { endTask.cancel(); endTask = null; }
+        stopHealPoolTask();
+        for (BukkitRunnable task : respawnTasks.values()) task.cancel();
+        respawnTasks.clear();
+        for (ResourceGenerator generator : generators) generator.stop();
+        clearShopVillagers();
+        clearDragonBuffs();
+    }
+
+    private void endGame(Team winningTeam, boolean immediate) {
+        if (state != GameState.RUNNING) {
+            if (state != GameState.ENDING) {
+                cancelGameTasks();
+                finishGame(false);
+            }
+            return;
+        }
 
         state = GameState.ENDING;
+        updateJoinSigns();
 
         plugin.getDebugLogger().debug("Game ending: arena=" + arena.getName()
                 + ", winner=" + (winningTeam != null ? winningTeam.getColor().name() : "none"));
 
-        // Stop tasks
-        if (gameScoreboard != null) gameScoreboard.stopUpdateTask();
-
-        if (countdownTask != null) { countdownTask.cancel(); countdownTask = null; }
-        if (gameTask != null) { gameTask.cancel(); gameTask = null; }
-
-        stopHealPoolTask();
-
-        for (BukkitRunnable r : respawnTasks.values()) r.cancel();
-        respawnTasks.clear();
-
-        // Stop generators
-        for (ResourceGenerator generator : generators) generator.stop();
-
-        clearShopVillagers();
-        clearDragonBuffs();
+        cancelGameTasks();
 
         // Update player stats
         for (GamePlayer gp : participants.values()) {
@@ -642,41 +695,60 @@ public class Game {
             broadcast("game.no-winner");
         }
 
+        if (immediate) {
+            finishGame(false);
+            return;
+        }
+
         // Teleport players back to lobby after delay, then reset game
-        new BukkitRunnable() {
+        endTask = new BukkitRunnable() {
             @Override
             public void run() {
-                // Teleport all current game players + spectators
-                for (UUID id : new HashSet<>(players.keySet())) {
-                    Player p = Bukkit.getPlayer(id);
-                    if (p != null) cleanupAndSendToLobby(p);
-                }
-                for (UUID id : new HashSet<>(spectators)) {
-                    Player p = Bukkit.getPlayer(id);
-                    if (p != null) cleanupAndSendToLobby(p);
-                }
-
-                resetGame();
+                endTask = null;
+                finishGame(true);
             }
-        }.runTaskLater(plugin, 100L);
+        };
+        endTask.runTaskLater(plugin, 100L);
     }
 
-    private void cleanupAndSendToLobby(Player player) {
+    private void finishGame(boolean allowServerTransfer) {
+        Set<UUID> ids = new HashSet<>(players.keySet());
+        ids.addAll(spectators);
+        for (UUID id : ids) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null) cleanupAndSendToLobby(player, allowServerTransfer);
+        }
+        resetGame();
+    }
+
+    private void cleanupAndSendToLobby(Player player, boolean allowServerTransfer) {
         if (player == null) return;
 
         restoreVisibility(player);
 
-        player.getInventory().clear();
-        player.setGameMode(GameMode.SURVIVAL);
+        // A death on the final tick may not have reached the scheduled respawn handler.
+        if (player.isDead()) player.spigot().respawn();
+        resetPlayerState(player);
+        UUID uuid = player.getUniqueId();
+        GamePlayer gamePlayer = players.remove(uuid);
+        if (gamePlayer != null && gamePlayer.getTeam() != null) {
+            gamePlayer.getTeam().removePlayer(gamePlayer);
+        }
+
+        spectators.remove(uuid);
+        plugin.getGameManager().removePlayerFromGame(player);
 
         if (gameScoreboard != null) gameScoreboard.hide(player);
 
-        boolean sendOnEnd = plugin.getConfig().getBoolean("bungeecord.send-to-lobby-on-end", true);
+        Location returnLocation = returnLocations.remove(uuid);
+        boolean hasReturnLocation = returnLocation != null && returnLocation.getWorld() != null;
+        // Leave the arena immediately, even when a proxy transfer is delayed or fails.
+        player.teleport(hasReturnLocation ? returnLocation : arena.getLobbySpawn());
+        boolean sendOnEnd = allowServerTransfer && returnLocation == null
+                && plugin.getConfig().getBoolean("bungeecord.send-to-lobby-on-end", true);
         if (sendOnEnd && (plugin.getBungeeManager().isEnabled()
                 || (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()))) {
             sendToLobbyDelayed(player);
-        } else {
-            player.teleport(arena.getLobbySpawn());
         }
     }
 
@@ -696,6 +768,7 @@ public class Game {
     /* --------------------------------------------------------------------- */
 
     private void resetGame() {
+        for (ResourceGenerator generator : generators) generator.reset();
         if (plugin.getConfig().getBoolean("world.reset-on-end", true)) {
             int blocksReset = worldResetManager.getBlockChangeCount();
             if (blocksReset > 0) {
@@ -710,11 +783,25 @@ public class Game {
         clearDragonBuffs();
 
         // Hide scoreboard from any remaining online players in this game
-        if (gameScoreboard != null) {
-            gameScoreboard.stopUpdateTask();
+        if (gameScoreboard != null) gameScoreboard.stopUpdateTask();
+
+        for (UUID id : new HashSet<>(players.keySet())) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null) {
+                restoreVisibility(player);
+                plugin.getGameManager().removePlayerFromGame(player);
+            }
+        }
+        for (UUID id : new HashSet<>(spectators)) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null) {
+                restoreVisibility(player);
+                plugin.getGameManager().removePlayerFromGame(player);
+            }
         }
 
         spectators.clear();
+        returnLocations.clear();
         players.clear();
         participants.clear();
 
@@ -726,6 +813,7 @@ public class Game {
         }
 
         state = GameState.WAITING;
+        updateJoinSigns();
         plugin.getDebugLogger().debug("Game reset to WAITING: arena=" + arena.getName());
     }
 
@@ -903,6 +991,11 @@ public class Game {
     /* --------------------------------------------------------------------- */
 
     public void addSpectator(Player player) {
+        if (!plugin.getConfig().getBoolean("spectator.allow-spectating", true)) {
+            plugin.getMessageManager().sendMessage(player, "spectator.disabled");
+            return;
+        }
+
         if (state != GameState.RUNNING && state != GameState.ENDING) {
             plugin.getMessageManager().sendMessage(player, "spectator.only-during-game");
             return;
@@ -912,11 +1005,13 @@ public class Game {
         plugin.getGameManager().addPlayerToGame(player, this);
 
         player.setGameMode(GameMode.SPECTATOR);
+        player.setFlySpeed(getSpectatorFlySpeed());
         player.teleport(arena.getSpectatorSpawn());
 
-        if (gameScoreboard != null) {
-            gameScoreboard.show(player);
-            gameScoreboard.startUpdateTask();
+        GameScoreboard scoreboard = getGameScoreboard();
+        if (scoreboard != null) {
+            scoreboard.show(player);
+            scoreboard.startUpdateTask();
         }
 
         plugin.getMessageManager().sendMessage(player, "spectator.now-spectating");
@@ -930,6 +1025,11 @@ public class Game {
     }
 
     public void removeSpectator(Player player) {
+        // Respawning and eliminated participants also belong to the spectator set.
+        if (players.containsKey(player.getUniqueId())) {
+            removePlayer(player);
+            return;
+        }
         if (!spectators.remove(player.getUniqueId())) return;
 
         plugin.getGameManager().removePlayerFromGame(player);
@@ -939,6 +1039,8 @@ public class Game {
         }
 
         player.setGameMode(GameMode.SURVIVAL);
+        player.setFlySpeed(0.1f);
+        player.setWalkSpeed(0.2f);
         player.teleport(arena.getLobbySpawn());
 
         restoreVisibility(player);
@@ -1098,6 +1200,50 @@ public class Game {
         p.setHealth(max);
     }
 
+    private void resetPlayerState(Player player) {
+        if (player == null) return;
+
+        player.closeInventory();
+        player.getInventory().clear();
+        player.setGameMode(GameMode.SURVIVAL);
+        player.setFlySpeed(0.1f);
+        player.setWalkSpeed(0.2f);
+        player.setFireTicks(0);
+        player.setFallDistance(0.0f);
+        player.setFoodLevel(20);
+        player.setSaturation(20.0f);
+        player.setExp(0.0f);
+        player.setLevel(0);
+
+        for (PotionEffect effect : player.getActivePotionEffects()) {
+            player.removePotionEffect(effect.getType());
+        }
+
+        setToMaxHealth(player);
+    }
+
+    private float getSpectatorFlySpeed() {
+        double multiplier = plugin.getConfig().getDouble("spectator.fly-speed", 1.0);
+        double speed = Math.max(0.0, Math.min(1.0, 0.1 * multiplier));
+        return (float) speed;
+    }
+
+    private void updateJoinSigns() {
+        if (plugin.getJoinSignManager() != null) {
+            plugin.getJoinSignManager().updateSigns(this);
+        }
+    }
+
+    private GameScoreboard getGameScoreboard() {
+        if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) {
+            return null;
+        }
+        if (gameScoreboard == null) {
+            gameScoreboard = new GameScoreboard(plugin, this);
+        }
+        return gameScoreboard;
+    }
+
     private void giveStartingItem(Player player) {
         String itemName = plugin.getConfig().getString("game.starting-item", "WOODEN_SWORD");
 
@@ -1108,7 +1254,12 @@ public class Game {
         if (material == null || material == Material.AIR) return;
 
         if (!player.getInventory().contains(material)) {
-            player.getInventory().addItem(new ItemStack(material, 1));
+            ItemStack item = new ItemStack(material, 1);
+            GamePlayer gamePlayer = players.get(player.getUniqueId());
+            if (gamePlayer != null && gamePlayer.getTeam() != null) {
+                plugin.getUpgradeManager().applyUpgradesToItem(item, gamePlayer.getTeam().getUpgrades());
+            }
+            player.getInventory().addItem(item);
         }
     }
 
@@ -1122,6 +1273,8 @@ public class Game {
             @Override
             public void run() {
                 if (!player.isOnline()) return;
+                // Do not pull a player out of a new match during the transfer delay.
+                if (plugin.getGameManager().getPlayerGame(player) != null) return;
 
                 if (plugin.getCloudNetManager() != null && plugin.getCloudNetManager().isEnabled()) {
                     plugin.getCloudNetManager().connectToLobby(player);

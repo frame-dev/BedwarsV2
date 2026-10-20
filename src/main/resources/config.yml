@@ -38,6 +38,7 @@ game:
   allow-fall-damage: true
   allow-projectile-damage: true
   allow-pvp: true
+  allow-explosion-damage: false
   
   # Bed settings
   bed-protection: true  # Prevent players from breaking their own bed

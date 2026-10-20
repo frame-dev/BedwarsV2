@@ -5,12 +5,13 @@ import ch.framedev.bedwars.utils.DebugLogger;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 /**
  * Generates resources at a specific location
@@ -20,10 +21,12 @@ public class ResourceGenerator {
     private final Location location;
     private final ResourceType type;
     private int level;
+    private final int initialLevel;
     private final int tier1DelayTicks;
     private final int tier2DelayTicks;
     private final int spawnAmount;
     private final int maxStack;
+    private final ItemStack resourceStack;
     private BukkitTask task;
     private Plugin plugin;
 
@@ -36,13 +39,18 @@ public class ResourceGenerator {
         this.location = location;
         this.type = type;
         this.level = level;
+        this.initialLevel = level;
         this.tier1DelayTicks = tier1DelayTicks;
         this.tier2DelayTicks = tier2DelayTicks;
         this.spawnAmount = Math.max(1, spawnAmount);
         this.maxStack = Math.max(0, maxStack);
+        this.resourceStack = new ItemStack(type.getMaterial(), this.spawnAmount);
     }
 
     public void start(Plugin plugin) {
+        if (task != null) {
+            return;
+        }
         this.plugin = plugin;
         int delay = getDelayTicks();
 
@@ -71,6 +79,12 @@ public class ResourceGenerator {
         }
     }
 
+    /** Restore the configured tier for the next match without restarting generation. */
+    public void reset() {
+        stop();
+        level = initialLevel;
+    }
+
     private void spawnResource() {
         World world = location.getWorld();
         if (world == null) {
@@ -79,12 +93,11 @@ public class ResourceGenerator {
 
         int existingCount = 0;
         if (maxStack > 0) {
-            for (Entity entity : world.getNearbyEntities(location, 1.5, 1.5, 1.5)) {
-                if (entity instanceof Item dropped) {
-                    ItemStack stack = dropped.getItemStack();
-                    if (stack.getType() == type.getMaterial()) {
-                        existingCount += stack.getAmount();
-                    }
+            for (Entity entity : world.getNearbyEntities(location, 1.5, 1.5, 1.5, entity -> entity instanceof Item)) {
+                Item dropped = (Item) entity;
+                ItemStack stack = dropped.getItemStack();
+                if (stack.getType() == type.getMaterial()) {
+                    existingCount += stack.getAmount();
                 }
             }
             if (existingCount >= maxStack) {
@@ -100,9 +113,9 @@ public class ResourceGenerator {
             }
         }
 
-        ItemStack item = new ItemStack(type.getMaterial(), amount);
+        ItemStack item = amount == resourceStack.getAmount() ? resourceStack.clone() : new ItemStack(type.getMaterial(), amount);
         Item droppedItem = world.dropItem(location, item);
-        droppedItem.setVelocity(droppedItem.getVelocity().zero());
+        droppedItem.setVelocity(new Vector(0, 0, 0));
 
         DebugLogger logger = getDebugLogger();
         if (logger != null && logger.isVerbose() && isGeneratorSpawnDebugEnabled()) {

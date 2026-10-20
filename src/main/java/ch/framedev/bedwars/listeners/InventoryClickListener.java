@@ -2,6 +2,7 @@ package ch.framedev.bedwars.listeners;
 
 import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.game.Game;
+import ch.framedev.bedwars.game.GameState;
 import ch.framedev.bedwars.player.GamePlayer;
 import ch.framedev.bedwars.shop.ShopCategory;
 import ch.framedev.bedwars.shop.ShopGUI;
@@ -18,7 +19,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
@@ -43,7 +46,7 @@ public class InventoryClickListener implements Listener {
 
     public InventoryClickListener(BedWarsPlugin plugin) {
         this.plugin = plugin;
-        this.shopGUI = new ShopGUI(plugin);
+        this.shopGUI = new ShopGUI(plugin.getShopManager());
         this.upgradeShopGUI = new UpgradeShopGUI(plugin.getUpgradeManager());
     }
 
@@ -51,25 +54,23 @@ public class InventoryClickListener implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        // We only care about clicks inside the top inventory (the GUI), not the player's own inventory.
-        if (event.getClickedInventory() == null) return;
-        if (event.getClickedInventory().equals(player.getInventory())) {
-            // If a GUI is open we typically still cancel movement to avoid shift-click exploits.
-            // But only cancel when the open inventory is one of ours.
-            String title = event.getView().getTitle();
-            if (isAnyPluginGui(title)) {
-                event.setCancelled(true);
-            }
+        final String title = event.getView().getTitle();
+        if (!isAnyPluginGui(title)) return;
+
+        // Cancel first. Number-key/hotbar swaps can otherwise move real inventory items
+        // through decorative GUI slots before our purchase logic finishes.
+        event.setCancelled(true);
+
+        int topSize = event.getView().getTopInventory().getSize();
+        if (event.getRawSlot() < 0 || event.getRawSlot() >= topSize) {
             return;
         }
 
-        final String title = event.getView().getTitle();
-        final ItemStack clicked = event.getCurrentItem();
-
-        // For our GUIs: always cancel to prevent item taking/moving.
-        if (isAnyPluginGui(title)) {
-            event.setCancelled(true);
+        if (!isNormalGuiClick(event.getClick())) {
+            return;
         }
+
+        final ItemStack clicked = event.getCurrentItem();
 
         if (isNullOrAir(clicked)) return;
 
@@ -111,11 +112,11 @@ public class InventoryClickListener implements Listener {
                     + ", slot=" + event.getSlot());
 
             Game game = plugin.getGameManager().getPlayerGame(player);
-            if (game == null) return;
+            if (game == null || game.getState() != GameState.RUNNING || game.isSpectator(player)) return;
 
             MessageManager mm = plugin.getMessageManager();
 
-            if (equalsTitle(title, ChatColor.BOLD + "Item Shop")) {
+            if (equalsTitle(title, ShopGUI.MAIN_TITLE)) {
                 handleMainShopClick(player, event.getSlot(), game);
                 return;
             }
@@ -128,6 +129,13 @@ public class InventoryClickListener implements Listener {
             if (equalsTitle(title, ChatColor.BOLD + "Team Upgrades")) {
                 handleUpgradeShopClick(player, event.getSlot(), game, mm);
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (isAnyPluginGui(event.getView().getTitle())) {
+            event.setCancelled(true);
         }
     }
 
@@ -150,7 +158,7 @@ public class InventoryClickListener implements Listener {
         // Strip color to avoid issues across versions / formatting
         String clean = ChatColor.stripColor(title);
 
-        return clean.equalsIgnoreCase(ChatColor.stripColor(ChatColor.BOLD + "Item Shop"))
+        return clean.equalsIgnoreCase(ChatColor.stripColor(ShopGUI.MAIN_TITLE))
                 || clean.equalsIgnoreCase(ChatColor.stripColor(ChatColor.BOLD + "Team Upgrades"))
                 || isShopCategory(title);
     }
@@ -159,12 +167,7 @@ public class InventoryClickListener implements Listener {
         String cleanTitle = ChatColor.stripColor(title);
         if (cleanTitle == null) return false;
 
-        for (ShopCategory category : shopGUI.getShopManager().getCategories()) {
-            if (cleanTitle.equalsIgnoreCase(category.getName())) {
-                return true;
-            }
-        }
-        return false;
+        return shopGUI.getShopManager().getCategory(cleanTitle) != null;
     }
 
     private void handleMainShopClick(Player player, int slot, Game game) {
@@ -207,11 +210,6 @@ public class InventoryClickListener implements Listener {
                     + shopItem.getItem().getType());
             mm.sendMessage(player, "shop.purchase-successful");
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
-
-            GamePlayer buyer = game.getGamePlayer(player);
-            if (buyer != null && buyer.getTeam() != null) {
-                plugin.getUpgradeManager().applyUpgradesToItem(purchased, buyer.getTeam().getUpgrades());
-            }
 
             // Refresh category view
             shopGUI.openCategory(player, category, game);
@@ -273,13 +271,12 @@ public class InventoryClickListener implements Listener {
                     if (p == null) continue;
 
                     var inv = p.getInventory();
-                    plugin.getUpgradeManager().applyUpgradesToItem(inv.getItemInMainHand(), team.getUpgrades());
-                    plugin.getUpgradeManager().applyUpgradesToItem(inv.getItemInOffHand(), team.getUpgrades());
-
-                    if (inv.getHelmet() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getHelmet(), team.getUpgrades());
-                    if (inv.getChestplate() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getChestplate(), team.getUpgrades());
-                    if (inv.getLeggings() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getLeggings(), team.getUpgrades());
-                    if (inv.getBoots() != null) plugin.getUpgradeManager().applyUpgradesToItem(inv.getBoots(), team.getUpgrades());
+                    // Include stored swords/tools, offhand and armor; write back copied stacks.
+                    ItemStack[] contents = inv.getContents();
+                    for (ItemStack item : contents) {
+                        plugin.getUpgradeManager().applyUpgradesToItem(item, team.getUpgrades());
+                    }
+                    inv.setContents(contents);
                 }
             }
 
@@ -297,6 +294,10 @@ public class InventoryClickListener implements Listener {
 
     private boolean isNullOrAir(ItemStack item) {
         return item == null || item.getType() == Material.AIR;
+    }
+
+    private boolean isNormalGuiClick(ClickType clickType) {
+        return clickType == ClickType.LEFT || clickType == ClickType.RIGHT;
     }
 
     private boolean equalsTitle(String a, String b) {

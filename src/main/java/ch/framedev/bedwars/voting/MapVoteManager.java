@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -237,7 +238,6 @@ public class MapVoteManager {
                 remaining--;
                 if (remaining <= 0) {
                     endVoting();
-                    cancel();
                 }
             }
         };
@@ -252,6 +252,7 @@ public class MapVoteManager {
     }
 
     private void endVoting() {
+        stopVoteTask();
         votingActive = false;
 
         String winner = pickWinner();
@@ -342,13 +343,13 @@ public class MapVoteManager {
 
     private Inventory buildVoteInventory() {
         slotToArena.clear();
-        int size = plugin.getConfig().getInt("map-voting.gui-size", 27);
+        int size = sanitizeInventorySize(plugin.getConfig().getInt("map-voting.gui-size", 27));
         String title = plugin.getConfig().getString("map-voting.gui-title", "Map Voting");
         Inventory inventory = Bukkit.createInventory(null, size, ChatColor.translateAlternateColorCodes('&', title));
 
         Map<String, Integer> counts = countVotes();
         List<String> eligibleNames = getEligibleArenaNames();
-        int slot = plugin.getConfig().getInt("map-voting.gui-slot-start", 10);
+        int slot = clampSlot(plugin.getConfig().getInt("map-voting.gui-slot-start", 10), size);
         int step = plugin.getConfig().getInt("map-voting.gui-slot-step", 1);
         if (step < 1) {
             step = 1;
@@ -385,6 +386,15 @@ public class MapVoteManager {
         }
 
         return inventory;
+    }
+
+    private int sanitizeInventorySize(int configuredSize) {
+        int clamped = Math.max(9, Math.min(54, configuredSize));
+        return ((clamped + 8) / 9) * 9;
+    }
+
+    private int clampSlot(int slot, int inventorySize) {
+        return Math.max(0, Math.min(inventorySize - 1, slot));
     }
 
     private List<String> getEligibleArenaNames() {
@@ -450,7 +460,10 @@ public class MapVoteManager {
 
     private Material getGuiItemMaterial() {
         String name = plugin.getConfig().getString("map-voting.gui-item", "MAP");
-        Material material = Material.matchMaterial(name.toUpperCase());
+        if (name == null || name.isBlank()) {
+            return Material.MAP;
+        }
+        Material material = Material.matchMaterial(name.toUpperCase(Locale.ROOT));
         return material == null ? Material.MAP : material;
     }
 

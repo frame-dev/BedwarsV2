@@ -41,6 +41,13 @@ block:
   cannot-place-yet: "&cYou can't place blocks yet!"
   place-disabled: "&cBlock placing is disabled in this arena!"
 
+# Join Sign Messages
+sign:
+  created: "&aBedWars join sign created for &e{0}&a."
+  invalid-arena: "&cArena '&e{0}&c' was not found."
+  missing-arena: "&cPut the arena name on the second line."
+  no-permission: "&cYou don't have permission to create BedWars signs."
+
 # Shop Messages
 shop:
   purchase-successful: "&aPurchase successful!"
@@ -51,6 +58,7 @@ shop:
 
 # Spectator Messages
 spectator:
+  disabled: "&cSpectating is disabled."
   only-during-game: "&cYou can only spectate during an active game!"
   now-spectating: "&7You are now spectating the game!"
   stopped-spectating: "&aYou are no longer spectating!"
@@ -192,6 +200,7 @@ command:
   setup-delete-usage: "&cUsage: /bedwars setup delete <arena>"
   setup-setspawn-usage: "&cUsage: /bedwars setup setspawn <team>"
   setup-setbed-usage: "&cUsage: /bedwars setup setbed <team>"
+  setup-invalid-bed: "&cLook at a complete bed within 5 blocks, then run /bw setup setbed <team>."
   setup-setshop-usage: "&cUsage: /bedwars setup setshop <team> <item|upgrade>"
   setup-addgenerator-usage: "&cUsage: /bedwars setup addgenerator <name>"
   setup-setminplayers-usage: "&cUsage: /bedwars setup setminplayers <count>"

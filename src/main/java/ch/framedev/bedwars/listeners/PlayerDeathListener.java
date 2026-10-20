@@ -19,7 +19,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
  * - Correct "final kill" logic: depends on VICTIM bed status (victim team bed alive?)
  * - Handles null team safely
  * - Clears drops + XP to prevent farming
- * - Ensures respawn handling is delegated to Game#handlePlayerDeath
+ * - Forces the vanilla death screen to close before delegating respawn handling
  */
 public class PlayerDeathListener implements Listener {
 
@@ -51,7 +51,7 @@ public class PlayerDeathListener implements Listener {
         GamePlayer victim = game.getGamePlayer(victimBukkit);
         if (victim == null || victim.getTeam() == null) {
             // Still run game logic to avoid stuck states
-            game.handlePlayerDeath(victimBukkit);
+            scheduleDeathHandling(game, victimBukkit);
             return;
         }
 
@@ -64,7 +64,7 @@ public class PlayerDeathListener implements Listener {
             // If killer isn't part of same game (shouldn't happen if your damage listener is correct), treat as no-killer
             if (killer == null || killer.getTeam() == null) {
                 game.broadcast("death.died", victim.getTeam().getColor().getChatColor() + victimBukkit.getName());
-                game.handlePlayerDeath(victimBukkit);
+                scheduleDeathHandling(game, victimBukkit);
                 return;
             }
 
@@ -97,11 +97,23 @@ public class PlayerDeathListener implements Listener {
                     victim.getTeam().getColor().getChatColor() + victimBukkit.getName());
         }
 
-        // Let Game handle respawn/elimination logic
-        // (Game already increments victim deaths internally; if not, keep victim.addDeath() here)
-        game.handlePlayerDeath(victimBukkit);
+        scheduleDeathHandling(game, victimBukkit);
+    }
 
-        // Optional: instant respawn on newer Spigot versions can be done via PlayerRespawnEvent / Paper settings.
-        // Do NOT call spigot().respawn() here; your Game uses a respawn timer.
+    private void scheduleDeathHandling(Game game, Player victimBukkit) {
+        // Let Bukkit finish the death event, then close the death screen and run BedWars respawn logic.
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!victimBukkit.isOnline()) return;
+            if (plugin.getGameManager().getPlayerGame(victimBukkit) != game) return;
+            if (game.getState() != GameState.RUNNING) return;
+
+            try {
+                victimBukkit.spigot().respawn();
+            } catch (IllegalStateException ignored) {
+                // Player may already have respawned through server settings.
+            }
+
+            game.handlePlayerDeath(victimBukkit);
+        });
     }
 }

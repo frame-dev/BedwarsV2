@@ -41,7 +41,7 @@ public class PlayerInteractListener implements Listener {
 
     public PlayerInteractListener(BedWarsPlugin plugin) {
         this.plugin = plugin;
-        this.shopGUI = new ShopGUI(plugin);
+        this.shopGUI = new ShopGUI(plugin.getShopManager());
         this.upgradeShopGUI = new UpgradeShopGUI(plugin.getUpgradeManager());
     }
 

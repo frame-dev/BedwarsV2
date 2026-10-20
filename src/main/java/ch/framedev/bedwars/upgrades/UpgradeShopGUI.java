@@ -1,6 +1,5 @@
 package ch.framedev.bedwars.upgrades;
 
-import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.manager.UpgradeManager;
 import ch.framedev.bedwars.team.Team;
 import org.bukkit.Bukkit;
@@ -25,10 +24,6 @@ public record UpgradeShopGUI(UpgradeManager upgradeManager) {
 
     public UpgradeShopGUI {
         upgradeManager = Objects.requireNonNull(upgradeManager, "upgradeManager");
-    }
-
-    public UpgradeShopGUI(BedWarsPlugin plugin) {
-        this(new UpgradeManager(plugin));
     }
 
     public UpgradeManager getUpgradeManager() {

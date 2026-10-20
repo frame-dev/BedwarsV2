@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -59,11 +60,12 @@ public class CosmeticsManager {
         loadConfig();
     }
 
-    public void loadConfig() {
+    private void loadConfig() {
         File cosmeticsFile = new File(plugin.getDataFolder(), "cosmetics.yml");
         if (!cosmeticsFile.exists()) {
-            if(!plugin.getDataFolder().mkdirs()) {
-                plugin.getLogger().severe("Failed to create Directory: " + plugin.getDataFolder().getAbsolutePath());
+            File dataFolder = plugin.getDataFolder();
+            if (!dataFolder.exists() && !dataFolder.mkdirs()) {
+                plugin.getLogger().severe("Failed to create Directory: " + dataFolder.getAbsolutePath());
             }
             try (InputStream in = plugin.getResource("cosmetics.yml")) {
                 if (in != null) {
@@ -194,7 +196,7 @@ public class CosmeticsManager {
             boolean enabled = entry.getBoolean("enabled", true);
             String displayName = entry.getString("display-name", key);
             String iconName = entry.getString("icon", "PAPER");
-            Material icon = Material.matchMaterial(iconName.toUpperCase());
+            Material icon = iconName == null ? null : Material.matchMaterial(iconName.toUpperCase(Locale.ROOT));
             if (icon == null) {
                 icon = Material.PAPER;
             }
@@ -217,14 +219,14 @@ public class CosmeticsManager {
     }
 
     private Inventory buildMenu(Player player) {
-        int size = cosmeticsConfig.getInt("gui.size", 54);
+        int size = sanitizeInventorySize(cosmeticsConfig.getInt("gui.size", 54));
         String title = cosmeticsConfig.getString("gui.title", "&dCosmetics");
         Inventory inventory = Bukkit.createInventory(null, size,
                 ChatColor.translateAlternateColorCodes('&', title));
 
         PlayerCosmetics cosmetics = getPlayerCosmetics(player.getUniqueId());
-        int killStart = cosmeticsConfig.getInt("gui.kill-slot-start", 10);
-        int bedStart = cosmeticsConfig.getInt("gui.bed-slot-start", 28);
+        int killStart = clampSlot(cosmeticsConfig.getInt("gui.kill-slot-start", 10), size);
+        int bedStart = clampSlot(cosmeticsConfig.getInt("gui.bed-slot-start", 28), size);
         int step = cosmeticsConfig.getInt("gui.slot-step", 1);
         if (step < 1) {
             step = 1;
@@ -265,6 +267,15 @@ public class CosmeticsManager {
 
         menuSlots.put(player.getUniqueId(), slots);
         return inventory;
+    }
+
+    private int sanitizeInventorySize(int configuredSize) {
+        int clamped = Math.max(9, Math.min(54, configuredSize));
+        return ((clamped + 8) / 9) * 9;
+    }
+
+    private int clampSlot(int slot, int inventorySize) {
+        return Math.max(0, Math.min(inventorySize - 1, slot));
     }
 
     private ItemStack buildCosmeticItem(CosmeticDefinition definition, String selectedId, Player player,

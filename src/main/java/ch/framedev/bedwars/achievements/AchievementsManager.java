@@ -40,7 +40,7 @@ public class AchievementsManager {
     private final BedWarsPlugin plugin;
     private final DatabaseManager database;
 
-    private final Map<String, AchievementDefinition> definitions = new HashMap<>();
+    private final Map<String, AchievementDefinition> definitions = new LinkedHashMap<>();
     private final Map<UUID, Map<String, AchievementProgress>> cache = new ConcurrentHashMap<>();
     private final Map<UUID, Map<Integer, AchievementDefinition>> menuSlots = new ConcurrentHashMap<>();
 
@@ -56,11 +56,12 @@ public class AchievementsManager {
     /* Config / enable                                                        */
     /* --------------------------------------------------------------------- */
 
-    public void loadConfig() {
+    private void loadConfig() {
         File achievementsFile = new File(plugin.getDataFolder(), "achievements.yml");
         if (!achievementsFile.exists()) {
-            if (!plugin.getDataFolder().mkdirs()) {
-                plugin.getLogger().severe("Failed to create Directory: " + plugin.getDataFolder().getAbsolutePath());
+            File dataFolder = plugin.getDataFolder();
+            if (!dataFolder.exists() && !dataFolder.mkdirs()) {
+                plugin.getLogger().severe("Failed to create Directory: " + dataFolder.getAbsolutePath());
             }
             try (InputStream in = plugin.getResource("achievements.yml")) {
                 if (in != null) {
@@ -84,7 +85,10 @@ public class AchievementsManager {
     /* --------------------------------------------------------------------- */
 
     public void loadPlayer(UUID uuid) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> cache.put(uuid, loadFromDatabase(uuid)));
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            Map<String, AchievementProgress> loadedProgress = loadFromDatabase(uuid);
+            cache.merge(uuid, loadedProgress, this::mergeProgressMaps);
+        });
     }
 
     /* --------------------------------------------------------------------- */
@@ -124,11 +128,11 @@ public class AchievementsManager {
     }
 
     private Inventory buildMenu(Player player) {
-        int size = achievementsConfig.getInt("gui.size", 54);
+        int size = sanitizeInventorySize(achievementsConfig.getInt("gui.size", 54));
         String title = achievementsConfig.getString("gui.title", "&6Achievements");
         Inventory inventory = Bukkit.createInventory(null, size, color(title));
 
-        int start = achievementsConfig.getInt("gui.slot-start", 10);
+        int start = Math.max(0, Math.min(size - 1, achievementsConfig.getInt("gui.slot-start", 10)));
         int step = Math.max(1, achievementsConfig.getInt("gui.slot-step", 1));
 
         String lockedLore = achievementsConfig.getString("gui.locked-lore", "&cLocked");
@@ -171,8 +175,9 @@ public class AchievementsManager {
             lore.addAll(def.getLore());
         }
 
+        int displayedProgress = Math.min(progress.getProgress(), def.getTarget());
         lore.add(progressTemplate
-                .replace("{progress}", String.valueOf(progress.getProgress()))
+                .replace("{progress}", String.valueOf(displayedProgress))
                 .replace("{target}", String.valueOf(def.getTarget())));
 
         lore.add(progress.isUnlocked() ? unlockedLore : lockedLore);
@@ -247,7 +252,7 @@ public class AchievementsManager {
                     () -> plugin.getLogger().warning("Invalid achievement type for " + key + ", defaulting to KILLS")
             );
 
-            int target = entry.getInt("target", 1);
+            int target = Math.max(1, entry.getInt("target", 1));
 
             definitions.put(key, new AchievementDefinition(key, displayName, icon, lore, type, target, enabled));
         }
@@ -268,7 +273,7 @@ public class AchievementsManager {
     /* --------------------------------------------------------------------- */
 
     private Map<String, AchievementProgress> loadFromDatabase(UUID uuid) {
-        Map<String, AchievementProgress> progress = new HashMap<>();
+        Map<String, AchievementProgress> progress = new ConcurrentHashMap<>();
         String query = "SELECT achievement_id, progress, unlocked_at FROM player_achievements WHERE uuid = ?";
 
         try (ResultSet rs = database.executeQuery(query, uuid.toString())) {
@@ -285,20 +290,32 @@ public class AchievementsManager {
     }
 
     private void saveToDatabase(UUID uuid, String id, AchievementProgress progress) {
-        try {
-            database.executeUpdate(
-                    "INSERT INTO player_achievements (uuid, achievement_id, progress, unlocked_at, updated_at) " +
-                            "VALUES (?, ?, ?, ?, ?) " +
-                            "ON CONFLICT(uuid, achievement_id) DO UPDATE SET progress = excluded.progress, " +
-                            "unlocked_at = excluded.unlocked_at, updated_at = excluded.updated_at",
-                    uuid.toString(),
-                    id,
-                    progress.getProgress(),
-                    progress.getUnlockedAt(),
-                    System.currentTimeMillis()
-            );
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to save achievement progress: " + e.getMessage());
+        int savedProgress = progress.getProgress();
+        long savedUnlockedAt = progress.getUnlockedAt();
+        long updatedAt = System.currentTimeMillis();
+
+        Runnable save = () -> {
+            try {
+                database.executeUpdate(
+                        "INSERT INTO player_achievements (uuid, achievement_id, progress, unlocked_at, updated_at) " +
+                                "VALUES (?, ?, ?, ?, ?) " +
+                                "ON CONFLICT(uuid, achievement_id) DO UPDATE SET progress = excluded.progress, " +
+                                "unlocked_at = excluded.unlocked_at, updated_at = excluded.updated_at",
+                        uuid.toString(),
+                        id,
+                        savedProgress,
+                        savedUnlockedAt,
+                        updatedAt
+                );
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Failed to save achievement progress: " + e.getMessage());
+            }
+        };
+        if (plugin.isEnabled()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, save);
+        } else {
+            // Match shutdown can record progress after Bukkit has disabled the plugin.
+            save.run();
         }
     }
 
@@ -312,7 +329,7 @@ public class AchievementsManager {
     }
 
     private Map<String, AchievementProgress> getOrCreateProgressMap(UUID uuid) {
-        return cache.computeIfAbsent(uuid, k -> new HashMap<>());
+        return cache.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>());
     }
 
     private int getProgressValue(UUID uuid, String id) {
@@ -330,6 +347,30 @@ public class AchievementsManager {
 
     private String color(String s) {
         return ChatColor.translateAlternateColorCodes('&', s == null ? "" : s);
+    }
+
+    private int sanitizeInventorySize(int configuredSize) {
+        int clamped = Math.max(9, Math.min(54, configuredSize));
+        return ((clamped + 8) / 9) * 9;
+    }
+
+    private Map<String, AchievementProgress> mergeProgressMaps(Map<String, AchievementProgress> current,
+                                                               Map<String, AchievementProgress> loaded) {
+        Map<String, AchievementProgress> merged = new ConcurrentHashMap<>(current);
+        loaded.forEach((id, loadedProgress) -> merged.merge(id, loadedProgress, this::mergeProgress));
+        return merged;
+    }
+
+    private AchievementProgress mergeProgress(AchievementProgress current, AchievementProgress loaded) {
+        int progress = Math.max(current.getProgress(), loaded.getProgress());
+        long unlockedAt = mergeUnlockedAt(current.getUnlockedAt(), loaded.getUnlockedAt());
+        return new AchievementProgress(progress, unlockedAt);
+    }
+
+    private long mergeUnlockedAt(long currentUnlockedAt, long loadedUnlockedAt) {
+        if (currentUnlockedAt <= 0) return loadedUnlockedAt;
+        if (loadedUnlockedAt <= 0) return currentUnlockedAt;
+        return Math.min(currentUnlockedAt, loadedUnlockedAt);
     }
 
     private Material safeMaterial(String name) {

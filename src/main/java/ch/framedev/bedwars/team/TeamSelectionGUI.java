@@ -76,8 +76,9 @@ public class TeamSelectionGUI {
         // Optionally: show "Random Team" button
         // inv.setItem(49, createRandomTeamItem());
 
-        menuSlots.put(player.getUniqueId(), slotToTeam);
         player.openInventory(inv);
+        // Opening the replacement closes the previous menu and clears its mapping.
+        menuSlots.put(player.getUniqueId(), slotToTeam);
     }
 
     /**
@@ -113,7 +114,7 @@ public class TeamSelectionGUI {
      * Check if a title matches the team selection GUI.
      */
     public static boolean isTeamSelectionTitle(String title) {
-        return ChatColor.stripColor(title).equalsIgnoreCase(ChatColor.stripColor(GUI_TITLE));
+        return title != null && ChatColor.stripColor(title).equalsIgnoreCase(ChatColor.stripColor(GUI_TITLE));
     }
 
     /**

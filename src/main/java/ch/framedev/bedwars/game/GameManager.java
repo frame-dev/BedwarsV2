@@ -5,6 +5,7 @@ import ch.framedev.bedwars.arena.ArenaManager;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages all BedWars games
@@ -20,7 +21,7 @@ public class GameManager {
         this.plugin = plugin;
         this.arenaManager = arenaManager;
         this.games = new HashMap<>();
-        this.playerGames = new HashMap<>();
+        this.playerGames = new ConcurrentHashMap<>();
 
         loadArenas();
         plugin.getLogger().info("GameManager initialized with " + games.size() + " games loaded");
@@ -76,10 +77,9 @@ public class GameManager {
 
     public void stopAllGames() {
         for (Game game : games.values()) {
-            if (game.getState() != GameState.WAITING) {
-                plugin.getDebugLogger().debug("Stopping game: " + game.getArena().getName());
-                game.endGame(null);
-            }
+            plugin.getDebugLogger().debug("Stopping game: " + game.getArena().getName());
+            game.shutdown();
         }
+        playerGames.clear();
     }
 }

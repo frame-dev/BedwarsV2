@@ -36,15 +36,19 @@ public class GameScoreboard {
 
     private final BedWarsPlugin plugin;
     private final Game game;
+    private final List<Team> orderedTeams;
 
     private BukkitRunnable updateTask;
 
     // player -> (lineIndex -> team)
     private final Map<UUID, Map<Integer, org.bukkit.scoreboard.Team>> lineTeams = new HashMap<>();
+    private final Map<UUID, SplitText[]> lastLines = new HashMap<>();
 
     public GameScoreboard(BedWarsPlugin plugin, Game game) {
         this.plugin = plugin;
         this.game = game;
+        this.orderedTeams = new ArrayList<>(game.getTeams().values());
+        this.orderedTeams.sort(Comparator.comparing(t -> t.getColor().name()));
     }
 
     public void show(Player player) {
@@ -72,6 +76,7 @@ public class GameScoreboard {
     public void hide(Player player) {
         if (player == null) return;
         lineTeams.remove(player.getUniqueId());
+        lastLines.remove(player.getUniqueId());
         player.setScoreboard(Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard());
     }
 
@@ -83,7 +88,10 @@ public class GameScoreboard {
         Objective obj = sb.getObjective(DisplaySlot.SIDEBAR);
         if (obj == null || !OBJECTIVE_NAME.equals(obj.getName())) return;
 
-        obj.setDisplayName(color(plugin.getConfig().getString("scoreboard.title", "&6&lBEDWARS")));
+        String title = color(plugin.getConfig().getString("scoreboard.title", "&6&lBEDWARS"));
+        if (!Objects.equals(obj.getDisplayName(), title)) {
+            obj.setDisplayName(title);
+        }
 
         ensureTeams(player, sb);
 
@@ -93,22 +101,30 @@ public class GameScoreboard {
             lines = lines.subList(0, MAX_LINES);
         }
 
-        // Write lines
+        SplitText[] previousLines = lastLines.computeIfAbsent(player.getUniqueId(), ignored -> new SplitText[MAX_LINES]);
+
+        // Write only changed lines. This avoids sending scoreboard team updates every tick
+        // when the rendered text is identical.
         for (int i = 0; i < MAX_LINES; i++) {
             org.bukkit.scoreboard.Team team = getLineTeam(player.getUniqueId(), i, sb);
+            SplitText split;
 
             if (i < lines.size()) {
                 String raw = lines.get(i);
                 if (raw == null) raw = "";
 
                 // Split into prefix/suffix safely
-                SplitText split = splitLegacy(raw); // total target; we still split for compatibility
-                team.setPrefix(split.prefix);
-                team.setSuffix(split.suffix);
+                split = splitLegacy(raw); // total target; we still split for compatibility
             } else {
                 // Clear unused lines
-                team.setPrefix("");
-                team.setSuffix("");
+                split = SplitText.EMPTY;
+            }
+
+            SplitText previous = previousLines[i];
+            if (previous == null || !previous.sameText(split)) {
+                team.setPrefix(split.prefix);
+                team.setSuffix(split.suffix);
+                previousLines[i] = split;
             }
         }
     }
@@ -189,13 +205,9 @@ public class GameScoreboard {
         }
 
         lines.add(ChatColor.DARK_GRAY + "Teams:");
-        // stable ordering by team color/name (prevents lines jumping)
-        List<Team> teams = new ArrayList<>(game.getTeams().values());
-        teams.sort(Comparator.comparing(t -> t.getColor().name()));
-
-        for (Team team : teams) {
+        for (Team team : orderedTeams) {
             String bed = team.isBedAlive() ? (ChatColor.GREEN + "✓") : (ChatColor.RED + "✗");
-            long alive = team.getPlayers().stream().filter(p -> !p.isEliminated()).count();
+            int alive = countAlive(team);
             lines.add(" " + team.getColor().getChatColor() + team.getColor().name()
                     + ChatColor.GRAY + ": " + bed + ChatColor.GRAY + " (" + alive + ")");
         }
@@ -227,24 +239,25 @@ public class GameScoreboard {
     }
 
     private String buildNextEventLine(int elapsed) {
-        List<EventEntry> events = new ArrayList<>();
+        EventEntry next = null;
 
         int diamondTime = game.getDiamondUpgradeTime();
         if (diamondTime > elapsed) {
-            events.add(new EventEntry("Diamond II", diamondTime - elapsed, ChatColor.AQUA));
+            next = new EventEntry("Diamond II", diamondTime - elapsed, ChatColor.AQUA);
         }
 
         int emeraldTime = game.getEmeraldUpgradeTime();
         if (emeraldTime > elapsed) {
-            events.add(new EventEntry("Emerald II", emeraldTime - elapsed, ChatColor.GREEN));
+            EventEntry emerald = new EventEntry("Emerald II", emeraldTime - elapsed, ChatColor.GREEN);
+            if (next == null || emerald.remainingSeconds < next.remainingSeconds) {
+                next = emerald;
+            }
         }
 
-        if (events.isEmpty()) {
+        if (next == null) {
             return null;
         }
 
-        events.sort(Comparator.comparingInt(e -> e.remainingSeconds));
-        EventEntry next = events.get(0);
         return ChatColor.GOLD + "Next: " + next.color + next.name + ChatColor.GRAY + " ("
                 + ChatColor.WHITE + formatTime(next.remainingSeconds) + ChatColor.GRAY + ")";
     }
@@ -252,7 +265,17 @@ public class GameScoreboard {
     private String formatTime(int seconds) {
         int m = seconds / 60;
         int s = seconds % 60;
-        return String.format("%d:%02d", m, s);
+        return m + ":" + (s < 10 ? "0" : "") + s;
+    }
+
+    private int countAlive(Team team) {
+        int alive = 0;
+        for (GamePlayer player : team.getPlayers()) {
+            if (!player.isEliminated()) {
+                alive++;
+            }
+        }
+        return alive;
     }
 
     private static final class EventEntry {
@@ -307,12 +330,20 @@ public class GameScoreboard {
 
     @SuppressWarnings("ClassCanBeRecord")
     private static final class SplitText {
+        static final SplitText EMPTY = new SplitText("", "");
+
         final String prefix;
         final String suffix;
 
         SplitText(String prefix, String suffix) {
             this.prefix = prefix;
             this.suffix = suffix;
+        }
+
+        boolean sameText(SplitText other) {
+            return other != null
+                    && Objects.equals(prefix, other.prefix)
+                    && Objects.equals(suffix, other.suffix);
         }
     }
 
@@ -343,8 +374,8 @@ public class GameScoreboard {
             }
         };
 
-        // 1 Hz is fine for time; if you want smoother, do 10 ticks, but avoid heavy work
-        updateTask.runTaskTimer(plugin, 20L, 20L);
+        long interval = Math.max(1L, plugin.getConfig().getLong("scoreboard.update-interval-ticks", 20L));
+        updateTask.runTaskTimer(plugin, interval, interval);
     }
 
     public void stopUpdateTask() {

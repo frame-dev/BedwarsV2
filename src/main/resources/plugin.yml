@@ -69,3 +69,6 @@ permissions:
   bedwars.team:
     description: Change team in lobby
     default: true
+  bedwars.sign.create:
+    description: Create BedWars join signs
+    default: op

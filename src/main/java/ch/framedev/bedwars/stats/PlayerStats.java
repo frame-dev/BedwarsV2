@@ -100,30 +100,30 @@ public class PlayerStats {
 
     // Setters for database loading
     public void setWins(int wins) {
-        this.wins = wins;
+        this.wins = Math.max(0, wins);
     }
 
     public void setLosses(int losses) {
-        this.losses = losses;
+        this.losses = Math.max(0, losses);
     }
 
     public void setKills(int kills) {
-        this.kills = kills;
+        this.kills = Math.max(0, kills);
     }
 
     public void setDeaths(int deaths) {
-        this.deaths = deaths;
+        this.deaths = Math.max(0, deaths);
     }
 
     public void setFinalKills(int finalKills) {
-        this.finalKills = finalKills;
+        this.finalKills = Math.max(0, finalKills);
     }
 
     public void setBedsBroken(int bedsBroken) {
-        this.bedsBroken = bedsBroken;
+        this.bedsBroken = Math.max(0, bedsBroken);
     }
 
     public void setGamesPlayed(int gamesPlayed) {
-        this.gamesPlayed = gamesPlayed;
+        this.gamesPlayed = Math.max(0, gamesPlayed);
     }
 }

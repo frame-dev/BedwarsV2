@@ -30,6 +30,12 @@ Start the server once so default config files are generated.
 
 ### Commands
 
+Place each team's complete bed first. Look at either half from within five
+blocks when running `/bw setup setbed <team>`; the plugin saves the exact foot
+block, including the bed's existing placement. It does not place a bed at your
+player position. Re-register bed locations created with older versions if they
+point above or beside the actual bed.
+
 ```text
 /bw setup create myarena
 /bw setup setlobby

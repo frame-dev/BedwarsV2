@@ -9,8 +9,8 @@ public class AchievementProgress {
     private long unlockedAt;
 
     public AchievementProgress(int progress, long unlockedAt) {
-        this.progress = progress;
-        this.unlockedAt = unlockedAt;
+        this.progress = Math.max(0, progress);
+        this.unlockedAt = Math.max(0, unlockedAt);
     }
 
     public int getProgress() {
@@ -18,7 +18,7 @@ public class AchievementProgress {
     }
 
     public void setProgress(int progress) {
-        this.progress = progress;
+        this.progress = Math.max(0, progress);
     }
 
     public long getUnlockedAt() {
@@ -26,7 +26,7 @@ public class AchievementProgress {
     }
 
     public void setUnlockedAt(long unlockedAt) {
-        this.unlockedAt = unlockedAt;
+        this.unlockedAt = Math.max(0, unlockedAt);
     }
 
     public boolean isUnlocked() {

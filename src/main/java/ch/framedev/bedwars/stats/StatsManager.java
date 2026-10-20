@@ -2,13 +2,20 @@ package ch.framedev.bedwars.stats;
 
 import ch.framedev.BedWarsPlugin;
 import ch.framedev.bedwars.database.DatabaseManager;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Manages player statistics using SQLite database
@@ -17,12 +24,19 @@ public class StatsManager {
 
     private final BedWarsPlugin plugin;
     private final DatabaseManager database;
-    private final Map<UUID, PlayerStats> statsCache;
+    private final ConcurrentMap<UUID, PlayerStats> statsCache;
+    private final Executor executor;
+    private final Map<UUID, CompletableFuture<Void>> pendingSaves = new HashMap<>();
 
     public StatsManager(BedWarsPlugin plugin, DatabaseManager database) {
+        this(plugin, database, ForkJoinPool.commonPool());
+    }
+
+    StatsManager(BedWarsPlugin plugin, DatabaseManager database, Executor executor) {
         this.plugin = plugin;
         this.database = database;
-        this.statsCache = new HashMap<>();
+        this.executor = executor;
+        this.statsCache = new ConcurrentHashMap<>();
         plugin.getLogger().info("StatsManager initialized with database connection");
         plugin.getDebugLogger().debug("StatsManager ready");
     }
@@ -30,12 +44,13 @@ public class StatsManager {
     /**
      * Load player stats from database (async)
      */
-    public CompletableFuture<PlayerStats> loadPlayerStats(UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
+    public synchronized CompletableFuture<PlayerStats> loadPlayerStats(UUID uuid) {
+        // A quick reconnect must not reload the database before the quit save finishes.
+        CompletableFuture<Void> previous = pendingSaves.getOrDefault(uuid, CompletableFuture.completedFuture(null));
+        return previous.handle((ignored, failure) -> null).thenApplyAsync(ignored -> {
             // Check cache first
-            if (statsCache.containsKey(uuid)) {
-                return statsCache.get(uuid);
-            }
+            PlayerStats cachedStats = statsCache.get(uuid);
+            if (cachedStats != null) return cachedStats;
 
             plugin.getDebugLogger().debug("Loading stats: " + uuid);
 
@@ -51,8 +66,8 @@ public class StatsManager {
                     stats.setBedsBroken(rs.getInt("beds_broken"));
                     stats.setGamesPlayed(rs.getInt("games_played"));
 
-                    statsCache.put(uuid, stats);
-                    return stats;
+                    PlayerStats existing = statsCache.putIfAbsent(uuid, stats);
+                    return existing != null ? existing : stats;
                 }
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load stats for " + uuid + ": " + e.getMessage());
@@ -60,22 +75,33 @@ public class StatsManager {
 
             // Create new stats if player doesn't exist
             PlayerStats newStats = new PlayerStats(uuid);
-            statsCache.put(uuid, newStats);
+            PlayerStats existing = statsCache.putIfAbsent(uuid, newStats);
+            if (existing != null) return existing;
             plugin.getDebugLogger().debug("Created new stats: " + uuid);
             return newStats;
-        });
+        }, executor);
     }
 
     /**
      * Save player stats to database (async)
      */
-    public CompletableFuture<Void> savePlayerStats(UUID uuid, String playerName) {
-        return CompletableFuture.runAsync(() -> {
-            PlayerStats stats = statsCache.get(uuid);
-            if (stats == null)
-                return;
+    public synchronized CompletableFuture<Void> savePlayerStats(UUID uuid, String playerName) {
+        PlayerStats stats = statsCache.get(uuid);
+        if (stats == null) return CompletableFuture.completedFuture(null);
 
-            plugin.getDebugLogger().debug("Saving stats: " + uuid + " (" + playerName + ")");
+        String safePlayerName = normalizePlayerName(playerName, uuid);
+        int wins = stats.getWins();
+        int losses = stats.getLosses();
+        int kills = stats.getKills();
+        int deaths = stats.getDeaths();
+        int finalKills = stats.getFinalKills();
+        int bedsBroken = stats.getBedsBroken();
+        int gamesPlayed = stats.getGamesPlayed();
+        long now = System.currentTimeMillis();
+
+        CompletableFuture<Void> previous = pendingSaves.getOrDefault(uuid, CompletableFuture.completedFuture(null));
+        CompletableFuture<Void> save = previous.handle((ignored, failure) -> null).thenRunAsync(() -> {
+            plugin.getDebugLogger().debug("Saving stats: " + uuid + " (" + safePlayerName + ")");
 
             String query = """
                     INSERT INTO player_stats (uuid, player_name, wins, losses, kills, deaths,
@@ -94,23 +120,29 @@ public class StatsManager {
                     """;
 
             try {
-                long now = System.currentTimeMillis();
                 database.executeUpdate(query,
                         uuid.toString(),
-                        playerName,
-                        stats.getWins(),
-                        stats.getLosses(),
-                        stats.getKills(),
-                        stats.getDeaths(),
-                        stats.getFinalKills(),
-                        stats.getBedsBroken(),
-                        stats.getGamesPlayed(),
+                        safePlayerName,
+                        wins,
+                        losses,
+                        kills,
+                        deaths,
+                        finalKills,
+                        bedsBroken,
+                        gamesPlayed,
                         now,
                         now);
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to save stats for " + uuid + ": " + e.getMessage());
             }
+        }, executor);
+        pendingSaves.put(uuid, save);
+        save.whenComplete((ignored, failure) -> {
+            synchronized (StatsManager.this) {
+                pendingSaves.remove(uuid, save);
+            }
         });
+        return save;
     }
 
     /**
@@ -118,8 +150,14 @@ public class StatsManager {
      */
     public void saveAllStats() {
         for (Map.Entry<UUID, PlayerStats> entry : statsCache.entrySet()) {
-            savePlayerStats(entry.getKey(), "Unknown").join(); // Join to ensure completion
+            savePlayerStats(entry.getKey(), resolveKnownPlayerName(entry.getKey())).join(); // Join to ensure completion
         }
+        CompletableFuture<Void> pending;
+        synchronized (this) {
+            // Quit-time cache eviction must not hide unfinished writes from shutdown.
+            pending = CompletableFuture.allOf(pendingSaves.values().toArray(new CompletableFuture<?>[0]));
+        }
+        pending.join();
         plugin.getLogger().info("Saved " + statsCache.size() + " player statistics to database.");
         plugin.getDebugLogger().debug("Saved all stats: count=" + statsCache.size());
     }
@@ -128,11 +166,8 @@ public class StatsManager {
      * Get player stats from cache (synchronous)
      */
     public PlayerStats getPlayerStats(UUID uuid) {
-        if (statsCache.containsKey(uuid)) {
-            return statsCache.get(uuid);
-        } else {
-            return loadPlayerStats(uuid).join(); // Load asynchronously but return null for now
-        }
+        PlayerStats stats = statsCache.get(uuid);
+        return stats != null ? stats : loadPlayerStats(uuid).join();
     }
 
     /**
@@ -140,12 +175,13 @@ public class StatsManager {
      */
     public CompletableFuture<Map<String, Integer>> getTopWins(int limit) {
         return CompletableFuture.supplyAsync(() -> {
-            Map<String, Integer> topPlayers = new HashMap<>();
+            Map<String, Integer> topPlayers = new LinkedHashMap<>();
             String query = "SELECT player_name, wins FROM player_stats ORDER BY wins DESC LIMIT ?";
+            int safeLimit = Math.max(1, limit);
 
-            plugin.getDebugLogger().debug("Leaderboard query: wins limit=" + limit);
+            plugin.getDebugLogger().debug("Leaderboard query: wins limit=" + safeLimit);
 
-            try (ResultSet rs = database.executeQuery(query, limit)) {
+            try (ResultSet rs = database.executeQuery(query, safeLimit)) {
                 while (rs.next()) {
                     topPlayers.put(rs.getString("player_name"), rs.getInt("wins"));
                 }
@@ -162,12 +198,13 @@ public class StatsManager {
      */
     public CompletableFuture<Map<String, Integer>> getTopKills(int limit) {
         return CompletableFuture.supplyAsync(() -> {
-            Map<String, Integer> topPlayers = new HashMap<>();
+            Map<String, Integer> topPlayers = new LinkedHashMap<>();
             String query = "SELECT player_name, kills FROM player_stats ORDER BY kills DESC LIMIT ?";
+            int safeLimit = Math.max(1, limit);
 
-            plugin.getDebugLogger().debug("Leaderboard query: kills limit=" + limit);
+            plugin.getDebugLogger().debug("Leaderboard query: kills limit=" + safeLimit);
 
-            try (ResultSet rs = database.executeQuery(query, limit)) {
+            try (ResultSet rs = database.executeQuery(query, safeLimit)) {
                 while (rs.next()) {
                     topPlayers.put(rs.getString("player_name"), rs.getInt("kills"));
                 }
@@ -184,12 +221,13 @@ public class StatsManager {
      */
     public CompletableFuture<Map<String, Integer>> getTopBedsBroken(int limit) {
         return CompletableFuture.supplyAsync(() -> {
-            Map<String, Integer> topPlayers = new HashMap<>();
+            Map<String, Integer> topPlayers = new LinkedHashMap<>();
             String query = "SELECT player_name, beds_broken FROM player_stats ORDER BY beds_broken DESC LIMIT ?";
+            int safeLimit = Math.max(1, limit);
 
-            plugin.getDebugLogger().debug("Leaderboard query: beds limit=" + limit);
+            plugin.getDebugLogger().debug("Leaderboard query: beds limit=" + safeLimit);
 
-            try (ResultSet rs = database.executeQuery(query, limit)) {
+            try (ResultSet rs = database.executeQuery(query, safeLimit)) {
                 while (rs.next()) {
                     topPlayers.put(rs.getString("player_name"), rs.getInt("beds_broken"));
                 }
@@ -225,5 +263,22 @@ public class StatsManager {
             }
             return 0;
         });
+    }
+
+    private String resolveKnownPlayerName(UUID uuid) {
+        Player onlinePlayer = plugin.getServer().getPlayer(uuid);
+        if (onlinePlayer != null) return onlinePlayer.getName();
+
+        OfflinePlayer offlinePlayer = plugin.getServer().getOfflinePlayer(uuid);
+        return offlinePlayer.getName();
+    }
+
+    private String normalizePlayerName(String playerName, UUID uuid) {
+        if (playerName != null && !playerName.isBlank() && !"Unknown".equalsIgnoreCase(playerName)) {
+            return playerName;
+        }
+
+        String resolvedName = resolveKnownPlayerName(uuid);
+        return resolvedName == null || resolvedName.isBlank() ? "Unknown" : resolvedName;
     }
 }

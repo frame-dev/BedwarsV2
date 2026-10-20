@@ -37,7 +37,7 @@ public class ArenaManager {
         this.plugin = plugin;
         this.arenasFile = new File(plugin.getDataFolder(), "arenas.yml");
         loadArenasFile();
-        plugin.getLogger().info("ArenaManager initialized with " + getArenaNames().size() + " arenas loaded");
+        plugin.getLogger().info("ArenaManager initialized with " + arenaCount() + " arenas loaded");
     }
 
     private void loadArenasFile() {
@@ -135,6 +135,11 @@ public class ArenaManager {
         return Collections.unmodifiableSet(root.getKeys(false));
     }
 
+    private int arenaCount() {
+        ConfigurationSection root = arenasConfig.getConfigurationSection(ARENAS_ROOT);
+        return root == null ? 0 : root.getKeys(false).size();
+    }
+
     /* --------------------------------------------------------------------- */
     /* Save helpers                                                           */
     /* --------------------------------------------------------------------- */
@@ -189,7 +194,7 @@ public class ArenaManager {
             TeamColor color = parseTeamColor(colorKey);
             if (color == null) continue;
 
-            String teamBase = "teams." + colorKey;
+            String teamBase = colorKey;
 
             // spawn/bed
             setIfPresent(teams, teamBase + ".spawn", loc -> arena.setTeamSpawn(color, loc));
